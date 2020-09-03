@@ -1,0 +1,11 @@
+{
+    "python.pythonPath": "/Users/raj/anaconda/bin/python",
+    "code-runner.executorMap": 
+    { 
+        "python": "$pythonPath -u $fullFileName" 
+    },
+    "python.linting.pylintEnabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.terminal.executeInFileDir": true,
+    "code-runner.fileDirectoryAsCwd": true
+}
