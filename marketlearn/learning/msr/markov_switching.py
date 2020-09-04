@@ -136,7 +136,9 @@ class MarkovSwitchingRegression:
         """
         transition_matrix = np.zeros((2, 2))
         transition_matrix[0,0] = pii
+        transition_matrix[0,1] = 1 - pii
         transition_matrix[1,1] = pjj
+        transition_matrix[1,0] = 1-pjj
         return transition_matrix
     
     def fit(self,

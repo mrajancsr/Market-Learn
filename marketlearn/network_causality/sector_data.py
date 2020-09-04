@@ -32,6 +32,6 @@ class SectorPrice:
 
     def _set_path(self):
         """path from where we download from"""
-        path = '/Users/raj/Documents/mlfinlab/mlfinlab_premium/mlfinlab/'
+        path = '/Users/raj/Documents/QuantResearch/Home/market-learn/marketlearn/'
         path = os.path.join(path, 'network_causality', 'data')
         return path

@@ -3,8 +3,8 @@
 import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.stats import f as ftest
-from vector_ar.varbase import Base
-from vector_ar.linear_regression import LinearRegression
+from marketlearn.network_causality.vector_ar.varbase import Base
+from marketlearn.learning.linear_models.linear_regression import LinearRegression
 from operator import itemgetter
 from numpy.linalg import det
 from arch.unitroot import PhillipsPerron
