@@ -1,6 +1,0 @@
-*.pyc
-__pycache__
-*.ipynb
-*.json
-*.ipynb_checkpoints
-datasets
