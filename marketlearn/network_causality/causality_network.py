@@ -5,30 +5,29 @@ insurance sectors by M.Billio, M.Getmansky,
 Andrew Lo, L.Pelizzon
 """
 
-from typing import Dict
-from itertools import combinations, product
 import pandas as pd
 import numpy as np
 from arch import arch_model
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from typing import Dict
+from itertools import combinations, product
 from scipy.stats import ttest_1samp
 from scipy.sparse.linalg import eigs
-from sector_data import SectorPrice
-from mlfinlab.network_causality.vector_ar.bivar import BiVariateVar
-from mlfinlab.network_causality.graph import GraphAdMap
+from marketlearn.network_causality.sector_data import SectorPrice
+from marketlearn.network_causality.vector_ar.bivar import BiVariateVar
+from marketlearn.network_causality.graph import GraphAdMap
 
 # pylint: disable=invalid-name, undefined-loop-variable
 
+
 class CNet:
     """
-    Class Implements the granger causal flows
-    in a complicated network
+    Class Implements the granger causal flows in a complicated network
     """
     class PreProcess:
         """
-        Nested Class to pre-process data
-        before program start and create
+        Nested Class to pre-process data before program start and create
         "sectors" attribute
         """
         def __init__(self, start: str = '1999-12-31'):

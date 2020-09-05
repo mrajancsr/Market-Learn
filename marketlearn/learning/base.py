@@ -3,11 +3,10 @@
 from abc import ABCMeta, abstractmethod
 from typing import Dict
 from sklearn.datasets import make_regression
-import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
 from operator import itemgetter
-
+import numpy as np
+import matplotlib.pyplot as plt
 
 class LinearBase(metaclass=ABCMeta):
     """Abstract Base class representing the Linear Model"""
@@ -26,14 +25,14 @@ class LinearBase(metaclass=ABCMeta):
             n_informative=n_features, n_targets=1,
             noise=5, coef=True)
         return dict(zip(['X', 'y', 'coef'], [features, output, coef]))
-  
+
     def make_constant(self, X: np.ndarray) -> np.ndarray:
         raise DeprecationWarning("function deprecated -- use make_polynomial instead")
         if self.fit_intercept:
             ones = np.ones(shape=(X.shape[0], 1))
             return np.concatenate((ones, X), axis=1)
         return X
-  
+
     def make_polynomial(self, X: np.ndarray) -> np.ndarray: 
         degree, bias = self.degree, self.fit_intercept
         pf = PolynomialFeatures(degree=degree, include_bias=bias)

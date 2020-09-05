@@ -3,10 +3,10 @@ Author: Rajan Subramanian
 Created: May 23, 2020
 """
 import numpy as np
-from learning.base import LinearBase
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 from typing import Dict, Union
+from marketlearn.learning.base import LinearBase
 
 
 class LinearRegression(LinearBase):
@@ -66,7 +66,7 @@ class LinearRegression(LinearBase):
             y = solve_triangular(l, A.T @ b, lower=True)
             return solve_triangular(l.T, y)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str = 'ols', covar=False) -> 'LinearRegression':
+    def fit(self, X: np.ndarray, y: np.ndarray, method: str = 'ols') -> 'LinearRegression':
         """fits training data via ordinary least Squares (ols)
         Args:
         X:
@@ -101,25 +101,32 @@ class LinearRegression(LinearBase):
             q, r = np.linalg.qr(X)
             # solves by forward substitution
             self.theta = solve_triangular(r, q.T @ y)
-        # make the predictions using estimated coefficients
+        # Make the predictions using estimated coefficients
         self.predictions = self.predict(X)
         self.residuals = (y - self.predictions)
         self.rss = self.residuals @ self.residuals
-        # residual standard error RSE
-        self.s2 = self.rss / (n_samples - (p_features + self.fit_intercept))
+
+        # Total parameters fitted
+        k = p_features + self.fit_intercept
+        self.k_params = k
+
+        # Remaining degrees of freedom
+        self.ddof = n_samples - k
+        self.s2 = self.rss / self.ddof
         ybar = y.mean()
         self.tss = (y - ybar) @ (y - ybar)
-        self.ess = self.tss - self.rss 
+        self.ess = self.tss - self.rss
         self.r2 = self.ess / self.tss
-        if covar: 
-            self.param_covar = self._param_covar(X)
+        self.bic = n_samples * np.log(self.rss / n_samples) + \
+            k * np.log(n_samples)
         self.run = True
+
         return self
 
     def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
         """makes predictions of response variable given input params
         Args:
-        X: 
+        X:
             shape = (n_samples, p_features)
             n_samples is number of instances
             p_features is number of features 
@@ -129,12 +136,12 @@ class LinearRegression(LinearBase):
                 uses estimated theta from fitting process
             if array is given:
                 makes prediction from given thetas
-        
+    
         Returns:
         predicted values:
             shape = (n_samples,)
         """
-        if thetas is None: 
+        if thetas is None:
             return X @ self.theta
         return X @ thetas
     
@@ -155,12 +162,12 @@ class LinearRegressionMLE(LinearBase):
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
     lease squares problem min ||Ax - b||, where x = px1, A=nxp, b = nx1
-    - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are 
+    - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are
         maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
         This is same as minimizing 0.5||Ax-b||, the cost function J.
         The jacobian for regression is given by A'(Ax - b) -> (px1) vector
-    - A implementation of MLE based on Newton-CG is provided.  The Hessian is: 
-        A'(Ax - b)A -> pxp matrix  
+    - A implementation of MLE based on Newton-CG is provided.  The Hessian is:
+        A'(Ax - b)A -> pxp matrix
     Todo
     - Levenberg-Marquardt Algorithm
 

@@ -2,11 +2,13 @@
 
 import numpy as np
 from scipy.linalg import solve_triangular
+from sklearn.preprocessing import PolynomialFeatures
 
 
 class MarkovSwitchingRegression:
-    def __init__(self, regime: int = 2):
+    def __init__(self, regime: int = 2, fit_intercept=True):
         self.regime = regime
+        self.fit_intercept = fit_intercept
 
     def _sigmoid(self, z: np.ndarray) -> np.ndarray:
         """Computes the sigmoid function
@@ -17,6 +19,11 @@ class MarkovSwitchingRegression:
         :rtype: np.ndarray
         """
         return 1.0 / (1 + np.exp(-z))
+
+    def _make_polynomial(self, X: np.ndarray) -> np.ndarray: 
+        bias = self.fit_intercept
+        pf = PolynomialFeatures(include_bias=bias)
+        return pf.fit_transform(X)
 
     def _linear_solve(self, A: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Linear solves equation Ax = b
@@ -35,7 +42,8 @@ class MarkovSwitchingRegression:
     def _beta(self,
               s: int,
               params1: np.ndarray,
-              params2: np.ndarray) -> np.ndarray:
+              params2: np.ndarray,
+              ) -> np.ndarray:
         """Computes the beta of Markov Switching process
 
         :param s: the state variable, 0 or 1
@@ -52,10 +60,7 @@ class MarkovSwitchingRegression:
             raise ValueError("state regime not supported")
         return params1 if s == 0 else params2
 
-    def _var(self,
-             s: int,
-             var1: float,
-             var2: float) -> float:
+    def _var(self, s: int, var1: float, var2: float) -> float:
         """Returns variance of Markov Switching process
 
         :param s: state variable, 0 or 1
@@ -72,14 +77,13 @@ class MarkovSwitchingRegression:
             raise ValueError("state regime not supported")
         return var1 if s == 0 else var2
 
-    def _normpdf(self, 
-                 s: int, 
-                 xt: np.ndarray, 
+    def _normpdf(self,
+                 s: int,
+                 xt: np.ndarray,
                  yt: np.ndarray,
-                 guess_params: np.ndarray
+                 guess: np.ndarray,
                  ) -> np.ndarray:
-        """Computes normal density at time t
-           corresponding to regime at state s
+        """Computes normal density at time t corresponding to regime at state s
 
         :param s: state variable
         :type s: int
@@ -87,24 +91,24 @@ class MarkovSwitchingRegression:
         :type xt: np.ndarray
         :param yt: response variable at time t
         :type yt: np.ndarray
-        :param guess_params: parameters of msr
+        :param guess: parameters of msr
          given in following format
          (beta0, beta1, var0, var1)
-        :type guess_params: np.ndarray
+        :type guess: np.ndarray
         :return: normal density at time t
         :rtype: np.ndarray
         """
-        beta = self._beta(s, *guess_params[0:2])
-        var = self._var(s, *guess_params[2:])
+        beta = self._beta(s, *guess[0:2])
+        var = self._var(s, *guess[2:])
         exponent = (yt - xt.T @ beta) ** 2
         exponent /= (-2.0 * var)
         denom = np.sqrt(2 * np.pi * var)
         return exponent / denom
-    
-    def filtered_probabilities(self,
-                               xt: np.ndarray,
-                               yt: np.ndarray,
-                               ) -> np.ndarray:
+
+    def _filtered_probabalities(self,
+                                xt: np.ndarray,
+                                yt: np.ndarray,
+                                ) -> np.ndarray:
         """calculates the filtered probabilities
            given by p(st=j | Ft)
 
@@ -115,13 +119,10 @@ class MarkovSwitchingRegression:
         :return: [description]
         :rtype: np.ndarray
         """
-    
-    def _transition_matrix(self,
-                           pii: float,
-                           pjj: float,
-                           ) -> np.ndarray:
-        """Constructs the transition matrix
-           given the diagonal probabilities
+        pass
+
+    def _transition_matrix(self, pii: float, pjj: float) -> np.ndarray:
+        """Constructs the transition matrix given the diagonal probabilities
 
         :param pii: probability that r.v
          stays at state i given it starts at i
@@ -135,18 +136,14 @@ class MarkovSwitchingRegression:
         :rtype: np.ndarray
         """
         transition_matrix = np.zeros((2, 2))
-        transition_matrix[0,0] = pii
-        transition_matrix[0,1] = 1 - pii
-        transition_matrix[1,1] = pjj
-        transition_matrix[1,0] = 1-pjj
+        transition_matrix[0, 0] = pii
+        transition_matrix[0, 1] = 1 - pii
+        transition_matrix[1, 1] = pjj
+        transition_matrix[1, 0] = 1-pjj
         return transition_matrix
-    
-    def fit(self,
-            X: np.ndarray,
-            y: np.ndarray,
-            ) -> "MarkovSwitchingRegression":
-        """fits two state markov-switching
 
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "MarkovSwitchingRegression":
+        """fits two state markov-switching
 
         :param X: design matrix
         :type X: np.ndarray,
@@ -157,5 +154,10 @@ class MarkovSwitchingRegression:
         :return: fitted parameters to data
         :rtype: MarkovSwitchingRegression
         """
-        initial_guess = np.random.randn(2)
-        pass
+        n_samples, p_features = X.shape[0], X.shape[1]
+        X = self._make_polynomial(X)
+  
+        # estimate intercept, slope, variances for both regimes
+        k = (p_features + self.fit_intercept) * 2 + 2
+        params = np.zeroes(k)
+        return params
