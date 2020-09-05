@@ -20,7 +20,7 @@ class MarkovSwitchingRegression:
         """
         return 1.0 / (1 + np.exp(-z))
 
-    def _make_polynomial(self, X: np.ndarray) -> np.ndarray: 
+    def _make_polynomial(self, X: np.ndarray) -> np.ndarray:
         bias = self.fit_intercept
         pf = PolynomialFeatures(include_bias=bias)
         return pf.fit_transform(X)
@@ -108,18 +108,45 @@ class MarkovSwitchingRegression:
     def _filtered_probabalities(self,
                                 xt: np.ndarray,
                                 yt: np.ndarray,
+                                theta: np.ndarray,
                                 ) -> np.ndarray:
         """calculates the filtered probabilities
            given by p(st=j | Ft)
 
-        :param xt: [description]
-        :type xt: np.ndarray
-        :param yt: [description]
-        :type yt: np.ndarray
+        :param xt: design matrix
+        :type xt: np.ndarray, shape = (n_samples, p_features)
+        :param yt: response variable
+        :type yt: np.ndarray, shape = (n_samples, 1)
+        :param theta: parameters to estimate
+         given by (beta0, beta1, var0, var1, p, q)
+         where p and q are initial values used in sigmoid function
+        :type theta: np.ndarray
         :return: [description]
         :rtype: np.ndarray
         """
-        pass
+        # step 1; initiate starting values
+        n_samples = xt.shape[0]
+        hfilter = np.zeros(n_samples)
+        eta_t = np.zeeros(n_samples)
+
+        # create transition matrix
+        pii, pjj = self._sigmoid(theta[-2:])
+        P = self._transition_matrix(pii, pjj)
+
+        # linear solve to get starting values of filter
+        I = np.ones(2)[:np.newaxis]
+        A = np.concatenate((I - P, I.T))
+        b = np.zeros(self.regime + 1)
+        b[-1] = 1
+        hfilter[0] = self._linear_solve(A, b)
+
+        # predict next period probabilities
+        hfilter[1] = P @ hfilter[0]
+
+        # compute the density at time 0
+        eta_t[0] = self._normpdf([0, 1], xt, yt, theta)
+        return eta_t[0]
+
 
     def _transition_matrix(self, pii: float, pjj: float) -> np.ndarray:
         """Constructs the transition matrix given the diagonal probabilities
@@ -152,12 +179,15 @@ class MarkovSwitchingRegression:
         :type y: np.ndarray,
          shape = (n_samples,)
         :return: fitted parameters to data
+         param_shape = 2 * (bias + p_features) * k_regimes
         :rtype: MarkovSwitchingRegression
         """
-        n_samples, p_features = X.shape[0], X.shape[1]
+        p_features = X.shape[1]
         X = self._make_polynomial(X)
 
-        # estimate intercept, slope, variances for both regimes
-        k = (p_features + self.fit_intercept) * 2 + 2
-        params = np.zeroes(k)
+        # total parameters to be estimated
+        # estimate bias, slope, variances for two regimes and transition prob
+        bias = self.fit_intercept
+        k = 2 * (bias + p_features) * self.regime
+        params = np.zeros(k)
         return params
