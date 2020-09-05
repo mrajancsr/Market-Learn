@@ -5,7 +5,8 @@
         "python": "$pythonPath -u $fullFileName" 
     },
     "python.linting.pylintEnabled": true,
-    "python.linting.flake8Enabled": true,
     "python.terminal.executeInFileDir": true,
-    "code-runner.fileDirectoryAsCwd": true
+    "code-runner.fileDirectoryAsCwd": true,
+    "python.linting.flake8Enabled": true,
+    "autoDocstring.docstringFormat": "sphinx"
 }
