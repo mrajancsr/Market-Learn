@@ -126,26 +126,23 @@ class MarkovSwitchingRegression:
         """
         # step 1; initiate starting values
         n_samples = xt.shape[0]
-        hfilter = np.zeros(n_samples)
-        eta_t = np.zeeros(n_samples)
+        hfilter = np.zeros((n_samples, self.regime))
+        eta_t = np.zeros((n_samples, self.regime))
 
         # create transition matrix
         pii, pjj = self._sigmoid(theta[-2:])
         P = self._transition_matrix(pii, pjj)
 
         # linear solve to get starting values of filter
-        I = np.ones(2)[:np.newaxis]
-        A = np.concatenate((I - P, I.T))
+        ones = np.ones(2)[:, np.newaxis]
+        A = np.concatenate((ones - P, ones.T))
         b = np.zeros(self.regime + 1)
         b[-1] = 1
         hfilter[0] = self._linear_solve(A, b)
 
-        # predict next period probabilities
-        hfilter[1] = P @ hfilter[0]
-
         # compute the density at time 0
-        eta_t[0] = self._normpdf([0, 1], xt, yt, theta)
-        return eta_t[0]
+        #eta_t[0] = self._normpdf([0, 1], xt, yt, theta[:-2])
+        return hfilter
 
 
     def _transition_matrix(self, pii: float, pjj: float) -> np.ndarray:
