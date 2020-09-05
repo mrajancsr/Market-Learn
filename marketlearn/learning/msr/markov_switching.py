@@ -156,7 +156,7 @@ class MarkovSwitchingRegression:
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         X = self._make_polynomial(X)
-  
+
         # estimate intercept, slope, variances for both regimes
         k = (p_features + self.fit_intercept) * 2 + 2
         params = np.zeroes(k)
