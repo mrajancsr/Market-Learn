@@ -118,7 +118,7 @@ class MarkovSwitchingRegression:
                        X: np.ndarray,
                        y: np.ndarray,
                        theta: np.ndarray,
-                       ) -> float:
+                       ) -> np.float64:
         """returns loglikelihood of two state markov
            switching model
 
@@ -170,6 +170,24 @@ class MarkovSwitchingRegression:
 
         # calculate the loglikelihood
         return np.log(cond_density).mean()
+
+    def _objective_func(self,
+                        guess: np.ndarray,
+                        X: np.ndarray,
+                        y: np.ndarray) -> np.float64:
+        """the objective function to be minimized
+
+        :param guess: parameters for optimization
+        :type guess: np.ndarray
+        :param X: design matrix
+        :type X: np.ndarray
+        :param y: response variable
+        :type y: np.ndarray
+        :return: scaler value from minimization
+        :rtype: np.float64
+        """
+        f = self._loglikelihood(X, y, theta=guess)
+        return -f
 
     def _transition_matrix(self, pii: float, pjj: float) -> np.ndarray:
         """Constructs the transition matrix given the diagonal probabilities
