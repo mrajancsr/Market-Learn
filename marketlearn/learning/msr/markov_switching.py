@@ -111,7 +111,7 @@ class MarkovSwitchingRegression:
                        X: np.ndarray,
                        y: np.ndarray,
                        theta: np.ndarray,
-                       ):
+                       ) -> float:
         """returns loglikelihood of two state markov
            switching model
 
@@ -137,6 +137,7 @@ class MarkovSwitchingRegression:
         n_samples = X.shape[0]
         hfilter = np.zeros((n_samples, self.regime))
         eta = np.zeros((n_samples, self.regime))
+        cond_density = np.zeros(n_samples)
         predictions = np.zeros((n_samples, self.regime))
 
         # create transition matrix
@@ -152,7 +153,6 @@ class MarkovSwitchingRegression:
         predictions[0] = P @ hfilter[0]
 
         # compute the densities for two regimes at time 0
-        cond_density = np.zeros(n_samples)
         eta[0] = self._normpdf(X[0], y[0], [intercept, slope], sig)
 
         # step2: start the filter
@@ -164,9 +164,75 @@ class MarkovSwitchingRegression:
             predictions[t] = P @ hfilter[t]
             eta[t] = self._normpdf(X[t], y[t], [intercept, slope], sig)
 
-        # step3: calculate the loglikelihood
+        # step3: calculate the loglikelihood, ignore index 0
         return np.log(cond_density[1:]).mean()
-    
+
+    def hamilton_filter(self,
+                        X: np.ndarray,
+                        y: np.ndarray,
+                        predict: bool = False,
+                        ) -> np.ndarray:
+        """Computes the Hamilton Filter, p(st=j|Ft)
+
+        Assumes self.fit() has been called prior to computing
+        the filter.  If fit() is not called, error is raised
+
+        :param X: design_matrix
+        :type X: np.ndarray, shape = (n_samples, p_features)
+         n_samples is number of observations
+         p_features is number of features
+        :param y: response variable
+        :type y: np.ndarray, shape = (n_samples,)
+        :param predict: if True return prediction
+         probabilities along with the filter as a tuple,
+         defaults to False
+        :type predict: bool, optional
+        :raises AttributeError: if fit() has not been called
+        :return: Filtered probabilities
+        :rtype: np.ndarray
+        """
+        if self.theta is None:
+            raise AttributeError("fit() has not been called")
+
+        # get parameters from theta
+        intercept, slope = self.theta[:2], self.theta[2:4]
+        sig = self.theta[4:6]
+        prob = self.theta[6:]
+
+        # step 1; initiate starting values
+        X = self._make_polynomial(X)
+        n_samples = X.shape[0]
+        hfilter = np.zeros((n_samples, self.regime))
+        eta = np.zeros((n_samples, self.regime))
+        cond_density = np.zeros(n_samples)
+        predictions = np.zeros((n_samples, self.regime))
+
+        # create transition matrix
+        pii, pjj = self._sigmoid(prob)
+        P = self._transition_matrix(pii, pjj)
+
+        # linear solve to start the filter
+        ones = np.ones(2)[:, np.newaxis]
+        A = np.concatenate((ones - P, ones.T))
+        b = np.zeros(self.regime + 1)
+        b[-1] = 1
+        hfilter[0] = self._linear_solve(A, b)
+        predictions[0] = P @ hfilter[0]
+
+        # compute the densities for two regimes at time 0
+        eta[0] = self._normpdf(X[0], y[0], [intercept, slope], sig)
+
+        # step2: start the filter
+        for t in range(1, n_samples):
+            exponent = predictions[t-1] * eta[t-1]
+            loglik = exponent.sum()
+            cond_density[t] = loglik
+            hfilter[t] = exponent / loglik
+            predictions[t] = P @ hfilter[t]
+            eta[t] = self._normpdf(X[t], y[t], [intercept, slope], sig)
+
+        return hfilter if predict is True else (hfilter, predictions)
+
     def lik(self, theta, x, y):
         from numpy import sqrt, pi, exp
         alpha1 = theta[0]
@@ -240,18 +306,16 @@ class MarkovSwitchingRegression:
          param_shape = 2 * (bias + p_features) * k_regimes
         :rtype: MarkovSwitchingRegression
         """
-        p_features = X.shape[1]
         X = self._make_polynomial(X)
 
         # total parameters to be estimated
         # estimate bias, slope, variances for two regimes and transition prob
-        bias = self.fit_intercept
         # k = 2 * (bias + p_features) * self.regime
         guess_params = np.array([0.05, 0.01, 0.2, 0.4, y.std(), y.std(), 0.5, 0.5])
         self.theta = minimize(self._objective_func,
                               guess_params,
-                              method='BFGS',
+                              method='SLSQP',
                               options={'disp': True},
                               args=(X, y))['x']
-        
+
         return self
