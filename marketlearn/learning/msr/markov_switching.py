@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.linalg import solve_triangular
+from scipy.optimize import minimize
 from sklearn.preprocessing import PolynomialFeatures
 
 
@@ -80,10 +81,10 @@ class MarkovSwitchingRegression:
         return var1 if s == 0 else var2
 
     def _normpdf(self,
-                 s: int,
                  xt: np.ndarray,
                  yt: np.ndarray,
-                 guess: np.ndarray,
+                 beta: np.ndarray,
+                 sig: float,
                  ) -> np.ndarray:
         """Computes normal density at time t corresponding to regime at state s
 
@@ -100,25 +101,17 @@ class MarkovSwitchingRegression:
         :return: normal density at time t
         :rtype: np.ndarray
         """
-        params1 = guess[:4]
-        params2 = guess[4:-2]
-        beta = self._beta(s, params1[:2], params1[2:])
-        var = self._var(s, params2[0], params2[1])
-        self.beta = beta
-        self.var = var
-        self.xt = xt
-        self.yt = yt
 
-        exponent = (yt - xt @ beta) ** 2
-        exponent /= (-2.0 * var)
-        denom = np.sqrt(2 * np.pi * var)
+        zt = yt - xt @ beta
+        exponent = np.exp(-(zt ** 2) / (2 * sig**2))
+        denom = np.sqrt(2 * np.pi) * sig
         return exponent / denom
 
     def _loglikelihood(self,
                        X: np.ndarray,
                        y: np.ndarray,
                        theta: np.ndarray,
-                       ) -> np.float64:
+                       ):
         """returns loglikelihood of two state markov
            switching model
 
@@ -128,18 +121,26 @@ class MarkovSwitchingRegression:
         :type y: np.ndarray, shape = (n_samples,)
         :param thetas: parameters of msr given by:
          (beta00, beta01, beta10, beta11, var0, var1, p, q)
+         (beta00 & beta10 are intercepts)
+         (beta01 & beta11 are slopes)
+         (var0 & var1 are regime variances)
         :type theta: np.ndarray
         :return: log-likelihood function value
         :rtype: float
         """
+        # get parameters from theta
+        intercept, slope = theta[:2], theta[2:4]
+        sig = theta[4:6]
+        prob = theta[6:]
+
         # step 1; initiate starting values
         n_samples = X.shape[0]
         hfilter = np.zeros((n_samples, self.regime))
-        eta_t = np.zeros((n_samples, self.regime))
+        eta = np.zeros((n_samples, self.regime))
         predictions = np.zeros((n_samples, self.regime))
 
         # create transition matrix
-        pii, pjj = self._sigmoid(theta[-2:])
+        pii, pjj = self._sigmoid(prob)
         P = self._transition_matrix(pii, pjj)
 
         # linear solve to start the filter
@@ -150,31 +151,47 @@ class MarkovSwitchingRegression:
         hfilter[0] = self._linear_solve(A, b)
         predictions[0] = P @ hfilter[0]
 
-        # compute the density at time 0
-        densities = np.zeros(self.regime)
+        # compute the densities for two regimes at time 0
         cond_density = np.zeros(n_samples)
-        densities[0] = self._normpdf(0, X[0], y[0], theta)
-        densities[1] = self._normpdf(1, X[0], y[0], theta)
-        eta_t[0] = densities
+        eta[0] = self._normpdf(X[0], y[0], [intercept, slope], sig)
 
         # step2: start the filter
         for t in range(1, n_samples):
-            exponent = predictions[t-1] * eta_t[t]
+            exponent = predictions[t-1] * eta[t-1]
             loglik = exponent.sum()
             cond_density[t] = loglik
             hfilter[t] = exponent / loglik
             predictions[t] = P @ hfilter[t]
-            densities[0] = self._normpdf(0, X[t], y[t], theta)
-            densities[1] = self._normpdf(1, X[t], y[t], theta)
-            eta_t[t] = densities
+            eta[t] = self._normpdf(X[t], y[t], [intercept, slope], sig)
 
-        # calculate the loglikelihood
-        return np.log(cond_density).mean()
+        # step3: calculate the loglikelihood
+        return np.log(cond_density[1:]).mean()
+    
+    def lik(self, theta, x, y):
+        from numpy import sqrt, pi, exp
+        alpha1 = theta[0]
+        alpha2 = theta[1]
+        alpha3 = theta[2]
+        alpha4 = theta[3]
+        alpha5 = theta[4]
+        alpha6 = theta[5]
+        p11 = 1 / (1 + exp(-theta[6]))
+        p22 = 1 / (1 + exp(-theta[7]))
+        P = self._transition_matrix(p11, p22)
+        dist1 = (1/(alpha5*sqrt(2*pi))) * \
+                 exp((-(y - alpha1 - alpha3*x)**2)/(2*alpha5**2))
+        dist2 = (1/(alpha6*sqrt(2*pi))) * \
+                 exp((-(y - alpha2 - alpha4*x)**2)/(2*alpha6**2))
+        dist = np.array([dist1, dist2])
+        ones = np.ones(2)
+        self.dist = dist
+        P = self._transition_matrix(p11, p22)
+        return P
 
     def _objective_func(self,
                         guess: np.ndarray,
                         X: np.ndarray,
-                        y: np.ndarray) -> np.float64:
+                        y: np.ndarray):
         """the objective function to be minimized
 
         :param guess: parameters for optimization
@@ -229,7 +246,12 @@ class MarkovSwitchingRegression:
         # total parameters to be estimated
         # estimate bias, slope, variances for two regimes and transition prob
         bias = self.fit_intercept
-        k = 2 * (bias + p_features) * self.regime
-        params = np.array([0.2, 0.3, 0.4, 0.6, y.var(ddof=1), X.var(ddof=1), 0.5, 0.5])
-        prob = self._filtered_probabalities(X, y, params)
-        return prob
+        # k = 2 * (bias + p_features) * self.regime
+        guess_params = np.array([0.05, 0.01, 0.2, 0.4, y.std(), y.std(), 0.5, 0.5])
+        self.theta = minimize(self._objective_func,
+                              guess_params,
+                              method='BFGS',
+                              options={'disp': True},
+                              args=(X, y))['x']
+        
+        return self
