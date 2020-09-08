@@ -233,27 +233,6 @@ class MarkovSwitchingRegression:
 
         return hfilter if predict is True else (hfilter, predictions)
 
-    def lik(self, theta, x, y):
-        from numpy import sqrt, pi, exp
-        alpha1 = theta[0]
-        alpha2 = theta[1]
-        alpha3 = theta[2]
-        alpha4 = theta[3]
-        alpha5 = theta[4]
-        alpha6 = theta[5]
-        p11 = 1 / (1 + exp(-theta[6]))
-        p22 = 1 / (1 + exp(-theta[7]))
-        P = self._transition_matrix(p11, p22)
-        dist1 = (1/(alpha5*sqrt(2*pi))) * \
-                 exp((-(y - alpha1 - alpha3*x)**2)/(2*alpha5**2))
-        dist2 = (1/(alpha6*sqrt(2*pi))) * \
-                 exp((-(y - alpha2 - alpha4*x)**2)/(2*alpha6**2))
-        dist = np.array([dist1, dist2])
-        ones = np.ones(2)
-        self.dist = dist
-        P = self._transition_matrix(p11, p22)
-        return P
-
     def _objective_func(self,
                         guess: np.ndarray,
                         X: np.ndarray,
