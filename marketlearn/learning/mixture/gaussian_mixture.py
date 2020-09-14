@@ -82,16 +82,31 @@ class GMM:
         :param obs: [description]
         :type obs: [type]
         """
+        # initial guess parameters
         mu1, mu2 = obs.mean(), obs.mean()
         sig1, sig2 = obs.std(), obs.std()
+        pi = 0.5
         theta = [(mu1, mu2, sig1, sig2, 0.5)]
 
         #iterate
         for c in range(self.max_iter):
             if show:
                 self._pprint(c, theta[c])
-            gamma = self.estep(obs, *theta)
+            gamma = self.estep(obs, mu1, mu2, sig1, sig2, pi)
             mu1, mu2, sig1, sig2, pi = self.mstep(obs, gamma)
             theta.append((mu1, mu2, sig1, sig2, pi))
-        
+
         return pd.DataFrame(theta)
+    
+    def simulate_gmm(self):
+        """simulates and fix a gaussian mixture model with two
+        components
+        """
+        # generate mixture of two gaussians thats mixed
+        mu_arr = np.array([5, 12])
+        sigma_arr = np.array([1.5, 6])
+        zi = np.random.choice([0, 1], size=1000, p=[0.7, 0.3])
+        dist1 = np.random.normal(5, 1.5, 1000)
+        dist2 = np.random.normal(12, 6, 1000)
+        xs = np.where(zi == 0, dist1, dist2)
+        return xs
