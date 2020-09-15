@@ -45,13 +45,13 @@ class GaussianMixture:
         return self
 
     def _norm(self,
-             obs: np.ndarray,
-             mean: np.ndarray,
-             sigma: np.ndarray,
-             ) -> np.ndarray:
+              obs: np.ndarray,
+              mean: np.ndarray,
+              sigma: np.ndarray,
+              ) -> np.ndarray:
         """Constructs univariate normal densities
 
-        :param obs: observed sample
+        :param obs: observed sample of mixtures
         :type obs: np.ndarray,
          shape = (n_samples,)
         :param mean: mean vector of individual components
@@ -67,7 +67,7 @@ class GaussianMixture:
         dist = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
         return np.column_stack(tuple(dist))
 
-    def posterior_prob(self, eta: np.ndarray, prob: float):
+    def posterior_prob(self, eta: np.ndarray, prob: np.ndarray):
         """Computes the posterior probabilities given densities
 
         :param eta: densities of Gaussian mixture
@@ -77,7 +77,7 @@ class GaussianMixture:
          came from density i
         :type prob: float
         """
-        return eta[:, 0] * prob / (prob * eta[:, 0] + (1-prob) * eta[:, 1])
+        return eta * prob / (eta @ prob)[:, np.newaxis]
 
     def estep(self,
               obs: np.ndarray,
@@ -99,14 +99,11 @@ class GaussianMixture:
          came from density i
         :type prob: float
         """
-        # compute the normal density of each mixture
+        # compute the normal density and posterior prob of each mixture
         normal_densities = self._norm(obs, mean, sigma)
-
-        # compute the posterior probabilities
         gamma = self.posterior_prob(normal_densities, prob)
-
         return gamma
-    
+
     def mstep(self,
               obs: np.ndarray,
               gamma: np.ndarray,
@@ -171,12 +168,12 @@ def gmm_mstep(trial, gamma):
     pi = np.mean(gamma)
     return mu1, mu2, sig1, sig2, pi
 
-def simulate_gaussian(show=False):
+def simulate_gaussian(show=False, maxiter=15):
     X = np.random.multivariate_normal([-5, 10], [[0.5, 0], [0, 9]], 1000)
     zi = np.random.choice([0, 1], size=1000, p=[0.75, 0.25])
     xs = np.where(zi == 0, X[:, 0], X[:, 1])
     n = len(xs)
     idx = np.random.randint(low=0, high=n, size=2)
-    theta, _ = gmm_em(xs, xs[idx[0]], xs[idx[1]], 1, 1, 0.5, maxiter=30, show=show)
+    theta, _ = gmm_em(xs, xs[idx[0]], xs[idx[1]], 1, 1, 0.5, maxiter=maxiter, show=show)
 
     return pd.DataFrame(theta), idx, xs, X
