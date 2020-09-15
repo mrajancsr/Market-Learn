@@ -1,8 +1,7 @@
-import seaborn as sns
+"""Implementation of Gaussian Mixture Model EM Algorithm"""
 from scipy.stats import norm
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 
 
 class GaussianMixture:
@@ -119,6 +118,21 @@ class GaussianMixture:
         :return: estimates of means, sigmas and
          state probabilities
         :rtype: tuple
+        """
+        nk = gamma.sum(axis=0)
+        mu_k = gamma.T @ obs / nk
+        sig_k = (gamma * (obs - mu_k[:, np.newaxis]).T).sum(axis=0) / nk
+        pi_k = gamma.mean(axis=0)
+        return mu_k, np.sqrt(sig_k), pi_k
+
+    def fit(self, X: np.ndarray) -> "GaussianMixture":
+        """fits a Gaussian Mixture model via EM
+
+        :param X: observations of mixtures
+        :type X: np.ndarray,
+         shape = (n_samples,)
+        :return: [description]
+        :rtype: GaussianMixture
         """
         pass
 
