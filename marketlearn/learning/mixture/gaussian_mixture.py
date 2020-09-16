@@ -8,13 +8,16 @@ import pandas as pd
 class GaussianMixture:
     """Class implements the Gaussian Mixture Model
 
-    Currently only supports a two mixture model
+    Currently only supports a one and two mixture model
     """
     def __init__(self,
                  n_components: int = 1,
                  tol: float = 1e-3,
                  max_iter=100):
         """Default Constructor used to initialize gmm model
+
+        When the constructor is created, theta param is
+        initialized to None
 
         :param tol: convergence threshold.  EM iterations will stop
          when lower bound average gain is below threshold
@@ -28,6 +31,7 @@ class GaussianMixture:
         self.n_components = n_components
         self.tol = tol
         self.max_iter = max_iter
+        self.theta = None
 
     def _norm(self,
               obs: np.ndarray,
