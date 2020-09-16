@@ -1,5 +1,6 @@
 """Implementation of Gaussian Mixture Model EM Algorithm"""
 from scipy.stats import norm
+from itertools import chain
 import numpy as np
 import pandas as pd
 
@@ -10,7 +11,7 @@ class GaussianMixture:
     Currently only supports a two mixture model
     """
     def __init__(self,
-                 n_components: int = 2,
+                 n_components: int = 1,
                  tol: float = 1e-3,
                  max_iter=100):
         """Default Constructor used to initialize gmm model
@@ -20,28 +21,13 @@ class GaussianMixture:
          defaults to 1e-3
         :type tol: float
         :param n_components: number of mixture components
-        :type n_components: int, defaults to 2, optional
+        :type n_components: int, defaults to 1, optional
         :param max_iter: number of EM iterations to perform,
         :type max_iter: int, defaults to 100, optional
         """
         self.n_components = n_components
         self.tol = tol
         self.max_iter = max_iter
-
-    def _initialize_params(self) -> "GaussianMixture":
-        """Initializes parameters of GMM based on n_components
-
-        Creates the initial values for mean vector, covariance matrix
-        of the mixture and the state probability vector, p(zi = j | xi, theta)
-
-        :return: object with default parameters
-        :rtype: GaussianMixture
-        """
-        n = self.n_components
-        self.mean_arr = np.zeros(n)
-        self.sigma_arr = np.ones(n)
-        self.prob = np.array([0.5, 0.5])
-        return self
 
     def _norm(self,
               obs: np.ndarray,
@@ -82,7 +68,7 @@ class GaussianMixture:
               obs: np.ndarray,
               mean: np.ndarray,
               sigma: np.ndarray,
-              prob: float):
+              prob: np.float64) -> np.ndarray:
         """Computes the e-step in EM algorithm
 
         :param obs: observed sample of mixtures
@@ -120,74 +106,43 @@ class GaussianMixture:
         :rtype: tuple
         """
         nk = gamma.sum(axis=0)
-        mu_k = gamma.T @ obs / nk
-        sig_k = (gamma * (obs - mu_k[:, np.newaxis]).T).sum(axis=0) / nk
-        pi_k = gamma.mean(axis=0)
-        return mu_k, np.sqrt(sig_k), pi_k
+        muk = (gamma.T @ obs / nk)[:, np.newaxis]
+        vark = (gamma * ((obs - muk)**2).T).sum(axis=0) / nk
+        pik = gamma.mean(axis=0)
+        return muk.flatten(), np.sqrt(vark), pik
 
-    def fit(self, X: np.ndarray) -> "GaussianMixture":
+    def fit(self, obs: np.ndarray, show=False) -> "GaussianMixture":
         """fits a Gaussian Mixture model via EM
 
-        :param X: observations of mixtures
-        :type X: np.ndarray,
+        :param obs: observations of mixtures
+        :type obs: np.ndarray,
          shape = (n_samples,)
         :return: [description]
         :rtype: GaussianMixture
         """
-        pass
+        n = obs.shape[0]
+        n_component = self.n_components
 
-def gmm_em(trial, mu1, mu2, sigma1, sigma2, pi, maxiter=0, show=False):
-    theta = [(mu1, mu2, sigma1, sigma2, pi)]
-    # iterate
-    for c in range(maxiter):
-        if show:
-            print("#%d:\t%0.2f %0.2f %0.2f %0.2f %0.2f" % (c, mu1, mu2, sigma1, sigma2, pi))
-        gamma = gmm_estep(trial, mu1, mu2, sigma1, sigma2, pi)
-        mu1, mu2, sigma1, sigma2, pi = gmm_mstep(trial, gamma)
-        theta.append((mu1, mu2, sigma1, sigma2, pi))
-    return theta, (mu1, mu2, sigma1, sigma2, pi)
+        # pick random index from obs for initial mean estimate
+        idx = np.random.randint(low=0, high=n, size=n_component)
 
+        # initialize latent prob, means and sigmas
+        pk = np.array([0.5]*n_component)
+        muk = obs[idx]
+        sigk = np.ones(n_component)
+        theta = [0] * self.max_iter
 
-def norm_likelihood(trial, mu1, mu2, sigma1, sigma2, pi):
-    dist1 = norm(loc=mu1, scale=sigma1).pdf(trial)
-    dist2 = norm(loc=mu2, scale=sigma2).pdf(trial)
-    return np.log(dist1 * pi + (1-pi)*dist2).sum()
+        # iterate
+        for i in range(self.max_iter):
+            theta[i] = chain(muk, sigk, pk)
+            if show:
+                items = chain(muk, sigk, pk)
+                print(f"#{i} ", ", ".join(f"{c:.2f}" for c in items))
+            # compute the e-step
+            gamma = self.estep(obs, muk, sigk, pk)
 
-def normal_density(trial, mu1, mu2, sigma1, sigma2):
-    n = len(trial)
-    dist1 = norm(loc=mu1, scale=sigma1).pdf(trial)
-    dist2 = norm(loc=mu2, scale=sigma2).pdf(trial)
-    densities = np.column_stack((dist1, dist2))
-    return densities
+            # compute the m-step
+            muk, sigk, pk = self.mstep(obs, gamma)
 
-def posterior_density(densities, pi):
-    n = densities.shape[0]
-    d = densities[:, 0]
-    d2 = densities[:, 1]
-    posterior = np.zeros(n)
-    posterior = (d * pi) / (pi * d + (1 - pi) * d2)
-    return posterior
-
-def gmm_estep(trial, mu1, mu2, sigma1, sigma2, pi):
-    norm_d = normal_density(trial, mu1, mu2, sigma1, sigma2)
-    gamma = posterior_density(norm_d, pi)
-    return gamma
-
-def gmm_mstep(trial, gamma):
-    n = trial.shape[0]
-    mu1 = np.sum(gamma * trial)/np.sum(gamma)
-    mu2 = np.sum((1 - gamma)*trial)/np.sum(1-gamma)
-    sig1 = np.sqrt(np.sum(gamma * (trial - mu1)**2)/np.sum(gamma))
-    sig2 = np.sqrt(np.sum((1 - gamma)*(trial - mu2)**2)/np.sum(1-gamma))
-    pi = np.mean(gamma)
-    return mu1, mu2, sig1, sig2, pi
-
-def simulate_gaussian(show=False, maxiter=15):
-    X = np.random.multivariate_normal([-5, 10], [[0.5, 0], [0, 9]], 1000)
-    zi = np.random.choice([0, 1], size=1000, p=[0.75, 0.25])
-    xs = np.where(zi == 0, X[:, 0], X[:, 1])
-    n = len(xs)
-    idx = np.random.randint(low=0, high=n, size=2)
-    theta, _ = gmm_em(xs, xs[idx[0]], xs[idx[1]], 1, 1, 0.5, maxiter=maxiter, show=show)
-
-    return pd.DataFrame(theta), idx, xs, X
+        self.theta = pd.DataFrame(theta)
+        return self
