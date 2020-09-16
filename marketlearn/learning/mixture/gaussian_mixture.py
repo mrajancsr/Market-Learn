@@ -8,7 +8,7 @@ import pandas as pd
 class GaussianMixture:
     """Class implements the Gaussian Mixture Model
 
-    Currently only supports a one and two mixture model
+    Currently supports k-Gaussian mixtures
     """
     def __init__(self,
                  n_components: int = 1,
@@ -131,7 +131,7 @@ class GaussianMixture:
         idx = np.random.randint(low=0, high=n, size=n_component)
 
         # initialize latent prob, means and sigmas
-        pk = np.array([0.5]*n_component)
+        pk = np.ones(n_component) / (n_component + 1)
         muk = obs[idx]
         sigk = np.ones(n_component)
         theta = [0] * self.max_iter
