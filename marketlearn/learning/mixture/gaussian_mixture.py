@@ -6,7 +6,7 @@ import pandas as pd
 
 
 class GaussianMixture:
-    """Class implements the Gaussian Mixture Model
+    """Class implements the Gaussian Mixture Model (gmm)
 
     Currently supports k-Gaussian mixtures
     """
