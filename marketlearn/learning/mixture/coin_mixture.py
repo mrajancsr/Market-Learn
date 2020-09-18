@@ -14,6 +14,7 @@ class CoinMixture:
     from n_coins and performing m_flips of each coin
     to estimate probability that a particular coin was
     picked
+    - Based on following paper: https://www.nature.com/articles/nbt1406
 
     Currently supports 2 coin mixtures
     """
@@ -58,7 +59,7 @@ class CoinMixture:
         n = trial.shape[1]
         num_heads = trial.sum(axis=1)
         return binom(n, p).logpmf(num_heads)
-    
+
     def posterior_prob(self, eta: np.ndarray, p: np.ndarray):
         """Computes the posterior probabilities given pmf
 
