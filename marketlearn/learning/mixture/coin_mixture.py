@@ -8,12 +8,18 @@ from scipy.optimize import minimize
 
 
 class CoinMixture:
-    """Class implements the Coin Mixture Model (gmm)
+    """Class implements the Coin Mixture Model (cmm)
+
+    Experiment consists of randomly picking one coin
+    from n_coins and performing m_flips of each coin
+    to estimate probability that a particular coin was
+    picked
 
     Currently supports 2 coin mixtures
     """
     def __init__(self,
-                 n_components: int = 1,
+                 n_coins: int = 1,
+                 m_flips: int = 10,
                  tol: float = 1e-3,
                  max_iter=100):
         """Default Constructor used to initialize cmm model
@@ -30,20 +36,44 @@ class CoinMixture:
         :param max_iter: number of EM iterations to perform,
         :type max_iter: int, defaults to 100, optional
         """
-        self.n_components = n_components
+        self.n_coins = n_coins
+        self.m_flips = m_flips
         self.tol = tol
         self.max_iter = max_iter
         self.theta = None
 
-    def _binom(self, obs: np.ndarray, bias):
-        n = obs.shape[0]
-        num_heads = obs.count("H")
-        return binom(n, bias).pmf(num_heads)
+    def _binom(self, trial: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """computes the probability of successes in each trial
+
+        :param trial: m_flips each trial
+        :type trial: np.ndarray,
+         shape = (n_trials, m_flips)
+         n_trials is total number of trials performed
+         m_flips is number of flips per trial
+        :param p: probability of successes in each trial
+        :type p: np.ndarray
+        :return: [description]
+        :rtype: np.ndarray
+        """
+        n = trial.shape[1]
+        num_heads = trial.sum(axis=1)
+        return binom(n, p).logpmf(num_heads)
+    
+    def posterior_prob(self, eta: np.ndarray, p: np.ndarray):
+        """Computes the posterior probabilities given pmf
+
+        :param eta: pmf of binomial mixture
+        :type eta: np.ndarray,
+         shape = (n_trials,)
+        :param p: probability of success in each trial
+        :type prob: np.ndarray
+        """
+        return eta * p / (eta @ p)
 
     def estep(self,
-             obs: np.ndarray,
-             prob: np.ndarray,
-             ) -> np.ndarray:
+              trial: np.ndarray,
+              p: np.ndarray,
+              ) -> tuple:
         """Computes the e-step in EM algorithm
 
         :param obs: observed samples of mixtures
@@ -55,44 +85,33 @@ class CoinMixture:
         :return: [description]
         :rtype: np.ndarray
         """
+        # compute pmf of each trial
+        coin_pmf = self._binom(trial, p)
+
+        # compute the posterior prob of each trial
+        gamma = self.posterior_prob(coin_pmf, p)
+
+        # get estimate of count of heads/tail per trial
+        m_flips = trial.shape[1]
+        heads_per_trial = gamma * trial.sum(axis=1)
+        tails_per_trial = gamma * (m_flips - heads_per_trial)
+
+        return (heads_per_trial, tails_per_trial)
+
+    def mstep(self,
+              heads_per_trial: np.ndarray,
+              tails_per_trial: np.ndarray,
+              ):
+        """[summary]
+
+        :param heads_per_trial: [description]
+        :type heads_per_trial: np.ndarray
+        :param tails_per_trial: [description]
+        :type tails_per_trial: np.ndarray
+        :return: [description]
+        :rtype: tuple
+        """
+        return heads_per_trial / (heads_per_trial + tails_per_trial)
+
+    def fit(self):
         pass
-
-def coin_em(trials, theta_A=None, theta_B=None, maxiter=0):
-    # initial guess
-    theta_A = theta_A or np.random.random()
-    theta_B = theta_B or np.random.random()
-    thetas = [(theta_A, theta_B)]
-    # iterate
-    for c in range(maxiter):
-        print("#%d:\t%0.2f %0.2f" % (c, theta_A, theta_B))
-        heads_A, tails_A, heads_B, tails_B = e_step(trials, theta_A, theta_B)
-        theta_A, theta_B = m_step(heads_A, tails_A, heads_B, tails_B)
-        thetas.append((theta_A, theta_B))
-    return thetas, (theta_A, theta_B)
-
-def e_step(trials, theta_A, theta_B):
-    """produce expected value for  heads_A, heads_B, tails_B
-    over the flips given the coin biases
-    """
-    heads_A, tails_A = 0, 0
-    heads_B, tails_B = 0, 0
-    for trial in trials:
-        likelihood_A = coin_likelihood(trial, theta_A)
-        likelihood_B = coin_likelihood(trial, theta_B)
-        p_A = likelihood_A / (likelihood_A + likelihood_B)
-        p_B = likelihood_B / (likelihood_A + likelihood_B)
-        heads_A += p_A * trial.count("H")
-        tails_A += p_A * trial.count("T")
-        heads_B += p_B * trial.count("H")
-        tails_B += p_B * trial.count("T")
-    return heads_A, tails_A, heads_B, tails_B
-
-def m_step(heads_A, tails_A, heads_B, tails_B):
-    theta_A = heads_A / (heads_A + heads_B)
-    theta_B = heads_B / (heads_A + heads_B)
-    return theta_A, theta_B
-
-def coin_likelihood(trial, bias):
-    numHeads = trial.count("H")
-    n = len(trial)
-    return binom(n, bias).pmf(numHeads)
