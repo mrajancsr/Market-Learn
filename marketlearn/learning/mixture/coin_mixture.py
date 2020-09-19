@@ -1,10 +1,12 @@
-   """Implementation of coin mixture via EM algorithm"""
+"""Implementation of coin mixture via EM algorithm"""
 
 
-import pandas as pd
-import numpy as np
 from scipy.stats import bernoulli, binom
 from scipy.optimize import minimize
+from numpy.random import sample
+from itertools import chain
+import pandas as pd
+import numpy as np
 
 
 class CoinMixture:
@@ -58,7 +60,8 @@ class CoinMixture:
         """
         n = trial.shape[1]
         num_heads = trial.sum(axis=1)
-        return binom(n, p).logpmf(num_heads)
+        dist = map(lambda x: binom(n, x).pmf(num_heads), p)
+        return np.column_stack(tuple(dist))
 
     def posterior_prob(self, eta: np.ndarray, p: np.ndarray):
         """Computes the posterior probabilities given pmf
@@ -69,7 +72,7 @@ class CoinMixture:
         :param p: probability of success in each trial
         :type prob: np.ndarray
         """
-        return eta * p / (eta @ p)
+        return eta * p / (eta @ p[:, np.newaxis])
 
     def estep(self,
               trial: np.ndarray,
@@ -92,16 +95,20 @@ class CoinMixture:
         # compute the posterior prob of each trial
         gamma = self.posterior_prob(coin_pmf, p)
 
-        # get estimate of count of heads/tail per trial
+        # get count of heads/tail per trial
         m_flips = trial.shape[1]
-        heads_per_trial = gamma * trial.sum(axis=1)
-        tails_per_trial = gamma * (m_flips - heads_per_trial)
+        num_heads = trial.sum(axis=1)[:, np.newaxis]
+        num_tails = m_flips - num_heads
 
-        return (heads_per_trial, tails_per_trial)
+        # get total heads/tails attributed to each coin for m coin flips
+        num_heads_per_coin = (gamma * num_heads).sum(axis=0)
+        num_tails_per_coin = (gamma * num_tails).sum(axis=0)
+
+        return num_heads_per_coin, num_tails_per_coin
 
     def mstep(self,
-              heads_per_trial: np.ndarray,
-              tails_per_trial: np.ndarray,
+              num_heads_per_coin: np.ndarray,
+              num_tails_per_coin: np.ndarray,
               ):
         """[summary]
 
@@ -112,7 +119,38 @@ class CoinMixture:
         :return: [description]
         :rtype: tuple
         """
-        return heads_per_trial / (heads_per_trial + tails_per_trial)
+        return num_heads_per_coin / (num_heads_per_coin + num_tails_per_coin)
 
-    def fit(self):
-        pass
+    def fit(self,
+            trial: np.ndarray, 
+            show: bool = False,
+            guess: np.ndarray = None,
+            ) -> 'CoinMixture':
+        """fits a coin mixture model via EM
+
+        :param trial: m_flips each trial
+        :type trial: np.ndarray
+        :param show: to show the results of iteration, 
+         defaults to False
+        :type show: bool, optional
+        :return: fitted object
+        :rtype: CoinMixture
+        """
+        # intial guess for probabilities associated with each coin
+        if guess is None:
+            guess = sample(self.n_coins)
+        theta = [0] * self.max_iter
+        # iterate
+        for i in range(self.max_iter):
+            theta[i] = chain(guess)
+            if show:
+                print(f"#{i} ", ", ".join(f"{c:.4f}" for c in chain(guess)))
+            
+            # compute the e-step
+            num_heads, num_tails = self.estep(trial, guess)
+            
+            # compute the m-step
+            guess = self.mstep(num_heads, num_tails)
+        
+        self.theta = pd.DataFrame(theta)
+        return self

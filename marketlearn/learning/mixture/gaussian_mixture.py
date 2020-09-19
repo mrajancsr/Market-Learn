@@ -115,7 +115,7 @@ class GaussianMixture:
         pik = gamma.mean(axis=0)
         return muk.flatten(), np.sqrt(vark), pik
 
-    def fit(self, obs: np.ndarray, show=False) -> "GaussianMixture":
+    def fit(self, obs: np.ndarray, show=False) -> 'GaussianMixture':
         """fits a Gaussian Mixture model via EM
 
         :param obs: observations of mixtures
@@ -131,7 +131,8 @@ class GaussianMixture:
         idx = np.random.randint(low=0, high=n, size=n_component)
 
         # initialize latent prob, means and sigmas
-        pk = np.ones(n_component) / (n_component + 1)
+        pk = np.ones(n_component)
+        pk /= pk.sum()
         muk = obs[idx]
         sigk = np.ones(n_component)
         theta = [0] * self.max_iter
