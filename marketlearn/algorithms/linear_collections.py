@@ -118,11 +118,22 @@ class MaxStack:
         return self._data[-1].max
     
     def pop(self) -> Any:
+        """removes item from the right(top) of stack
+
+        :raises _Empty: if stack is empty
+        :return: item removed
+        :rtype: Any
+        """
         if self.empty():
             raise _Empty("Stack is empty")
         return self._data[-1].item
     
     def push(self, item):
+        """adds item to right(top) of stack
+
+        :param item: item to be pushed
+        :type item: Any
+        """
         self._data.append(\
             self._Items(item, item
             if self.empty() else max(item, self.max())))
