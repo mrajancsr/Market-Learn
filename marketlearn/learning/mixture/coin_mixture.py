@@ -45,8 +45,10 @@ class CoinMixture:
         self.max_iter = max_iter
         self.theta = None
 
-    def _binom(self, trial: np.ndarray, p: np.ndarray) -> np.ndarray:
-        """computes the probability of successes in each trial
+    def _likelihood(self, trial: np.ndarray, p: np.ndarray) -> np.ndarray:
+        """Computes the likelihood p(x|z) of each trial
+
+        the function returns P(Evidence | hypothesis)
 
         :param trial: m_flips each trial
         :type trial: np.ndarray,
@@ -60,11 +62,16 @@ class CoinMixture:
         """
         n = trial.shape[1]
         num_heads = trial.sum(axis=1)
-        dist = map(lambda x: binom(n, x).pmf(num_heads), p)
-        return np.column_stack(tuple(dist))
+        lik = map(lambda x: binom(n, x).pmf(num_heads), p)
+        return np.column_stack(tuple(lik))
 
-    def posterior_prob(self, eta: np.ndarray, p: np.ndarray):
-        """Computes the posterior probabilities given pmf
+    def qprob(self, likelihood: np.ndarray, prior: np.ndarray):
+        """Computes the posterior probabilities p(z|x) of each trial
+
+        the function computes the bayes formula;
+        p(hypothesis|evidence) = prior * likelihood / p(evidence)
+        prior = p(hypothesis) = p(z)
+        likelihood = p(x|z)
 
         :param eta: pmf of binomial mixture
         :type eta: np.ndarray,
@@ -72,11 +79,12 @@ class CoinMixture:
         :param p: probability of success in each trial
         :type prob: np.ndarray
         """
-        return eta * p / (eta @ p[:, np.newaxis])
+        pevidence = likelihood @ prior[:, np.newaxis]
+        return likelihood * prior / pevidence
 
     def estep(self,
               trial: np.ndarray,
-              p: np.ndarray,
+              theta: np.ndarray,
               ) -> tuple:
         """Computes the e-step in EM algorithm
 
@@ -89,26 +97,15 @@ class CoinMixture:
         :return: [description]
         :rtype: np.ndarray
         """
-        # compute pmf of each trial
-        coin_pmf = self._binom(trial, p)
+        psuccess, prior = theta[:2], theta[2:]
+        lik = self._likelihood(trial, psuccess)
 
         # compute the posterior prob of each trial
-        gamma = self.posterior_prob(coin_pmf, p)
-
-        # get count of heads/tail per trial
-        m_flips = trial.shape[1]
-        num_heads = trial.sum(axis=1)[:, np.newaxis]
-        num_tails = m_flips - num_heads
-
-        # get total heads/tails attributed to each coin for m coin flips
-        num_heads_per_coin = (gamma * num_heads).sum(axis=0)
-        num_tails_per_coin = (gamma * num_tails).sum(axis=0)
-
-        return num_heads_per_coin, num_tails_per_coin
+        return self.qprob(lik, prior)
 
     def mstep(self,
-              num_heads_per_coin: np.ndarray,
-              num_tails_per_coin: np.ndarray,
+              trial: np.ndarray,
+              qprob: np.ndarray,
               ):
         """[summary]
 
@@ -119,7 +116,17 @@ class CoinMixture:
         :return: [description]
         :rtype: tuple
         """
-        return num_heads_per_coin / (num_heads_per_coin + num_tails_per_coin)
+        # get count of heads/tail per trial
+        m_flips = trial.shape[1]
+        num_heads = trial.sum(axis=1)[:, np.newaxis]
+        num_tails = m_flips - num_heads
+
+        # get total heads/tails attributed to each coin for m coin flips
+        nheads = (qprob * num_heads).sum(axis=0)
+        ntails = (qprob * num_tails).sum(axis=0)
+        prior = qprob.mean(axis=0)
+        pheads = nheads / (nheads + ntails)
+        return np.concatenate((prior, pheads))
 
     def fit(self,
             trial: np.ndarray, 
@@ -138,7 +145,7 @@ class CoinMixture:
         """
         # intial guess for probabilities associated with each coin
         if guess is None:
-            guess = sample(self.n_coins)
+            guess = np.concatenate(([0.5, 0.5], sample(self.n_coins)))
         theta = [0] * self.max_iter
         # iterate
         for i in range(self.max_iter):
@@ -147,10 +154,10 @@ class CoinMixture:
                 print(f"#{i} ", ", ".join(f"{c:.4f}" for c in chain(guess)))
             
             # compute the e-step
-            num_heads, num_tails = self.estep(trial, guess)
+            qprob = self.estep(trial, guess)
             
             # compute the m-step
-            guess = self.mstep(num_heads, num_tails)
+            guess = self.mstep(trial, qprob)
         
         self.theta = pd.DataFrame(theta)
         return self
