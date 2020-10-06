@@ -1,7 +1,7 @@
 """Linear Collections, consisting of stacks, queue and deque"""
 
-from typing import Any, Union, List
-from collections import namedtuple
+from typing import Any, Union, List, Optional
+import collections
 
 class _Empty(Exception):
     """prints Exception error if array is empty
@@ -21,7 +21,7 @@ class Stack:
        Assumes LIFO; 
        items on the right is the top, left is bottom
     """
-    def __init__(self, data: Union[None, List]):
+    def __init__(self, data: Optional[list]=None):
         self._data = [] if data is None else data
     
     def empty(self):
@@ -77,9 +77,9 @@ class MaxStack:
        items on the right is the top, left is bottom
     """
     # to keep track of maximum value after each push
-    _Items = namedtuple("_Items", ('item', 'max'))
+    _Items = collections.namedtuple("_Items", ('item', 'max'))
 
-    def __init__(self, item: Union[None, List]):
+    def __init__(self, item: Optional[list]=None):
         self._data = []
         self._create_stack(item)
         
@@ -139,3 +139,114 @@ class MaxStack:
             if self.empty() else max(item, self.max())))
 
 class Queue:
+    """Implementation of Queue using a list
+
+    O(1) for enqueue operation
+    O(n) for dequeue operation
+    Assumes: First In First Out (FIFO)
+    """
+    def __init__(self):
+        """Default constructor, needs no parameters"""
+        self._data = []
+    
+    def empty(self):
+        return self._data == []
+    
+    def enqueue(self, item):
+        self._data.append(item)
+    
+    def dequeue(self):
+        return self._data.pop(0)
+    
+    def size(self):
+        return len(self._data)
+    
+    def max(self):
+        return max(self._data)
+
+class CircularQueue:
+    """Implementation of a Queue using a circular Array
+
+    O(1) time for all operations
+    Assumes: First In First Out (FIFO)
+    """
+    # class constant
+    _DEFAULT_CAPACITY = 10
+
+    def __init__(self):
+        """Default Constructor, needs no parameters"""
+        self._data = [None] * self._DEFAULT_CAPACITY
+        self._size = 0
+        self._front = 0
+    
+    def __len__(self):
+        return self._size
+    
+    def size(self):
+        return len(self)
+    
+    def empty(self):
+        return self.size() == 0
+    
+    def front(self):
+        """Returns, but doesn't remove first element"""
+        if self.empty():
+            raise IndexError("Queue is Empty")
+        return self._data[self._front]
+    
+    def dequeue(self):
+        if self.empty():
+            raise IndexError("Queue is Empty")
+        removed_item = self.front()
+        # reclaim for garbage collection
+        self._data[self._front] = None
+        # get available space and decrement size by 1
+        self._front = (1 + self._front) % len(self._data)
+        self._size -= 1
+        return removed_item
+
+    def enqueue(self, item):
+        # if capcacity is reached, double capacity
+        if self.size() == len(self._data):
+            self._resize(2 * len(self._data))
+        avail = (self._front + self.size()) % len(self._data)
+        self._data[avail] = item
+        self._size += 1
+    
+    def _resize(self, cap):
+        old = self._data
+        self._data = [None] * cap
+        walk = self._front
+        for k in range(self.size()):
+            self._data[k] = old[walk]
+            walk = (1 + walk) % len(old)
+        self._front = 0
+
+
+class StackQueue:
+    """Implementation of Queue using Stacks"""
+    def __init__(self):
+        self._enq, self._deq = Stack(), Stack()
+    
+    def enqueue(self, item):
+        self._enq.push(item)
+    
+    def dequeue(self):
+        if not self._deq:
+            while self._enq:
+                self._deq.push(self._enq.pop())
+        if not self._deq:
+            raise IndexError("Empty Queue")
+        return self._deq.pop()
+    
+    def front(self):
+        return self._enq.peek()
+    
+class MaxQueue:
+    """Implementation of Queue withh max API using Deque"""
+    def __init__(self):
+        self._data = collections.deque()
+        self._candidates_for_max = collections.deque()
+    
+    def enqueue(self, item):
+        pass
