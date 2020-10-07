@@ -7,7 +7,7 @@ from numpy.random import sample
 from itertools import chain
 import pandas as pd
 import numpy as np
-
+from string import ascii_uppercase
 
 class CoinMixture:
     """Class implements the Coin Mixture Model (cmm)
@@ -117,15 +117,14 @@ class CoinMixture:
         :rtype: tuple
         """
         # get count of heads/tail per trial
-        m_flips = trial.shape[1]
         num_heads = trial.sum(axis=1)[:, np.newaxis]
-        num_tails = m_flips - num_heads
 
-        # get total heads/tails attributed to each coin for m coin flips
-        nheads = (qprob * num_heads).sum(axis=0)
-        ntails = (qprob * num_tails).sum(axis=0)
+        # estimate pHeads by mle
+        eheads = (qprob * num_heads).sum(axis=0)
+        pheads = eheads / (qprob.sum(axis=0) * self.m_flips)
+
+        # calculate prior and probability of heads for each coin
         prior = qprob.mean(axis=0)
-        pheads = nheads / (nheads + ntails)
         return np.concatenate((prior, pheads))
 
     def fit(self,
@@ -159,5 +158,8 @@ class CoinMixture:
             # compute the m-step
             guess = self.mstep(trial, qprob)
         
-        self.theta = pd.DataFrame(theta)
+        letters = ascii_uppercase[:self.n_coins]
+        col1 = list("p(z={i})".format(i=i) for i in range(2))
+        col2 = list("theta{i}".format(i=i) for i in letters)
+        self.theta = pd.DataFrame(theta, columns=list(chain(col1, col2)))
         return self
