@@ -158,8 +158,13 @@ class CoinMixture:
             # compute the m-step
             guess = self.mstep(trial, qprob)
         
+        cols = self._create_columns()
+        self.theta = pd.DataFrame(theta, columns=cols)
+        return self
+    
+    def _create_columns(self):
+        """Creates columns for pandas dataframe after em is run"""
         letters = ascii_uppercase[:self.n_coins]
         col1 = list("p(z={i})".format(i=i) for i in range(2))
         col2 = list("theta{i}".format(i=i) for i in letters)
-        self.theta = pd.DataFrame(theta, columns=list(chain(col1, col2)))
-        return self
+        return list(chain(col1, col2))
