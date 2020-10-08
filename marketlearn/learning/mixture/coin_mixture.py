@@ -168,3 +168,19 @@ class CoinMixture:
         col1 = list("p(z={i})".format(i=i) for i in range(2))
         col2 = list("theta{i}".format(i=i) for i in letters)
         return list(chain(col1, col2))
+    
+    def _flipcoins(self, thetaA, thetaB, m):
+        """flips the two coins m times for 5 trials"""
+        """trials = 
+        np.array([[1,0,0,0,1,1,0,1,0,1], [1,1,1,1,0,1,1,1,1,1], 
+        [1,0,1,1,1,1,1,0,1,1], 
+        [1,0,1,0,0,0,1,1,0,0],
+        [0,1,1,1,0,1,1,1,0,1]])
+        """
+        m = 100 # 100 tosses of each coin
+        theta_A = 0.8
+        theta_B = 0.1
+        coin_A = bernoulli(theta_A)
+        coin_B = bernoulli(theta_B)
+        trials = np.vstack([coin_A.rvs(m), coin_A.rvs(m), coin_B.rvs(m), coin_A.rvs(m), coin_B.rvs(m)])
+        return trials
