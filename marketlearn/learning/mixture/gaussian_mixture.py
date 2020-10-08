@@ -33,12 +33,12 @@ class GaussianMixture:
         self.max_iter = max_iter
         self.theta = None
 
-    def _norm(self,
-              obs: np.ndarray,
-              mean: np.ndarray,
-              sigma: np.ndarray,
-              ) -> np.ndarray:
-        """Constructs univariate normal densities
+    def _likelihood(self,
+                    obs: np.ndarray,
+                    mean: np.ndarray,
+                    sigma: np.ndarray,
+                    ) -> np.ndarray:
+        """Computes the likelihood p(x|z) of each observation
 
         :param obs: observed sample of mixtures
         :type obs: np.ndarray,
@@ -53,11 +53,11 @@ class GaussianMixture:
         :rtype: np.ndarray,
          shape = (n_samples, n_components)
         """
-        dist = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
-        return np.column_stack(tuple(dist))
+        lik = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
+        return np.column_stack(tuple(lik))
 
-    def posterior_prob(self, eta: np.ndarray, prob: np.ndarray):
-        """Computes the posterior probabilities given densities
+    def qprob(self, likelihood: np.ndarray, prior: np.ndarray):
+        """Computes the posterior probabilities p(z|x) of each observation
 
         :param eta: densities of Gaussian mixture
         :type eta: np.ndarray,
@@ -66,13 +66,14 @@ class GaussianMixture:
          came from density i
         :type prob: float
         """
-        return eta * prob / (eta @ prob)[:, np.newaxis]
+        pevidence = (likelihood @ prior)[:, np.newaxis]
+        return likelihood * prior / pevidence
 
     def estep(self,
               obs: np.ndarray,
               mean: np.ndarray,
               sigma: np.ndarray,
-              prob: np.float64) -> np.ndarray:
+              prior: np.float64) -> np.ndarray:
         """Computes the e-step in EM algorithm
 
         :param obs: observed sample of mixtures
@@ -89,9 +90,8 @@ class GaussianMixture:
         :type prob: float
         """
         # compute the normal density and posterior prob of each mixture
-        normal_densities = self._norm(obs, mean, sigma)
-        gamma = self.posterior_prob(normal_densities, prob)
-        return gamma
+        likelihood = self._likelihood(obs, mean, sigma)
+        return self.qprob(likelihood, prior)
 
     def mstep(self,
               obs: np.ndarray,
