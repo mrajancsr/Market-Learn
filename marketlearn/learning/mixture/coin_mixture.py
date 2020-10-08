@@ -107,7 +107,7 @@ class CoinMixture:
               trial: np.ndarray,
               qprob: np.ndarray,
               ):
-        """[summary]
+        """Computes the m-step in the EM algorithm
 
         :param heads_per_trial: [description]
         :type heads_per_trial: np.ndarray
