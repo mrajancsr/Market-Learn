@@ -11,11 +11,11 @@ class Book:
     - The Cont-Stoikov-Talreja Model c.f
     """
     def __init__(self):
-        l = 1000
-        depth = 5
-        self.price = np.arange(-l, l+1)
-        self.buy_size = np.append(np.append(np.repeat(depth, l-8),[5, 4, 4, 3, 3, 2, 2, 1]), np.repeat(0, l+1))
-        self.sell_size = np.append(np.repeat(0,l), np.append([0, 1, 2, 2, 3, 3, 4, 4, 5], np.repeat(depth, l-8)))
+        self._levels = 1000
+        self._depth = 5
+        self.price = np.arange(-self._levels, self._levels + 1)
+        self.buy_size = np.append(np.append(np.repeat(self._depth, self._levels-8),[5, 4, 4, 3, 3, 2, 2, 1]), np.repeat(0, self._levels+1))
+        self.sell_size = np.append(np.repeat(0,self._levels), np.append([0, 1, 2, 2, 3, 3, 4, 4, 5], np.repeat(self._depth, self._levels-8)))
 
     # functions to get information from market
     def best_ask(self):
