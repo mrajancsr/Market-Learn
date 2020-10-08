@@ -5,6 +5,7 @@ from itertools import chain
 import numpy as np
 import pandas as pd
 
+
 class GaussianMixture:
     """Class implements the Gaussian Mixture Model (gmm)
 
@@ -152,4 +153,10 @@ class GaussianMixture:
         self.theta = pd.DataFrame(theta)
         return self
 
+    def _make_titles(self) -> list:
+        """Creates column titles after em is run
 
+        :return: dataframe column titles
+        :rtype: list
+        """
+        pass
