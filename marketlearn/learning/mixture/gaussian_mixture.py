@@ -11,6 +11,7 @@ class GaussianMixture:
     """Class implements the Gaussian Mixture Model (gmm)
 
     Currently supports k-Gaussian mixtures
+    - todo convergence until tolerance is reached
     """
     def __init__(self,
                  n_components: int = 1,
@@ -128,7 +129,7 @@ class GaussianMixture:
         :param obs: observations of mixtures
         :type obs: np.ndarray,
          shape = (n_samples,)
-        :return: [description]
+        :return: estimated parameters of distribution of latent variables
         :rtype: GaussianMixture
         """
         n = obs.shape[0]
