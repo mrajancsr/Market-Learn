@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from string import ascii_uppercase
 
+
 class CoinMixture:
     """Class implements the Coin Mixture Model (cmm)
 
@@ -123,12 +124,12 @@ class CoinMixture:
         eheads = (qprob * num_heads).sum(axis=0)
         pheads = eheads / (qprob.sum(axis=0) * self.m_flips)
 
-        # calculate prior and probability of heads for each coin
+        # calculate prior
         prior = qprob.mean(axis=0)
         return np.concatenate((prior, pheads))
 
     def fit(self,
-            trial: np.ndarray, 
+            trial: np.ndarray,
             show: bool = False,
             guess: np.ndarray = None,
             ) -> 'CoinMixture':
@@ -136,13 +137,13 @@ class CoinMixture:
 
         :param trial: m_flips each trial
         :type trial: np.ndarray
-        :param show: to show the results of iteration, 
+        :param show: to show the results of iteration,
          defaults to False
         :type show: bool, optional
         :return: fitted object
         :rtype: CoinMixture
         """
-        # intial guess for probabilities associated with each coin
+        # intial guess stores prior and pHeads of each coin
         if guess is None:
             guess = np.concatenate(([0.5, 0.5], sample(self.n_coins)))
         theta = [0] * self.max_iter
@@ -151,24 +152,29 @@ class CoinMixture:
             theta[i] = chain(guess)
             if show:
                 print(f"#{i} ", ", ".join(f"{c:.4f}" for c in chain(guess)))
-            
+
             # compute the e-step
             qprob = self.estep(trial, guess)
-            
+
             # compute the m-step
             guess = self.mstep(trial, qprob)
-        
-        cols = self._create_columns()
+
+        cols = self._make_titles()
         self.theta = pd.DataFrame(theta, columns=cols)
         return self
-    
-    def _create_columns(self):
-        """Creates columns for pandas dataframe after em is run"""
+
+    def _make_titles(self) -> list:
+        """Creates column titles after em is run
+
+        :return: list of dataframe column titles
+        :rtype: list
+        """
+        # get the letters and create titles
         letters = ascii_uppercase[:self.n_coins]
-        col1 = list("p(z={i})".format(i=i) for i in range(2))
+        col1 = list("p(z={i})".format(i=i) for i in range(self.n_coins))
         col2 = list("theta{i}".format(i=i) for i in letters)
         return list(chain(col1, col2))
-    
+
     def _flipcoins(self, thetaA, thetaB, m):
         """flips the two coins m times for 5 trials"""
         """trials = 

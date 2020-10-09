@@ -4,6 +4,7 @@ from scipy.stats import norm
 from itertools import chain
 import numpy as np
 import pandas as pd
+from string import ascii_uppercase
 
 
 class GaussianMixture:
@@ -96,25 +97,30 @@ class GaussianMixture:
 
     def mstep(self,
               obs: np.ndarray,
-              gamma: np.ndarray,
+              qprob: np.ndarray,
               ) -> tuple:
         """Computes the m-step in EM algorithm
 
         :param obs: observed sample of mixtures
         :type obs: np.ndarray,
          shape = (n_samples,)
-        :param gamma: posterior probabilities
-        :type gamma: np.ndarray,
+        :param qprob: posterior probabilities
+        :type qprob: np.ndarray,
          shape = (n_samples,)
         :return: estimates of means, sigmas and
-         state probabilities
+         prior probabilities
         :rtype: tuple
         """
-        nk = gamma.sum(axis=0)
-        muk = (gamma.T @ obs / nk)[:, np.newaxis]
-        vark = (gamma * ((obs - muk)**2).T).sum(axis=0) / nk
-        pik = gamma.mean(axis=0)
-        return muk.flatten(), np.sqrt(vark), pik
+        # estimate effective number of points assigned to component k
+        nk = qprob.sum(axis=0)
+
+        # calculate mean and variance based on mle
+        muk = (qprob.T @ obs / nk)[:, np.newaxis]
+        vark = (qprob * ((obs - muk)**2).T).sum(axis=0) / nk
+
+        # calculate prior
+        prior = nk / qprob.shape[0]
+        return prior, muk.flatten(), np.sqrt(vark)
 
     def fit(self, obs: np.ndarray, show=False) -> 'GaussianMixture':
         """fits a Gaussian Mixture model via EM
@@ -131,7 +137,7 @@ class GaussianMixture:
         # pick random index from obs for initial mean estimate
         idx = np.random.randint(low=0, high=n, size=n_component)
 
-        # initialize latent prob, means and sigmas
+        # initialize prior, means and sigmas
         pk = np.ones(n_component)
         pk /= pk.sum()
         muk = obs[idx]
@@ -140,23 +146,31 @@ class GaussianMixture:
 
         # iterate
         for i in range(self.max_iter):
-            theta[i] = chain(muk, sigk, pk)
+            theta[i] = chain(pk, muk, sigk)
             if show:
-                items = chain(muk, sigk, pk)
-                print(f"#{i} ", ", ".join(f"{c:.2f}" for c in items))
+                items = chain(pk, muk, sigk)
+                print(f"#{i} ", ", ".join(f"{c:.4f}" for c in items))
+
             # compute the e-step
-            gamma = self.estep(obs, muk, sigk, pk)
+            qprob = self.estep(obs, muk, sigk, pk)
 
             # compute the m-step
-            muk, sigk, pk = self.mstep(obs, gamma)
+            pk, muk, sigk = self.mstep(obs, qprob)
 
-        self.theta = pd.DataFrame(theta)
+        cols = self._make_titles()
+        self.theta = pd.DataFrame(theta, columns=cols)
         return self
 
     def _make_titles(self) -> list:
         """Creates column titles after em is run
 
-        :return: dataframe column titles
+        :return: list of dataframe column titles
         :rtype: list
         """
-        pass
+        # get the letters and create titles
+        n = self.n_components
+        letters = ascii_uppercase[:n]
+        col1 = list("p(z={i})".format(i=i) for i in range(n))
+        col2 = list("mean{i}".format(i=i) for i in range(1, n + 1))
+        col3 = list("sigma{i}".format(i=i) for i in range(1, n + 1))
+        return list(chain(col1, col2, col3))
