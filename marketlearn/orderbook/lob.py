@@ -20,7 +20,7 @@ class Book:
         self._levels = 1000
         self._depth = 5
         self.price = np.arange(-self._levels, self._levels + 1)
-        self.buy_orders, self.sell_orders = self._initialize_orders()
+        self.bid_size, self.ask_size = self._initialize_orders()
 
     def _get_levels(self) -> int:
         """returns number of levels in lob
@@ -45,7 +45,7 @@ class Book:
         These orders await execution by incoming order or
         can be cancelled
 
-        :return: buy/sell orders on the bid/ask side
+        :return: buy/sell sizes on the bid/ask side
         :rtype: Tuple[np.ndarray, np.ndarray]
         """
         d, pl = self._get_depth(), self._get_levels()
@@ -69,7 +69,7 @@ class Book:
         :return: the best asking price is returned
         :rtype: float
         """
-        return self.price[self.sell_orders > 0].min()
+        return self.price[self.ask_size > 0].min()
 
     def best_bid(self) -> float:
         """Computes the best bid on bid side
@@ -77,7 +77,7 @@ class Book:
         :return: the best bid price is returned
         :rtype: float
         """
-        return self.price[self.buy_orders > 0].max()
+        return self.price[self.bid_size > 0].max()
 
     def spread(self) -> float:
         """Compute the inside spread
@@ -104,7 +104,7 @@ class Book:
         :type qty: int, optional
         """
         p = self.best_ask()
-        self.sell_orders[self.price == p] = self.sell_orders[self.price == p][0] - qty
+        self.ask_size[self.price == p] = self.ask_size[self.price == p][0] - qty
 
     def market_sell(self, qty: int = 1):
         """Places market sell order at best bid
@@ -114,7 +114,7 @@ class Book:
         :type qty: int, optional
         """
         p = self.best_bid()
-        self.buy_orders[self.price == p] = self.buy_orders[self.price == p][0] - qty
+        self.bid_size[self.price == p] = self.bid_size[self.price == p][0] - qty
 
     def limit_buy(self, price: int, qty: int = 1):
         """Places limit buy order at a given price level
@@ -125,14 +125,14 @@ class Book:
          if not specified, defaults to 1
         :type qty: int, optional
         """
-        self.buy_orders[self.price == price] = self.buy_orders[self.price == price][0] + qty
+        self.bid_size[self.price == price] = self.bid_size[self.price == price][0] + qty
 
     def limit_sell(self, price: int, qty: int = 1):
-        self.sell_size[self.price == price] = self.sell_size[self.price == price][0] + 1
+        self.ask_size[self.price == price] = self.ask_size[self.price == price][0] + 1
 
     def cancel_buy(self, price=None):
         if price is not None:
-            self.buy_size[self.price == price] = self.buy_size[self.price==price][0] - 1
+            self.bid_size[self.price == price] = self.bid_size[self.price == price][0] - 1
         else:
             q = self.choose(nb)
             tmp = self.buy_size[::-1].cumsum()
