@@ -1,6 +1,7 @@
 """Implementation of Zero-Intelligence Models of Limit Order Book"""
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Tuple
 
 
 class Book:
@@ -9,32 +10,74 @@ class Book:
     Two Agent Based Models are currently supported: 
     - The SFGK Zero Intelligence Model c.f 
     - The Cont-Stoikov-Talreja Model c.f
+
+    Currently only supports placing orders of size 1
     """
     def __init__(self):
+        """Default Constructor used to initialize the order book"""
         self._levels = 1000
         self._depth = 5
         self.price = np.arange(-self._levels, self._levels + 1)
-        self.buy_size = np.append(np.append(np.repeat(self._depth, self._levels-8),[5, 4, 4, 3, 3, 2, 2, 1]), np.repeat(0, self._levels+1))
-        self.sell_size = np.append(np.repeat(0,self._levels), np.append([0, 1, 2, 2, 3, 3, 4, 4, 5], np.repeat(self._depth, self._levels-8)))
+        self.buy_orders, self.sell_orders = self._initialize_orders()
+
+    def _get_levels(self) -> int:
+        """returns number of levels in lob
+
+        :return: levels in the lob
+        :rtype: int
+        """
+        return self._levels
+
+    def _get_depth(self) -> int:
+        """Returns the depth of orders from the limit order book
+
+        :return: depth of orders in the book
+        :rtype: int
+        """
+        return self._depth
+
+    def _initialize_orders(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Creates buy and sell orders in the lob
+
+        Orders are created before agent based simulation begins
+        These orders await execution by incoming order or
+        can be cancelled
+
+        :return: buy/sell orders on the bid/ask side
+        :rtype: Tuple[np.ndarray, np.ndarray]
+        """
+        d, pl = self._get_depth(), self._get_levels()
+
+        # create buy & sell orders for bid prices at -1000 to -1
+        buy_orders = np.repeat(d, pl - 8)
+        buy_orders = np.append(buy_orders, [5, 4, 4, 3, 3, 2, 2, 1])
+        sell_orders = np.repeat(0, pl)
+
+        # create buy and sell orders for ask prices at 0 to 1000
+        buy_orders = np.append(buy_orders, np.repeat(0, pl + 1))
+        sell_orders = np.append(sell_orders, [0, 1, 2, 2, 3, 3, 4, 4, 5])
+        sell_orders = np.append(sell_orders, np.repeat(d, pl - 8))
+
+        return buy_orders, sell_orders
 
     # functions to get information from market
-    def best_ask(self):
+    def best_ask(self) -> float:
         """Computes the best price on ask side
 
         :return: the best asking price is returned
         :rtype: float
         """
-        return self.price[self.sell_size > 0].min()
+        return self.price[self.sell_orders > 0].min()
 
-    def best_bid(self):
+    def best_bid(self) -> float:
         """Computes the best bid on bid side
 
         :return: the best bid price is returned
         :rtype: float
         """
-        return self.price[self.buy_size > 0].max()
+        return self.price[self.buy_orders > 0].max()
 
-    def spread(self):
+    def spread(self) -> float:
         """Compute the inside spread
 
         :return: spread between best prices
@@ -42,22 +85,47 @@ class Book:
         """
         return self.best_ask() - self.best_bid()
 
-    def mid(self):
+    def mid(self) -> float:
+        """compute the mid price from best bid and ask
+
+        :return: mid price
+        :rtype: float
+        """
         return (self.best_ask() + self.best_bid()) * 0.5
 
     # functions to place order
-    def market_buy(self):
+    def market_buy(self, qty: int = 1):
+        """Places market buy order at best ask
+
+        :param qty: the quantity to buy
+         if not specified, defaults to 1
+        :type qty: int, optional
+        """
         p = self.best_ask()
-        self.sell_size[self.price == p] = self.sell_size[self.price == p][0] - 1
+        self.sell_orders[self.price == p] = self.sell_orders[self.price == p][0] - qty
 
-    def market_sell(self):
+    def market_sell(self, qty: int = 1):
+        """Places market sell order at best bid
+
+        :param qty: the quantity to sell
+         if not specified, defaults to 1.
+        :type qty: int, optional
+        """
         p = self.best_bid()
-        self.buy_size[self.price == p] = self.buy_size[self.price == p][0] - 1
+        self.buy_orders[self.price == p] = self.buy_orders[self.price == p][0] - qty
 
-    def limit_buy(self, price):
-        self.buy_size[self.price == price] = self.buy_size[self.price == price][0] + 1
+    def limit_buy(self, price: int, qty: int = 1):
+        """Places limit buy order at a given price level
 
-    def limit_sell(self, price):
+        :param price: the price at which to place the LBO
+        :type price: int
+        :param qty: the quantity agent wishes to buy
+         if not specified, defaults to 1
+        :type qty: int, optional
+        """
+        self.buy_orders[self.price == price] = self.buy_orders[self.price == price][0] + qty
+
+    def limit_sell(self, price: int, qty: int = 1):
         self.sell_size[self.price == price] = self.sell_size[self.price == price][0] + 1
 
     def cancel_buy(self, price=None):
