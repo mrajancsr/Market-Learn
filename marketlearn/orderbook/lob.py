@@ -1,7 +1,10 @@
 """Implementation of Zero-Intelligence Models of Limit Order Book"""
+
+from typing import Tuple
+from numpy import floor
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Tuple
+
 
 
 class Book:
@@ -103,8 +106,10 @@ class Book:
          if not specified, defaults to 1
         :type qty: int, optional
         """
+        # get the best ask and remove orders at that price
         p = self.best_ask()
-        self.ask_size[self.price == p] = self.ask_size[self.price == p][0] - qty
+        remaining_orders = self.ask_size[self.price == p][0] - qty
+        self.ask_size[self.price == p] = remaining_orders
 
     def market_sell(self, qty: int = 1):
         """Places market sell order at best bid
@@ -113,8 +118,10 @@ class Book:
          if not specified, defaults to 1.
         :type qty: int, optional
         """
+        # get best bid and remove orders at that price
         p = self.best_bid()
-        self.bid_size[self.price == p] = self.bid_size[self.price == p][0] - qty
+        remaining_orders = self.bid_size[self.price == p][0] - qty
+        self.bid_size[self.price == p] = remaining_orders
 
     def limit_buy(self, price: int, qty: int = 1):
         """Places limit buy order at a given price level
@@ -125,40 +132,108 @@ class Book:
          if not specified, defaults to 1
         :type qty: int, optional
         """
-        self.bid_size[self.price == price] = self.bid_size[self.price == price][0] + qty
+        # add orders at the price specified
+        new_orders = self.bid_size[self.price == price][0] + qty
+        self.bid_size[self.price == price] = new_orders
 
     def limit_sell(self, price: int, qty: int = 1):
-        self.ask_size[self.price == price] = self.ask_size[self.price == price][0] + 1
+        """Places limit sell order at a given price level
 
-    def cancel_buy(self, price=None):
+        :param price: price at which to place the LSO
+        :type price: int
+        :param qty: the quantity agent wishes to sell
+         if not specified, defaults to 1
+        :type qty: int, optional
+        """
+        # add orders at the price specified
+        new_orders = self.ask_size[self.price == price][0] + qty
+        self.ask_size[self.price == price] = new_orders
+
+    def cancel_buy(self,
+                   price: int = None,
+                   cancelable_orders: int = None,
+                   qty: int = 1):
+        """Places a cancel order at given price level on bid side
+
+        :param price: price at which we cancel order
+         defaults to None.  If not specified, randomly choose
+         from which cancelable_orders to cancel from
+        :type price: int, optional
+        :param cancelable_orders: total cancelable orders on bid side
+         defaults to None.  If price is specified,
+         then cancelable_orders is None
+        :type cancelable_orders: int, optional
+        :param qty: the quantity agent wishes to cancel
+         defaults to 1
+        :type qty: int, optional
+        """
+        # if price is specified, cancel order at that level
         if price is not None:
-            self.bid_size[self.price == price] = self.bid_size[self.price == price][0] - 1
+            remaining_orders = self.bid_size[self.price == price][0] - qty
+            self.bid_size[self.price == price] = remaining_orders
+        # otherwise randomly choose from total cancelable_orders at bid side
         else:
-            q = self.choose(nb)
+            q = self.choose(cancelable_orders)
             tmp = self.buy_size[::-1].cumsum()
             posn = len(tmp[tmp >= q])
             p = self.price[posn-1]
-            self.buy_size[posn-1] = self.buy_size[posn-1]-1
+            self.bid_size[posn-1] = self.bid_size[posn-1] - qty
 
-    def cancel_sell(self, price=None):
+    def cancel_sell(self,
+                    price: int = None,
+                    cancelable_orders: int = None,
+                    qty: int = 1):
+        """Places a cancel order at given price level on ask side
+
+        :param price: price at which we cancel order
+         defaults to None.  If not specified, randomly choose
+         from which cancelable_orders to cancel from
+        :type price: int, optional
+        :param cancelable_orders: total cancelable orders on ask side
+         defaults to None.  If price is specified,
+         then cancelable_orders is None
+        :type cancelable_orders: int, optional
+        :param qty: the quantity agent wishes to cancel
+         defaults to 1
+        :type qty: int, optional
+        """
+        # if price is specified, cancel order at that level
         if price is not None:
-            self.sell_size[self.price == price] = self.sell_size[self.price == price][0] - 1
+            remaining_orders = self.ask_size[self.price == price][0] - qty
+            self.sell_size[self.price == price] = remaining_orders
+        # otherwise randomly choose from total cancelable_orders at ask side
         else:
-            q = self.choose(ns)
+            q = self.choose(cancelable_orders)
             tmp = self.sell_size.cumsum()
             posn = len(tmp[tmp < q]) + 1
             p = self.price[posn - 1]
-            self.sell_size[posn - 1] = self.sell_size[posn - 1] - 1
+            self.ask_size[posn - 1] = self.ask_size[posn - 1] - qty
 
     # functions to find the bid/ask positions and mid position
-    def bid_posn(self): 
-        return len(self.buy_size[self.price <= self.best_bid()])
+    def _bid_position(self) -> int:
+        """returns the index of position of best bid
 
-    def ask_posn(self): 
-        return len(self.sell_size[self.price <= self.best_ask()])
+        :return: index of best bid
+        :rtype: int
+        """
+        return np.where(self.price == self.best_bid())[0][0] + 1
 
-    def mid_posn(self): 
-        return int(np.floor((self.bid_posn() + self.ask_posn())*0.5))
+    def _ask_position(self) -> int:
+        """returns the index of position of best ask
+
+        :return: index of best ask
+        :rtype: int
+        """
+        return np.where(self.price == self.best_ask())[0][0] + 1
+
+    def _mid_position(self) -> int:
+        """returns index of position of mid-market
+
+        :return: index of mid-point price
+        :rtype: int
+        """
+        mid_pos = (self._bid_position() + self._ask_position()) * 0.5
+        return int(floor(mid_pos))
 
     def book_shape(self, band):
         """
