@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
 class Book:
     """Implements a Limit Order Book via array based data structure
 
@@ -24,6 +23,7 @@ class Book:
         self._depth = 5
         self.price = np.arange(-self._levels, self._levels + 1)
         self.bid_size, self.ask_size = self._initialize_orders()
+        self.events = self._create_events()
 
     def _get_levels(self) -> int:
         """returns number of levels in lob
@@ -237,7 +237,7 @@ class Book:
 
     def book_shape(self, band):
         """
-        returns the #of shares up to band on each side of the book around mid price
+        returns the #of shares up to band on each side of book around mid-price
         """
         buy_qty = self.buy_size[self.mid_posn() + np.arange(-band-1, 0)]
         sell_qty = self.sell_size[self.mid_posn() + np.arange(band)]
@@ -246,15 +246,61 @@ class Book:
         total_qty[band+1:] = sell_qty
         return total_qty
 
-    def book_plot(self, band): 
-        plt.plot(np.arange(-band, band+1), self.book_shape(band))
+    def book_plot(self, band: int):
+        """plots the book shape around mid-price
 
-    def choose(self, m, prob=None):
+        the function plots the number of shares around mid-price
+        upto the given band
+
+        :param band: the interval around mid-price to plot
+        :type band: int
+        """
+        shares_around_mid = self.book_shape(band)
+        plt.plot(np.arange(-band, band + 1), shares_around_mid)
+
+    def choose(self, price_level: int, prob: np.ndarray = None):
+        """pick price from price_level randomly
+
+        :param price_level: the price level from which to pick from
+        :type price_level: int
+        :param prob: pick a level based on provided prob
+         if not specified, pick uniformly.  defaults to None
+        :type prob: float, optional
+        :return: the price level chosen
+        :rtype: int
+        """
+        # if probability isn't specified, pick uniformly
         if prob is None:
-            return np.random.choice(np.arange(1, m+1),1)[0]
-        return np.random.choice(np.arange(1, m+1), p=prob, size=1)[0]
+            return np.random.choice(np.arange(1, price_level + 1), 1)[0]
+        # otherwise pick based on given probability
+        return np.random.choice(np.arange(1, price_level + 1), 1, prob)[0]
+
+    def _create_events(self) -> dict:
+        """creates events based on simulation
+
+        :return: dictionary of events
+        :rtype: dict
+        """
+        events = ["market_buy", "market_sell", "limit_buy", "limit_sell",
+                  "cancel_buy", "cancel_sell"]
+        return dict(zip(range(6), events))
 
     def cst_model(self, mu, lamdas, thetas, L):
+        """Generates a agent based event simulation
+
+        Calling this function generates a market event
+        that results in one of market_buy, market_sell,
+        limit_buy, limit_sell, cancel_buy or cancel_sell
+
+        :param mu: the rate of arrival of market orders
+        :type mu: float
+        :param lamdas: the rate of arrival of limit orders
+        :type lamdas: np.ndarray
+        :param thetas: the rate at which orders are cancelled
+        :type thetas: np.ndarray
+        :param L: [description]
+        :type L: [type]
+        """
         cb = self.buy_size[self.price >= (self.best_ask()-L)][:L][::-1]
         cs = self.sell_size[self.price <= (self.best_bid() + L)][-L:]
         nb = cb.sum()
