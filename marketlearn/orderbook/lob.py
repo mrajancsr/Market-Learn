@@ -7,9 +7,11 @@ from typing import Tuple
 class Book:
     """Implements a Limit Order Book via array based data structure
 
-    Two Agent Based Models are currently supported: 
-    - The SFGK Zero Intelligence Model c.f 
+    Two Agent Based Models are currently supported:
+    - The SFGK Zero Intelligence Model c.f
+      https://arxiv.org/pdf/cond-mat/0210475.pdf
     - The Cont-Stoikov-Talreja Model c.f
+      https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.139.1085&rep=rep1&type=pdf
 
     Currently only supports placing orders of size 1
     """
