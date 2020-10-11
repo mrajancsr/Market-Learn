@@ -312,28 +312,28 @@ class Book:
 
         cum_rate = 2*mu + 2*cum_lam + cb_rates+cs_rates
         pevent = np.array([mu, mu, cum_lam, cum_lam, cb_rates, cs_rates]) / cum_rate
-        ans = np.random.choice(6, 1, p=pevent)[0]
+        market_event = self.events[np.random.choice(6, 1, p=pevent)[0]]
 
-        if ans == 0:
+        if market_event == "market_buy":
             self.market_buy()
-        elif ans == 1:
+        elif market_event == "market_sell":
             self.market_sell()
-        elif ans == 2:
+        elif market_event == "limit_buy":
             pevent = lamdas / cum_lam
             q = self.choose(L, prob = pevent)
             p = self.best_ask() - q
             self.limit_buy(price = p)
-        elif ans == 3:
+        elif market_event == "limit_sell":
             pevent = lamdas / cum_lam
             q = self.choose(L, prob = pevent)
             p = self.best_bid() + q
             self.limit_sell(price = p)
-        elif ans == 4:
+        elif market_event == "cancel_buy":
             pevent = (thetas * cb) / cb_rates
             q = self.choose(L,prob=pevent)
             p = self.best_ask() - q
             self.cancel_buy(price = p)
-        elif ans == 5:
+        elif market_event == "cancel_sell":
             pevent = (thetas * cs) / cs_rates
             q = self.choose(L,prob = pevent)
             p = self.best_bid() + q
