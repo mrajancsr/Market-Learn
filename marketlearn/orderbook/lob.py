@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import floor
 from typing import Tuple, Callable, Union
+from lmfit import Model
 
 
 class Book:
@@ -475,12 +476,147 @@ class Book:
             p = self.best_bid() + q
             self.cancel_sell(price=p)
 
-    def powerlawfit(self, emp_estimates, distance):
-        obj_func = lambda k,alpha,i: k*i**(-alpha)
-        import lmfit as lmfit
-        model = lmfit.Model(obj_func,independent_vars=['i'],param_names=['k','alpha'])
-        fit = model.fit(emp_estimates,i=np.arange(1,6),k=1.2,alpha=0.4,verbose=False)
-        return fit.values['k']*distance**-fit.values['alpha']
+    def _objective_func(self, k: float, alpha: float, L: float) -> float:
+        """Bouchaud et al (2002) power law function
+
+        :param k: power law parameter
+        :type k: float
+        :param alpha: power law parameter to be estimated
+        :type alpha: float
+        :param L: distance in ticks from opposite best quote
+        :type L: float
+        :return: float
+        :rtype: float
+        """
+        return k * L ** (-alpha)
+
+    def _powerlawfit(self,
+                     emp_estimates: np.ndarray,
+                     L: np.ndarray,
+                     ) -> np.ndarray:
+        """Estimates and returns fitted values from power law function
+
+        :param emp_estimates: empirical arrival rates of limit orders
+        :type emp_estimates: np.ndarray
+        :param L: distance in ticks from opposite best quote
+        :type L: np.ndarray
+        :return: arrival rates of limit orders a distance L ticks
+         from opposite best quote
+        :rtype: np.ndarray
+        """
+        model = Model(self._objective_func,
+                      independent_vars=['L'],
+                      param_names=['k', 'alpha'])
+
+        # make initial guess for k and alpha
+        fit = model.fit(emp_estimates, L=np.arange(1, 6), k=1.2, alpha=0.4)
+        return fit.values['k'] * L ** -fit.values['alpha']
+
+    def _dk(self, k: int, mu: float, theta: float):
+        """Computes the death rate of birth-death process
+
+        death is defined as an agent's order
+        that has either been cancelled or executed
+        by incoming market order
+
+        :param mu: market arrival rate
+        :type mu: float
+        :param k: [description]
+        :type k: int
+        :param theta: order cancellation rate
+        :type theta: float
+        """
+        return mu + k * theta
+
+    def _aj(self, k: int, j: int, mu: float, lamda: float, theta: float):
+        """helper to compute continued fractions
+
+        :param j: index
+        :type j: int
+        :param lamda: limit order arrival rates
+        :type lamda: float
+        """
+        return -lamda * self._dk(k+j-1, mu, theta)
+
+    def _bj(self,
+            k: int,
+            j: int,
+            s: float,
+            mu: float,
+            lamda: float,
+            theta: float):
+        """helper to compute continued fractions
+
+        :param k: [description]
+        :type k: int
+        :param j: [description]
+        :type j: int
+        :param s: [description]
+        :type s: float
+        """
+        return lamda + self._dk(k+j-1, mu, theta) + s
+
+    def laplace_transform(self,
+                          k: int,
+                          s: float,
+                          n: int,
+                          mu: float,
+                          lamda: float,
+                          theta: float):
+        """Computes the laplace transform of first passage time
+
+        The function evaluates the laplace transform of first
+        passage time of agent's orders to go from k orders
+        to k-1 orders.  Modified lentz's method is used
+        for continued fraction evaluation
+        c.f http://turing.ieor.berkeley.edu/html/numerical-recipes/bookcpdf/c5-2.pdf
+
+        :param k: orders
+        :type k: int
+        :param s: complex number frequency parameter
+         s = sigma + i omega, where sigma and omega
+         are real numbers
+        :type s: float
+        :param n: levels of a continued fraction
+        :type n: int
+        """
+        f0 = 10E-30
+        c0 = f0
+        c = np.zeros(n)
+        c[0] = c0
+        d = np.zeros(n)
+        delta = np.zeros(n)
+        f = np.zeros(n)
+        f[0] = f0
+
+        # iterate
+        for j in range(1, n):
+            d[j] = self._bj(k, j, s, mu, lamda, theta) + \
+                self._aj(k, j, mu, lamda, theta) * d[j-1]
+            c[j] = self._bj(k, j, s, mu, lamda, theta) + \
+                self._aj(k, j, mu, lamda, theta) / c[j-1]
+            d[j] = 1.0 / d[j]
+            delta[j] = c[j] * d[j]
+            f[j] = f[j-1] * delta[j]
+
+        return -f[-1] / lamda
+
+    def fhat(self, b: int, s, mu: float, lamda: float, theta: float):
+        """laplace transform from state b to state 0
+
+        The function computes and returns the laplace transform
+        of the time it takes for agents orders at b
+        to deplete to 0
+
+        :param b: [description]
+        :type b: int
+        :param s: [description]
+        :type s: [type]
+        """
+        orders = np.arange(1, b+1)
+        f = np.vectorize(lambda b:
+                         self.laplace_transform(b, s, 20, mu, lamda, theta))
+        return f(orders).prod()
 
     def prob_mid(self, n=10000, xb=1, xs=1):
         """ calculates probability of mid-price to go up"""
