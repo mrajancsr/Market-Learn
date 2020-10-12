@@ -25,6 +25,7 @@ class Book:
         self.price = np.arange(-self._levels, self._levels + 1)
         self.bid_size, self.ask_size = self._initialize_orders()
         self.events = self._create_events()
+        self.run = False
 
     def _get_levels(self) -> int:
         """returns number of levels in lob
@@ -512,7 +513,30 @@ class Book:
         fit = model.fit(emp_estimates, L=np.arange(1, 6), k=1.2, alpha=0.4)
         return fit.values['k'] * L ** -fit.values['alpha']
 
-    def _dk(self, k: int, mu: float, theta: float):
+    def set_market_params(self,
+                          mu: float,
+                          lamda: float,
+                          theta: float,
+                          ) -> "Book":
+        """sets top of book parameters for market events
+
+        This function needs to be called prior to laplace transformation
+
+        :param mu: market order arrival rates
+        :type mu: float
+        :param lamda: limit order arrival rates
+        :type lamda: float
+        :param theta: order cancellation rates
+        :type theta: float
+        """
+        self.mu = mu
+        self.lamda = lamda
+        self.theta = theta
+        # set runner
+        self.run = True
+        return self
+
+    def _dk(self, k: int):
         """Computes the death rate of birth-death process
 
         death is defined as an agent's order
@@ -526,9 +550,11 @@ class Book:
         :param theta: order cancellation rate
         :type theta: float
         """
-        return mu + k * theta
+        if self.run is False:
+            raise ValueError("set_market_params needs to be called first")
+        return self.mu + k * self.theta
 
-    def _aj(self, k: int, j: int, mu: float, lamda: float, theta: float):
+    def _aj(self, k: int, j: int):
         """helper to compute continued fractions
 
         :param j: index
@@ -536,15 +562,11 @@ class Book:
         :param lamda: limit order arrival rates
         :type lamda: float
         """
-        return -lamda * self._dk(k+j-1, mu, theta)
+        if self.run is False:
+            raise ValueError("set_market_params needs to be called first")
+        return -self.lamda * self._dk(k+j-1)
 
-    def _bj(self,
-            k: int,
-            j: int,
-            s: float,
-            mu: float,
-            lamda: float,
-            theta: float):
+    def _bj(self, k: int, j: int, s: float)
         """helper to compute continued fractions
 
         :param k: [description]
@@ -554,15 +576,11 @@ class Book:
         :param s: [description]
         :type s: float
         """
-        return lamda + self._dk(k+j-1, mu, theta) + s
+        if self.run is False:
+            raise ValueError("set_market_params needs to be called first")
+        return self.lamda + self._dk(k+j-1) + s
 
-    def laplace_transform(self,
-                          k: int,
-                          s: float,
-                          n: int,
-                          mu: float,
-                          lamda: float,
-                          theta: float):
+    def laplace_transform(self, k: int, s: float, n: int)
         """Computes the laplace transform of first passage time
 
         The function evaluates the laplace transform of first
@@ -591,17 +609,15 @@ class Book:
 
         # iterate
         for j in range(1, n):
-            d[j] = self._bj(k, j, s, mu, lamda, theta) + \
-                self._aj(k, j, mu, lamda, theta) * d[j-1]
-            c[j] = self._bj(k, j, s, mu, lamda, theta) + \
-                self._aj(k, j, mu, lamda, theta) / c[j-1]
+            d[j] = self._bj(k, j, s) + self._aj(k, j) * d[j-1]
+            c[j] = self._bj(k, j, s) + self._aj(k, j) / c[j-1]
             d[j] = 1.0 / d[j]
             delta[j] = c[j] * d[j]
             f[j] = f[j-1] * delta[j]
 
         return -f[-1] / lamda
 
-    def fhat(self, b: int, s, mu: float, lamda: float, theta: float):
+    def fhat(self, b: int, s):
         """laplace transform from state b to state 0
 
         The function computes and returns the laplace transform
@@ -614,8 +630,7 @@ class Book:
         :type s: [type]
         """
         orders = np.arange(1, b+1)
-        f = np.vectorize(lambda b:
-                         self.laplace_transform(b, s, 20, mu, lamda, theta))
+        f = np.vectorize(lambda b: self.laplace_transform(b, s, 20))
         return f(orders).prod()
 
     def prob_mid(self, n=10000, xb=1, xs=1):
