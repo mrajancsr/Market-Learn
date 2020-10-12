@@ -390,17 +390,31 @@ class Book:
         :param L: [description]
         :type L: [type]
         """
-        cb = self.buy_size[self.price >= (self.best_ask()-L)][:L][::-1]
-        cs = self.sell_size[self.price <= (self.best_bid() + L)][-L:]
-        nb = cb.sum()
-        ns = cs.sum()
-        cb_rates = np.dot(thetas, cb)
-        cs_rates = np.dot(thetas, cs)
+        # get cancelable orders on bid side from opposte best quote from L
+        cancelable_bids = self.price >= (self.best_ask()-L)
+        cancelable_bids = self.bid_size[cancelable_bids][:L][::-1]
 
+        # get cancelable orders on ask side from opposite best quote from L
+        cancelable_sells = self.price <= (self.best_bid() + L)
+        cancelable_sells = self.ask_size[cancelable_sells][-L:]
+
+        # get total orders on bid side from opposite best quote from L
+        net_buys = cancelable_bids.sum()
+
+        # get total orders on ask side from opposite best quote from L
+        net_sells = cancelable_sells.sum()
+
+        # calculate rates corresponding to cancelable orders
+        cb_rates = thetas @ cancelable_bids
+        cs_rates = thetas @ cancelable_sells
+
+        # calculate total arrival rate of limit orders
         cum_lam = lamdas.sum()
 
-        cum_rate = 2*mu + 2*cum_lam + cb_rates+cs_rates
-        pevent = np.array([mu, mu, cum_lam, cum_lam, cb_rates, cs_rates]) / cum_rate
+        # set the probability of each event based on market rates
+        cum_rate = 2*mu + 2*cum_lam + cb_rates + cs_rates
+        pevent = np.array([mu, mu, cum_lam, cum_lam, cb_rates, cs_rates])
+        pevent /= cum_rate
         market_event = self.events[np.random.choice(6, 1, p=pevent)[0]]
 
         if market_event == "market_buy":
