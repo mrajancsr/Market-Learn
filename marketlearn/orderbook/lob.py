@@ -370,9 +370,13 @@ class Book:
         :type mu: float
         :param lamda: rate of arrival of limit orders
         :type lamda: Union[float, np.ndarray]
+         if func is sfgk_model, float value of lamda is required
+         if func is cst_model, array value of lamda is required
         :param theta: rate at which orders are cancelled
         :type theta: Union[float, np.ndarray]
-        :param L: [description]
+         if func is sfgk_model, float value of theta is required
+         if func is cst_model, array values of theta is required
+        :param L: distance in ticks from opposite best quote
         :type L: int
         :param func: one of sfgk_model or cst_model
         :type func: Callable
