@@ -239,12 +239,9 @@ class Book:
         """
         returns the #of shares up to band on each side of book around mid-price
         """
-        buy_qty = self.buy_size[self.mid_posn() + np.arange(-band-1, 0)]
-        sell_qty = self.sell_size[self.mid_posn() + np.arange(band)]
-        total_qty = np.zeros(2*band+1)
-        total_qty[:band+1] = buy_qty
-        total_qty[band+1:] = sell_qty
-        return total_qty
+        buy_qty = self.bid_size[self._mid_position() + np.arange(-band-1, 0)]
+        sell_qty = self.ask_size[self._mid_position() + np.arange(band)]
+        return np.append(buy_qty, sell_qty)
 
     def book_plot(self, band: int):
         """plots the book shape around mid-price
@@ -284,6 +281,97 @@ class Book:
         events = ["market_buy", "market_sell", "limit_buy", "limit_sell",
                   "cancel_buy", "cancel_sell"]
         return dict(zip(range(6), events))
+
+    def sfgk_model(self,
+                   mu: float,
+                   lamda: float,
+                   theta: float,
+                   L: int = 20):
+        """Generates an agent based event simulation
+
+        Calling this function generates a market event
+        that results in one of market_buy, market_sell,
+        limit_buy, limit_sell, cancel_buy, cancel_sell
+        according to sfgk model
+
+        :param mu: rate of arrival of market orders
+        :type mu: int
+        :param lamda: rate of arrival of limit orders
+        :type lamda: int
+        :param theta: rate at which orders are cancelled
+        :type theta: float
+        :param L: distance in ticks from opposite best quote
+        :type L: int
+        """
+        # get total orders on bid side from opposte best quote from L
+        net_buys = self.buy_size[self.price >= (self.best_ask()-L)].sum()
+
+        # get total orders on ask side from opposite best quote from L
+        net_sells = self.sell_size[self.price <= (self.best_bid() + L)].sum()
+
+        # set the probability of each event based on market rates
+        cum_rate = mu + 2 * L * lamda + net_buys * theta + net_sells * theta
+        pevent = [0.5*mu, 0.5*mu, L*lamda, L*lamda,
+                  net_buys*theta, net_sells*theta]
+        pevent = np.array(pevent) / cum_rate
+
+        # generate market events and initite orders
+        market_event = self.events[np.random.choice(6, 1, p=pevent)[0]]
+        if market_event == "market_buy":
+            self.market_buy()
+        elif market_event == "market_sell":
+            self.market_sell()
+        elif market_event == "limit_buy":
+            # pick price from distance L of opposite best quote and place order
+            q = self.choose(L)
+            p = self.best_ask() - q
+            self.limit_buy(price=p)
+        elif market_event == "limit_sell":
+            # pick price from distance L of opposite best quote and place order
+            q = self.choose(L)
+            p = self.best_bid() + q
+            self.limit_sell(price=p)
+        elif market_event == "cancel_buy":
+            self.cancel_buy(cancellable_orders=net_buys)
+        elif market_event == "cancel_sell":
+            self.cancel_sell(cancellable_orders=net_sells)
+
+    def sfgk_simulate(self,
+                      mu: float,
+                      lamda: float,
+                      theta: float,
+                      L: int,
+                      max_events: int = 10000,
+                      ) -> np.ndarray:
+        """Simulates the average book shape in SFGK model
+
+        :param mu: arrival rate of market orders
+        :type mu: float
+        :param lamda: arrival rate of limit orders
+        :type lamda: float
+        :param theta: rate at which orders are cancelled
+        :type theta: float
+        :param L: distance in ticks from opposite best quote
+        :type L: int
+        :param max_events: number of events generated
+         defaults to 10000
+        :type max_events: int, optional
+        :return: average book shape
+        :rtype: np.ndarray
+        """
+        # simulate 1000 events to start
+        for _ in range(1000):
+            self.sfgk_model(mu, lamda, theta, L)
+
+        # calculate average book shape
+        avg_book_shape = self.book_shape(L) / max_events
+
+        # run sfgk simulation for max_events and return bookshape
+        for _ in range(1, max_events):
+            self.sfgk_model(mu, lamda, theta, L)
+            avg_book_shape += self.book_shape(L) / max_events
+
+        return avg_book_shape
 
     def cst_model(self, mu, lamdas, thetas, L):
         """Generates a agent based event simulation
