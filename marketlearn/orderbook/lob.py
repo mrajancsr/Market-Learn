@@ -150,7 +150,7 @@ class Book:
         self.ask_size[self.price == price] = new_orders
 
     def cancel_buy(self,
-                   price: int = None,
+                   price: int,
                    cancelable_orders: int = None,
                    qty: int = 1):
         """Places a cancel order at given price level on bid side
@@ -167,20 +167,16 @@ class Book:
          defaults to 1
         :type qty: int, optional
         """
-        # if price is specified, cancel order at that level
-        if price is not None:
-            remaining_orders = self.bid_size[self.price == price][0] - qty
-            self.bid_size[self.price == price] = remaining_orders
-        # otherwise randomly choose from total cancelable_orders at bid side
-        else:
-            q = self.choose(cancelable_orders)
-            tmp = self.bid_size[::-1].cumsum()
-            posn = len(tmp[tmp >= q])
-            p = self.price[posn-1]
-            self.bid_size[posn-1] = self.bid_size[posn-1] - qty
+        # if price is not specified, raise error
+        if price is None:
+            raise ValueError("Price cannot be None")
+
+        # otherwise, cancel order on bid side at that price level
+        remaining_orders = self.bid_size[self.price == price][0] - qty
+        self.bid_size[self.price == price] = remaining_orders
 
     def cancel_sell(self,
-                    price: int = None,
+                    price: int,
                     cancelable_orders: int = None,
                     qty: int = 1):
         """Places a cancel order at given price level on ask side
@@ -197,17 +193,13 @@ class Book:
          defaults to 1
         :type qty: int, optional
         """
-        # if price is specified, cancel order at that level
-        if price is not None:
-            remaining_orders = self.ask_size[self.price == price][0] - qty
-            self.sell_size[self.price == price] = remaining_orders
-        # otherwise randomly choose from total cancelable_orders at ask side
-        else:
-            q = self.choose(cancelable_orders)
-            tmp = self.ask_size.cumsum()
-            posn = len(tmp[tmp < q]) + 1
-            p = self.price[posn - 1]
-            self.ask_size[posn - 1] = self.ask_size[posn - 1] - qty
+        # if price is not specified, raise error
+        if price is None:
+            raise ValueError("Price cannot be None")
+
+        # otherwise, cancel order on ask side at that price level
+        remaining_orders = self.ask_size[self.price == price][0] - qty
+        self.ask_size[self.price == price] = remaining_orders
 
     # functions to find the bid/ask positions and mid position
     def _bid_position(self) -> int:
@@ -270,7 +262,7 @@ class Book:
         if prob is None:
             return np.random.choice(np.arange(1, price_level + 1), 1)[0]
         # otherwise pick based on given probability
-        return np.random.choice(np.arange(1, price_level + 1), 1, prob)[0]
+        return np.random.choice(np.arange(1, price_level + 1), 1, p=prob)[0]
 
     def _create_events(self) -> dict:
         """creates events based on simulation
@@ -303,11 +295,23 @@ class Book:
         :param L: distance in ticks from opposite best quote
         :type L: int
         """
-        # get total orders on bid side from opposte best quote from L
-        net_buys = self.bid_size[self.price >= (self.best_ask()-L)].sum()
+        # get cancelable orders on bid side from opposte best quote from L
+        cancelable_bids = self.price >= (self.best_ask()-L)
+        cancelable_bids = self.bid_size[cancelable_bids][:L][::-1]
+
+        # get cancelable orders on ask side from opposite best quote from L
+        cancelable_sells = self.price <= (self.best_bid() + L)
+        cancelable_sells = self.ask_size[cancelable_sells][-L:]
+
+        # get total orders on bid side from opposite best quote from L
+        net_buys = cancelable_bids.sum()
 
         # get total orders on ask side from opposite best quote from L
-        net_sells = self.ask_size[self.price <= (self.best_bid() + L)].sum()
+        net_sells = cancelable_sells.sum()
+
+        # calculate rates corresponding to cancelable orders
+        cb_rates = (theta * cancelable_bids).sum()
+        cs_rates = (theta * cancelable_sells).sum()
 
         # set the probability of each event based on market rates
         cum_rate = mu + 2 * L * lamda + net_buys * theta + net_sells * theta
@@ -315,8 +319,10 @@ class Book:
                   net_buys*theta, net_sells*theta]
         pevent = np.array(pevent) / cum_rate
 
-        # generate market events and initite orders
+        # randomly pick a event based on above poisson rates
         market_event = self.events[np.random.choice(6, 1, p=pevent)[0]]
+
+        # generate events
         if market_event == "market_buy":
             self.market_buy()
         elif market_event == "market_sell":
@@ -332,9 +338,23 @@ class Book:
             p = self.best_bid() + q
             self.limit_sell(price=p)
         elif market_event == "cancel_buy":
-            self.cancel_buy(cancelable_orders=net_buys)
+            # calculate rates corresponding to cancelable orders
+            cb_rates = (theta * cancelable_bids).sum()
+
+            # determine prob at which orders are cancelled across price levels
+            pevent = (theta * cancelable_bids) / cb_rates
+            q = self.choose(L, prob=pevent)
+            p = self.best_ask() - q
+            self.cancel_buy(price=p)
         elif market_event == "cancel_sell":
-            self.cancel_sell(cancelable_orders=net_sells)
+            # calculate rates corresponding to cancelable orders
+            cs_rates = (theta * cancelable_sells).sum()
+
+            # determine prob at which orders are cancelled across price levels
+            pevent = (theta * cancelable_sells) / cs_rates
+            q = self.choose(L, prob=pevent)
+            p = self.best_bid() + q
+            self.cancel_sell(price=p)
 
     def simulate_book(self,
                       mu: float,
