@@ -1,9 +1,9 @@
 """Implementation of Zero-Intelligence Models of Limit Order Book"""
 
-from typing import Tuple, Callable
-from numpy import floor
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from numpy import floor
+from typing import Tuple, Callable, Union
 
 
 class Book:
@@ -336,28 +336,31 @@ class Book:
         elif market_event == "cancel_sell":
             self.cancel_sell(cancelable_orders=net_sells)
 
-    def simulate_events(self,
-                        mu: float,
-                        lamda: float,
-                        theta: float,
-                        L: int,
-                        func: Callable,
-                        max_events: int = 10000,
-                        ) -> np.ndarray:
-        """Simulates the average book shape in Limit Order Book
+    def simulate_book(self,
+                      mu: float,
+                      lamda: Union[float, np.ndarray],
+                      theta: Union[float, np.ndarray],
+                      L: int,
+                      func: Callable,
+                      max_events: int = 10000,
+                      ) -> np.ndarray:
+        """Monte-Carlo Simulation of average book shape
 
-        :param mu: arrival rate of market orders
+        :param mu: rate of arrival of market orders
         :type mu: float
-        :param lamda: arrival rate of limit orders
-        :type lamda: float
+        :param lamda: rate of arrival of limit orders
+        :type lamda: Union[float, np.ndarray]
         :param theta: rate at which orders are cancelled
-        :type theta: float
-        :param L: distance in ticks from opposite best quote
+        :type theta: Union[float, np.ndarray]
+        :param L: [description]
         :type L: int
+        :param func: one of sfgk_model or cst_model
+        :type func: Callable
         :param max_events: number of events generated
          defaults to 10000
         :type max_events: int, optional
-        :return: average book shape
+        :return: average number of orders a distance L ticks
+         from opposite best quote
         :rtype: np.ndarray
         """
         # simulate 1000 events to start
@@ -372,7 +375,9 @@ class Book:
             func(mu, lamda, theta, L)
             avg_book_shape += self.book_shape(L) / max_events
 
-        return avg_book_shape
+        # calculate average of bid/ask orders a distance L ticks
+        result = (avg_book_shape[:L][::-1]+avg_book_shape[L+1:])*0.5
+        return np.append(avg_book_shape[L], result)
 
     def cst_model(self, mu, lamdas, thetas, L):
         """Generates a agent based event simulation
@@ -422,40 +427,29 @@ class Book:
         elif market_event == "market_sell":
             self.market_sell()
         elif market_event == "limit_buy":
+            # pick price from distance L of opposite best quote and place order
             pevent = lamdas / cum_lam
-            q = self.choose(L, prob = pevent)
+            q = self.choose(L, prob=pevent)
             p = self.best_ask() - q
-            self.limit_buy(price = p)
+            self.limit_buy(price=p)
         elif market_event == "limit_sell":
+            # pick price from distance L of opposite best quote and place order
             pevent = lamdas / cum_lam
-            q = self.choose(L, prob = pevent)
+            q = self.choose(L, prob=pevent)
             p = self.best_bid() + q
-            self.limit_sell(price = p)
+            self.limit_sell(price=p)
         elif market_event == "cancel_buy":
-            pevent = (thetas * cb) / cb_rates
-            q = self.choose(L,prob=pevent)
+            # determine prob at which orders are cancelled across price levels
+            pevent = (thetas * cancelable_bids) / cb_rates
+            q = self.choose(L, prob=pevent)
             p = self.best_ask() - q
-            self.cancel_buy(price = p)
+            self.cancel_buy(price=p)
         elif market_event == "cancel_sell":
-            pevent = (thetas * cs) / cs_rates
-            q = self.choose(L,prob = pevent)
+            # determine prob at which orders are cancelled across price levels
+            pevent = (thetas * cancelable_sells) / cs_rates
+            q = self.choose(L, prob=pevent)
             p = self.best_bid() + q
-            self.cancel_sell(price = p)
-
-    def cst_simulate(self, mu, lamdas, thetas, L, numEvents):
-        """returns the average book shape"""
-        # burn in for 1000 events
-        n = 1000
-        for i in range(n):
-            self.cst_model(mu,lamdas,thetas,L)
-        avgBookShape = self.book_shape(L) / numEvents
-
-        for i in range(1,numEvents):
-            self.cst_model(mu,lamdas,thetas,L)
-            avgBookShape = avgBookShape + self.book_shape(L)/ numEvents
-        ans = (avgBookShape[:L][::-1]+avgBookShape[L+1:])*0.5
-        ans = np.append(avgBookShape[L],ans)
-        return ans
+            self.cancel_sell(price=p)
 
     def powerlawfit(self, emp_estimates, distance):
         obj_func = lambda k,alpha,i: k*i**(-alpha)
