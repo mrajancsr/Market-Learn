@@ -1,6 +1,6 @@
 """Implementation of Zero-Intelligence Models of Limit Order Book"""
 
-from typing import Tuple
+from typing import Tuple, Callable
 from numpy import floor
 import numpy as np
 import matplotlib.pyplot as plt
@@ -174,7 +174,7 @@ class Book:
         # otherwise randomly choose from total cancelable_orders at bid side
         else:
             q = self.choose(cancelable_orders)
-            tmp = self.buy_size[::-1].cumsum()
+            tmp = self.bid_size[::-1].cumsum()
             posn = len(tmp[tmp >= q])
             p = self.price[posn-1]
             self.bid_size[posn-1] = self.bid_size[posn-1] - qty
@@ -204,7 +204,7 @@ class Book:
         # otherwise randomly choose from total cancelable_orders at ask side
         else:
             q = self.choose(cancelable_orders)
-            tmp = self.sell_size.cumsum()
+            tmp = self.ask_size.cumsum()
             posn = len(tmp[tmp < q]) + 1
             p = self.price[posn - 1]
             self.ask_size[posn - 1] = self.ask_size[posn - 1] - qty
@@ -304,10 +304,10 @@ class Book:
         :type L: int
         """
         # get total orders on bid side from opposte best quote from L
-        net_buys = self.buy_size[self.price >= (self.best_ask()-L)].sum()
+        net_buys = self.bid_size[self.price >= (self.best_ask()-L)].sum()
 
         # get total orders on ask side from opposite best quote from L
-        net_sells = self.sell_size[self.price <= (self.best_bid() + L)].sum()
+        net_sells = self.ask_size[self.price <= (self.best_bid() + L)].sum()
 
         # set the probability of each event based on market rates
         cum_rate = mu + 2 * L * lamda + net_buys * theta + net_sells * theta
@@ -332,18 +332,19 @@ class Book:
             p = self.best_bid() + q
             self.limit_sell(price=p)
         elif market_event == "cancel_buy":
-            self.cancel_buy(cancellable_orders=net_buys)
+            self.cancel_buy(cancelable_orders=net_buys)
         elif market_event == "cancel_sell":
-            self.cancel_sell(cancellable_orders=net_sells)
+            self.cancel_sell(cancelable_orders=net_sells)
 
-    def sfgk_simulate(self,
-                      mu: float,
-                      lamda: float,
-                      theta: float,
-                      L: int,
-                      max_events: int = 10000,
-                      ) -> np.ndarray:
-        """Simulates the average book shape in SFGK model
+    def simulate_events(self,
+                        mu: float,
+                        lamda: float,
+                        theta: float,
+                        L: int,
+                        func: Callable,
+                        max_events: int = 10000,
+                        ) -> np.ndarray:
+        """Simulates the average book shape in Limit Order Book
 
         :param mu: arrival rate of market orders
         :type mu: float
@@ -361,14 +362,14 @@ class Book:
         """
         # simulate 1000 events to start
         for _ in range(1000):
-            self.sfgk_model(mu, lamda, theta, L)
+            func(mu, lamda, theta, L)
 
         # calculate average book shape
         avg_book_shape = self.book_shape(L) / max_events
 
         # run sfgk simulation for max_events and return bookshape
         for _ in range(1, max_events):
-            self.sfgk_model(mu, lamda, theta, L)
+            func(mu, lamda, theta, L)
             avg_book_shape += self.book_shape(L) / max_events
 
         return avg_book_shape
