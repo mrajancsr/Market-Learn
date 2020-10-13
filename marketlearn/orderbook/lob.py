@@ -566,7 +566,7 @@ class Book:
             raise ValueError("set_market_params needs to be called first")
         return -self.lamda * self._dk(k+j-1)
 
-    def _bj(self, k: int, j: int, s: float)
+    def _bj(self, k: int, j: int, s: float):
         """helper to compute continued fractions
 
         :param k: [description]
@@ -580,7 +580,7 @@ class Book:
             raise ValueError("set_market_params needs to be called first")
         return self.lamda + self._dk(k+j-1) + s
 
-    def laplace_transform(self, k: int, s: float, n: int)
+    def _laplace_transform(self, k: int, s: float, n: int):
         """Computes the laplace transform of first passage time
 
         The function evaluates the laplace transform of first
@@ -630,7 +630,7 @@ class Book:
         :type s: [type]
         """
         orders = np.arange(1, b+1)
-        f = np.vectorize(lambda b: self.laplace_transform(b, s, 20))
+        f = np.vectorize(lambda b: self._laplace_transform(b, s, 20))
         return f(orders).prod()
 
     def prob_mid(self, n=10000, xb=1, xs=1):
