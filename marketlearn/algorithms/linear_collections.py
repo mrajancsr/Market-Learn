@@ -1,5 +1,4 @@
 """Linear Collections, consisting of stacks, queue and deque"""
-
 from typing import Any, Union, List, Optional
 import collections
 
@@ -244,7 +243,6 @@ class StackQueue:
 
     def front(self):
         return self._enq.peek()
-
 
 class MaxQueue:
     """Implementation of Queue withh max API using Deque"""
