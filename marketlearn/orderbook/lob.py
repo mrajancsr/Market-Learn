@@ -1,10 +1,26 @@
 """Implementation of Zero-Intelligence Models of Limit Order Book"""
 
 import matplotlib.pyplot as plt
+import mpmath as mpm
 import numpy as np
+from functools import wraps
+from lmfit import Model
 from numpy import floor
 from typing import Tuple, Callable, Union
-from lmfit import Model
+
+
+class Vectorize:
+    """vectorization decorator that works with instance methods"""
+    def vectorize(self, otypes=None, signature=None):
+        # Decorator as an instance method
+        def decorator(fn):
+            vectorized = np.vectorize(fn, otypes=otypes, signature=signature)
+
+            @wraps(fn)
+            def wrapper(*args, **kwargs):
+                return vectorized(*args, **kwargs)
+            return wrapper
+        return decorator
 
 
 class Book:
@@ -18,6 +34,9 @@ class Book:
 
     Currently only supports placing orders of size 1
     """
+    # decorator function
+    v = Vectorize()
+
     def __init__(self):
         """Default Constructor used to initialize the order book"""
         self._levels = 1000
@@ -580,6 +599,7 @@ class Book:
             raise ValueError("set_market_params needs to be called first")
         return self.lamda + self._dk(k+j-1) + s
 
+    @v.vectorize(signature=("(),(),(),()->()"))
     def _laplace_transform(self, k: int, s: float, n: int):
         """Computes the laplace transform of first passage time
 
@@ -615,7 +635,7 @@ class Book:
             delta[j] = c[j] * d[j]
             f[j] = f[j-1] * delta[j]
 
-        return -f[-1] / lamda
+        return -f[-1] / self.lamda
 
     def fhat(self, b: int, s):
         """laplace transform from state b to state 0
@@ -630,8 +650,35 @@ class Book:
         :type s: [type]
         """
         orders = np.arange(1, b+1)
-        f = np.vectorize(lambda b: self._laplace_transform(b, s, 20))
-        return f(orders).prod()
+        return self._laplace_transform(b, s, 20).prod()
+
+    def _ghat(self, ask_qty: int, bid_qty: int, s):
+        """Laplace transform of probability of increase in mid-price
+
+        The mid-price increases when quantity at ask goes to 0
+        before quantity at bid goes to 0.  The function
+        computes and returns P(Task_qty < Tbid_qty)
+        where Task_qty is first time quantity at ask goes to 0,
+        likewise for Tbid_qty
+
+        :param ask_qty: quantity at the best ask price
+        :type ask_qty: int
+        :param bid_qty: quantity at the best bid price
+        :type bid_qty: int
+        :param s: complex number frequency parameter
+        :type s: [type]
+        :return: laplace transform of probability of increase in mid-price
+        :rtype: float
+        """
+        shift = 100
+        result = self.fhat(ask_qty, s) * self.fhat(bid_qty, -s) / s
+        return result * mpm.exp(-shift*s)
+
+    def prob_mid(self, a, b):
+        shift = 100
+        f = lambda x: self._ghat(a, b, x)
+        return mpm.invertlaplace(f, shift, method='talbot')
+
 
     def prob_mid(self, n=10000, xb=1, xs=1):
         """ calculates probability of mid-price to go up"""
