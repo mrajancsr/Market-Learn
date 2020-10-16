@@ -2,15 +2,14 @@
 PostGresSQL python Interface for interacting with Dbeaver DB
 Author: Rajan Subramanian
 Created May 10 2020
-Todo - add a copy from and time profiler 
+Todo - add a copy from
 """
 
 import os
 import pandas as pd
 import psycopg2
 from configparser import ConfigParser
-from functools import wraps
-from marketlearn.toolz import execution_time
+from marketlearn.toolz import timethis
 from psycopg2.extras import execute_values, DictCursor, execute_batch
 from typing import Iterator, List, Tuple, Dict, Any
 
@@ -75,7 +74,7 @@ class DbReader:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    @execution_time
+    @timethis
     def fetch(self, query: str, section: str = 'dev'):
         """Returns the data associated with table
         Args:
@@ -100,7 +99,7 @@ class DbReader:
         else:
             return rows
 
-    @execution_time
+    @timethis
     def fetchdf(self, query: str, section: str = 'dev'):
         """Returns a pandas dataframe of the db query"""
         return pd.DataFrame(self.fetch(query, section), columns=self.col_names)
@@ -111,7 +110,7 @@ class DbReader:
         """
         yield from iter(datadf.to_dict(orient='rows'))
 
-    @execution_time
+    @timethis
     def push(self,
              data: Iterator[Dict[str, Any]],
              table_name: str,
@@ -149,7 +148,7 @@ class DbReader:
         else:
             return
 
-    @execution_time
+    @timethis
     def pushdf(self,
                datadf: pd.DataFrame,
                table_name: str,
@@ -178,18 +177,21 @@ class DbReader:
                   section=section)
         return
 
-    def copy_from(self, data: Iterator[Dict[str, Any]], table_name: str, columns: List[str], section: str = 'dev') -> None:
+    def copy_from(self,
+                  data: Iterator[Dict[str, Any]],
+                  table_name: str,
+                  columns: List[str],
+                  section: str = 'dev',
+                  ) -> None:
         """copies data from csv file and writes to Db"""
         raise NotImplementedError("Will be Implemented Later")
-        
 
-
-    def push1(self, df, conn, hide=False,table_name=None):
+    def push1(self, df, conn, hide=False, table_name=None):
         """Deprecated and no longer used"""
         raise DeprecationWarning("function has been deprecated and no longer used")
         columns = ",".join(list(df))
-        #create INSERT INTO table (columns) VALUES('%s',...)
-        insert_stmt = "INSERT INTO {} ({}) values %s".format(table_name,columns)
+        # create INSERT INTO table (columns) VALUES('%s',...)
+        insert_stmt = "INSERT INTO {} ({}) values %s".format(table_name, columns)
         curr = conn.cursor()
         args = list(df.itertuples(index=False, name=None))
         execute_values(curr, insert_stmt, args)
@@ -200,8 +202,6 @@ class DbReader:
         """removes table given by table_name from dev db"""
         query = f'drop table {table_name};'
         self.execute(query, conn)
-
-    
 
     def delete(self, table_name, section='dev'):
         """deletes all rows given by table_name from dev deb
