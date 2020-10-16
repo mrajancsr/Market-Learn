@@ -1,5 +1,6 @@
 """class for singly and doubly linked lists"""
 
+
 class SinglyLinkedList:
     """Create a new Singly Linked List
         Takes O(1) time
@@ -32,6 +33,9 @@ class SinglyLinkedList:
         self.start_node = None
         self.size = 0
 
+    def __len__(self):
+        return self.size
+
     def traverse(self):
         """Traverses a Singly Linked List
             Takes O(n) time
@@ -49,11 +53,11 @@ class SinglyLinkedList:
         takes O(1) time
         """
         new_node = self.Node(data)  # create a node
-        new_node.nref = self.start_node # new nodes next reference is old nodes start
+        new_node.nref = self.start_node  # new nodes nextref is old nodes start
         self.start_node = new_node  # new node is now the start_node
         self.size += 1
-    
-    def insert_at_end(self,data):
+
+    def insert_at_end(self, data):
         """inserts value at end of the list
         if list is empty, takes O(1) time.  Otherwise:
         O(n) time
@@ -69,91 +73,105 @@ class SinglyLinkedList:
             n = n.nref
         n.nref = new_node  # set the next reference to point to new node
         self.size += 1
-    
-    def insert_after_item(self,x,data):
-        """inserts value after item x is found
-        if found, takes O(n-k), Otherwise, O(n)
+
+    def insert_after_item(self, item, data):
+        """inserts data after item is found
+        if found, takes O(k+1), Otherwise, O(n)
         """
         n = self.start_node
         while n:  # iterate until x is found
-            if n.element == x:
+            if n.element == item:
                 break
             n = n.nref
         if n is None:
             print("item not found in list")
-        else: # when element is found
-            new_node = self.Node(data)   # create a new node
-            new_node.nref = n.nref  # set the new nodes next ref to current nodes next ref
-            n.nref = new_node # set the current nodes next ref to new node
+        else:
+            new_node = self.Node(data)
+            # set the new nodes next ref to current nodes next ref
+            new_node.nref = n.nref
+            n.nref = new_node  # set the current nodes next ref to new node
             self.size += 1
-    
-    def insert_before_value(self, value,cdata):
-        """Inserts data before value
-        params:
-        value:      item you are looking for
-        data:   data to insert before item
+
+    def insert_before_item(self, item, data) -> None:
+        """Inserts data before item is found
+        if found, takes O(k+1), otherwise, O(n)
+
+        :param item: the item in node
+        :type item: Any
+        :param data: the data to be inserted
+        :type data: Any
         """
         if self.start_node is None:
             print("list has no elements")
-            return 
+            return
+
         # if element is found in first node
-        if self.start_node.element == value:
+        if self.start_node.element == item:
             new_node = self.Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
             self.size += 1
             return
-        n = self.start_node
+
         # iterate until next node contains element
+        n = self.start_node
         while n.nref is not None:
-            if n.nref.element == value:
+            if n.nref.element == data:
                 break
             n = n.nref
+
+        # if end of list is reached
         if n.nref is None:
             print("value not found is list")
         else:
             new_node = self.Node(data)
-            new_node.nref = n.nref  # new nodes next reference is previous nodes next
-            n.nref = new_node       # previous node's next reference is now the new node
+            new_node.nref = n.nref  # new nodes next ref is previous nodes next
+            n.nref = new_node       # previous node's next ref is now new node
             self.size += 1
 
     def insert_at_index(self, index, data):
-        if index == 1:
+        if index == 0:
             new_node = self.Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
             self.size += 1
             return
+
+        # iterate until index is found
         n = self.start_node
-        # similar to insert after element
-        while n and index > 1:
+        while n and index > 0:
             n = n.nref
             index -= 1
         if n is None:
-            print("Index out of bounds")
+            raise IndexError("Index out of bounds")
         else:
             new_node = self.Node(data)
             new_node.nref = n.nref
             n.nref = new_node
             self.size += 1
+
     def count_positions(self):
         """Returns the count of nodes in Linked List"""
         return self.size
-    def search(self, value):
-        """searches a linked list for given value
 
-        params:
-        value:  item to look for
+    def search(self, item) -> bool:
+        """Returns True if item is found
 
-        Returns:
-        bool
+        :param item: the item to look for
+        :type item: Any
+        :return: True if item is found, false otherwise
+        :rtype: bool
         """
+        # check if linked list is empty
         if self.start_node is None:
             print("list has non elements")
             return
+
+        # iterate and search for elements
         n = self.start_node
         while n:
-            if n.element == x: return True
+            if n.element == item:
+                return True
             n = n.nref
         return False
 
@@ -174,11 +192,11 @@ class SinglyLinkedList:
             return
         # delete by assining next reference of start node to start node
         self.start_node = self.start_node.nref
-    
+
     def delete_from_end(self):
         if self.start_node is None:
             print("list has no elements to delete")
-            return 
+            return
         n = self.start_node
         while n.nref.nref:
             n = n.nref
