@@ -202,30 +202,37 @@ class SinglyLinkedList:
             n = n.nref
         n.nref = None
 
-    def delete_by_value(self,value):
-        """deletes node that contains the value
-        params:
-        value:  item to look for in the node to delete
+    def delete_item(self, item: Any):
+        """Deletes the Node that contains the item
+
+        :param item: the item to look for and remove
+        :type item: Any
         """
+        # check if list is empty
         if self.start_node is None:
             print("no element to delete")
-            return 
-        if self.start_node.element == value: # if an element is found
-            self.start_node = self.start_node.nref  # assign next reference of current node to start node
-            return 
+            return
+        # check if first node contains the item
+        if self.start_node.element == item:
+            # assign next reference of current node to start node
+            self.start_node = self.start_node.nref
+            return
+
+        # iterate until element is found
         n = self.start_node
-        while n: # iterate until next references element
-            if n.nref.element == value: 
+        while n:
+            if n.nref.element == item:
                 break
             n = n.nref
+
+        # check if tail is reached
         if n.nref is None:
             print("item not found in index")
         else:
             n.nref = n.nref.nref
 
-   
-    def add_two_linked_lists(self,other):
-        n1 = self.start_node 
+    def add_two_linked_lists(self, other):
+        n1 = self.start_node
         n2 = other.start_node
         l3 = SinglyLinkedList()
         l3.insert_at_start(0)
@@ -234,8 +241,9 @@ class SinglyLinkedList:
         while n1:
             l3.insert_at_end(n1.element+n2.element)
             n1 = n1.nref
-            n2 = n2.nref 
+            n2 = n2.nref
         return l3
+
 
 class DoublyLinkedList:
     """Create a new Doubly Linked List (dLinklist)
