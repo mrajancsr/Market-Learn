@@ -8,6 +8,7 @@ from scipy.stats import norm
 class MarkovSwitchingRegression:
     def __init__(self, regime: int = 2):
         self.regime = regime
+        self.theta = None
 
     def _sigmoid(self, z: np.ndarray) -> np.ndarray:
         """Computes the sigmoid function
@@ -24,7 +25,7 @@ class MarkovSwitchingRegression:
                     mean: np.ndarray,
                     sigma: np.ndarray,
                     ):
-        """Computes the normal density corresponding to regime at time t
+        """Computes the likelihood f(yt|st,Ft-1) of each observation
 
         :param obs: [description]
         :type obs: np.ndarray
@@ -87,17 +88,29 @@ class MarkovSwitchingRegression:
         # compute and return loglikelihood of data observed
         return np.log(jointd[1:]).mean()
 
-    def hamilton_filter(self, obs, predict=False):
+    def hamilton_filter(self,
+                        obs: np.ndarray,
+                        theta: np.ndarray,
+                        predict=False):
         """computes the hamilton filter, p(st=j|Ft)
 
-        Assume self.fit() has been called prior to computing
-        the filter.  If fit() is not called, error is raised
+        :param obs: observed response variable
+        :type obs: np.ndarray,
+         shape = (n_samples,)
+        :param theta: parameters of density function
+        :type theta: np.ndarray
+        :param predict: the prediction probabilities
+         if True, return prediction probabilities
+         along with the Hamilton Filter as tuple
+         defaults to False
+        :type predict: bool, optional
+        :return: hamilton filter
+        :rtype: np.ndarray if predict is False
+         otherwise a tuple of np.ndarrays
         """
-        if self.theta is None:
-            raise AttributeError("fit() has not been called")
         # get parameters from theta
-        prob = self.theta[:2]
-        means = self.theta[2:4]
+        prob = theta[:2]
+        means = theta[2:4]
         sig = np.array([theta[-1], theta[-1]])
 
         # step 1: initate starting values
@@ -176,4 +189,21 @@ class MarkovSwitchingRegression:
                               options={'disp': True},
                               args=(obs,))['x']
 
+        # compute the hamilton filter from the minimization step
+        self.filtered_prob = self.hamilton_filter(obs, self.theta)
+
         return self
+
+    def smoothing_prob(self,
+                       transition_matrix: np.ndarray,
+                       hfilter: np.ndarray) -> np.ndarray:
+        """Computes smoothing probabilities via kim's algorithm
+
+        :param transition_matrix: computed from initial guess
+        :type transition_matrix: np.ndarray
+        :param hfilter: [description]
+        :type hfilter: np.ndarray
+        :return: [description]
+        :rtype: np.ndarray
+        """
+        
