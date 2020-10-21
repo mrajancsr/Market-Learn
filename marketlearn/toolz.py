@@ -1,5 +1,10 @@
-"""Helper tools for makeing life easier"""
+"""Helper tools for making life easier
 
+Author: Rajan Subramanian
+Date: 10/20/2020
+"""
+
+import logging
 import time
 from functools import wraps
 from typing import Callable
@@ -43,3 +48,26 @@ def debugthis(func: Callable):
         return value
     return wrapper
 
+
+def logthis(level, name: str = None, message: str = None):
+    """Adds logging to a function
+
+    :param level: logging level
+    :type level: [type]
+    :param name: logger name, defaults to None
+    :type name: [type], optional
+    :param message: log message
+     if not specified, use function's name
+    :type message: [type], optional
+    """
+    def decorate(func):
+        logname = name if name else func.__module__
+        log = logging.getLogger(logname)
+        logmsg = message if message else func.__name__
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            log.log(level, logmsg)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorate
