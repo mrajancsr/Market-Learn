@@ -220,4 +220,5 @@ class DbReader:
         except Exception as e:
             print(e)
         else:
-            return 
+            return
+    
