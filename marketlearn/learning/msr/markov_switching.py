@@ -239,3 +239,18 @@ class MarkovSwitchingRegression:
             smoothed_prob[t-1] = filtered_prob[t-1] * terms
 
         return smoothed_prob
+
+    def estep(self,
+              obs: np.ndarray,
+              theta: np.ndarray,
+              ) -> np.ndarray:
+        """Computes the e-step in EM algorithm
+
+        :param obs: observed response variables
+        :type obs: np.ndarray
+        :param theta: parameters to be estimated
+        :type theta: np.ndarray
+        :return: posterior probabilities
+        :rtype: np.ndarray
+        """
+        pass
