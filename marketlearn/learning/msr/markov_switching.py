@@ -91,7 +91,7 @@ class MarkovSwitchingRegression:
     def switching_probs(self,
                         obs: np.ndarray,
                         theta: np.ndarray,
-                        transition=False):
+                        smoothing: bool = False):
         """Computes the Hamilton filter, predictions and smoothing prob
 
         :param obs: observed response variable
@@ -118,7 +118,6 @@ class MarkovSwitchingRegression:
         hfilter = np.zeros((n, self.regime))
         eta = np.zeros((n, self.regime))
         predict_prob = np.zeros((n, self.regime))
-        smoothed_prob = np.zeros_like(hfilter)
 
         # create transition matrix
         pii, pjj = self._sigmoid(prob)
@@ -145,14 +144,19 @@ class MarkovSwitchingRegression:
         hfilter[-1] = exponent / exponent.sum()
 
         # set smoothed prob at time T equal to Hamilton Filter at time T
-        smoothed_prob[-1] = hfilter[-1]
+        if smoothing is True:
+            smoothed_prob = np.zeros_like(hfilter)
+            smoothed_prob[-1] = hfilter[-1]
 
-        # recursively compute the smoothed probabilities
-        for t in range(n-1, 0, -1):
-            terms = (P @ (smoothed_prob[t] / predict_prob[t]))
-            smoothed_prob[t-1] = hfilter[t-1] * terms
+            # recursively compute the smoothed probabilities
+            for t in range(n-1, 0, -1):
+                terms = (P @ (smoothed_prob[t] / predict_prob[t]))
+                smoothed_prob[t-1] = hfilter[t-1] * terms
 
-        return (hfilter, predict_prob, smoothed_prob, P)
+        if not smoothing:
+            return (hfilter, predict_prob, P)
+        else:
+            return (hfilter, predict_prob, smoothed_prob, P)
 
     def _objective_func(self, guess: np.ndarray, obs: np.ndarray) -> float:
         """The objective function to be minimized
@@ -204,7 +208,7 @@ class MarkovSwitchingRegression:
         # get all probabilities and transition matrix from minimization step
         self.filtered_prob, self.predict_prob, \
             self.smoothed_prob, self.transition_matrix = \
-            self.switching_probs(obs, self.theta, transition=True)
+            self.switching_probs(obs, self.theta, smoothing=True)
 
         return self
 
@@ -252,5 +256,19 @@ class MarkovSwitchingRegression:
         :type theta: np.ndarray
         :return: posterior probabilities
         :rtype: np.ndarray
+        """
+        # get the switching parameters from theta
+        filtered_prob, predict_prob, P = self.switching_probs(obs, theta)
+
+        # compute the posterior prob of each observation
+        return self.qprob(filtered_prob, predict_prob, P)
+
+    def mstep(self, obs: np.ndarray, qprob: np.ndarray):
+        """Computes the m-step in the EM algorithm
+
+        :param obs: [description]
+        :type obs: np.ndarray
+        :param qprob: [description]
+        :type qprob: np.ndarray
         """
         pass
