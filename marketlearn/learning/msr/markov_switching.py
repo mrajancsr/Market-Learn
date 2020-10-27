@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import norm
+from marketlearn.toolz import timethis
 
 
 class MarkovSwitchingRegression:
@@ -20,12 +21,12 @@ class MarkovSwitchingRegression:
         """
         return 1.0 / (1 + np.exp(-z))
 
-    def _likelihood(self,
-                    obs: np.ndarray,
-                    mean: np.ndarray,
-                    sigma: np.ndarray,
-                    ):
-        """Computes the likelihood f(yt|st,Ft-1) of each observation
+    def _normpdf(self,
+                 obs: np.ndarray,
+                 mean: np.ndarray,
+                 sigma: np.ndarray,
+                 ) -> np.ndarray:
+        """Computes the normal density f(yt|st,Ft-1) of each observation
 
         :param obs: [description]
         :type obs: np.ndarray
@@ -50,7 +51,7 @@ class MarkovSwitchingRegression:
         n = obs.shape[0]
         hfilter = np.zeros((n, self.regime))
         eta = np.zeros((n, self.regime))
-        predictions = np.zeros((n, self.regime))
+        predict_prob = np.zeros((n, self.regime))
         # joint density f(yt|St, Ft-1) * P(st|Ft-1)
         jointd = np.zeros(n)
 
@@ -60,15 +61,14 @@ class MarkovSwitchingRegression:
 
         # initial guess for filter
         hfilter[0] = np.array([0.5, 0.5])
-        predictions[1] = P.T @ hfilter[0]
+        predict_prob[1] = P.T @ hfilter[0]
 
         # compute the densities at t=1
-        eta[1] = self._likelihood(obs[1], means, sig)
-        self.n = n
+        eta[1] = self._normpdf(obs[1], means, sig)
 
         # step2: start filter for t = 1,...,T-1
         for t in range(1, n-1):
-            exponent = eta[t] * predictions[t]
+            exponent = eta[t] * predict_prob[t]
             loglik = exponent.sum()
 
             # compute the joint density for t = 1,...,T-1
@@ -76,11 +76,11 @@ class MarkovSwitchingRegression:
             hfilter[t] = exponent / loglik
 
             # compute predictions for t = 2,...,T
-            predictions[t+1] = P.T @ hfilter[t]
-            eta[t+1] = self._likelihood(obs[t+1], means, sig)
+            predict_prob[t+1] = P.T @ hfilter[t]
+            eta[t+1] = self._normpdf(obs[t+1], means, sig)
 
         # compute the filter and joint at time T
-        exponent = eta[-1] * predictions[-1]
+        exponent = eta[-1] * predict_prob[-1]
         loglik = exponent.sum()
         jointd[-1] = loglik
         hfilter[-1] = exponent / loglik
@@ -88,11 +88,15 @@ class MarkovSwitchingRegression:
         # compute and return loglikelihood of data observed
         return np.log(jointd[1:]).mean()
 
-    def switching_probs(self,
-                        obs: np.ndarray,
-                        theta: np.ndarray,
-                        smoothing: bool = False):
-        """Computes the Hamilton filter, predictions and smoothing prob
+    def forecasts(self,
+                  obs: np.ndarray,
+                  theta: np.ndarray,
+                  smoothing: bool = False,
+                  ) -> tuple:
+        """Computes optimal forecasts based on different information sets
+
+        Forecasts include filtered probabilities, prediction probabilities
+        and smoothed probabilities
 
         :param obs: observed response variable
         :type obs: np.ndarray,
@@ -128,7 +132,7 @@ class MarkovSwitchingRegression:
         predict_prob[1] = P.T @ hfilter[0]
 
         # compute the densities at t=1
-        eta[1] = self._likelihood(obs[1], means, sig)
+        eta[1] = self._normpdf(obs[1], means, sig)
 
         # step2: start filter for t =1,..., T-1
         for t in range(1, n-1):
@@ -137,26 +141,18 @@ class MarkovSwitchingRegression:
 
             # compute predictions for t = 2,...,T
             predict_prob[t+1] = P.T @ hfilter[t]
-            eta[t+1] = self._likelihood(obs[t+1], means, sig)
+            eta[t+1] = self._normpdf(obs[t+1], means, sig)
 
         # compute the filter at time T
         exponent = eta[-1] * predict_prob[-1]
         hfilter[-1] = exponent / exponent.sum()
 
-        # set smoothed prob at time T equal to Hamilton Filter at time T
+        # compute smoothing probabilities
         if smoothing is True:
-            smoothed_prob = np.zeros_like(hfilter)
-            smoothed_prob[-1] = hfilter[-1]
+            smoothed_prob = self.kims_smoother(hfilter, predict_prob, P)
+            return (hfilter, predict_prob, smoothed_prob)
 
-            # recursively compute the smoothed probabilities
-            for t in range(n-1, 0, -1):
-                terms = (P @ (smoothed_prob[t] / predict_prob[t]))
-                smoothed_prob[t-1] = hfilter[t-1] * terms
-
-        if not smoothing:
-            return (hfilter, predict_prob, P)
-        else:
-            return (hfilter, predict_prob, smoothed_prob, P)
+        return (hfilter, predict_prob)
 
     def _objective_func(self, guess: np.ndarray, obs: np.ndarray) -> float:
         """The objective function to be minimized
@@ -192,6 +188,7 @@ class MarkovSwitchingRegression:
         transition_matrix[1, 0] = 1-pjj
         return transition_matrix
 
+    @timethis
     def fit(self, obs: np.ndarray) -> "MarkovSwitchingRegression":
         """Fits two state markov switching model
 
@@ -199,28 +196,34 @@ class MarkovSwitchingRegression:
         :rtype: object
         """
         guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
-        self.theta = minimize(self._objective_func,
-                              guess_params,
-                              method='BFGS',
-                              options={'disp': True},
-                              args=(obs,))['x']
+        theta = minimize(self._objective_func,
+                         guess_params,
+                         method='BFGS',
+                         options={'disp': True},
+                         args=(obs,))['x']
 
-        # get all probabilities and transition matrix from minimization step
+        # get optimal forecasts from above minimization
         self.filtered_prob, self.predict_prob, \
-            self.smoothed_prob, self.transition_matrix = \
-            self.switching_probs(obs, self.theta, smoothing=True)
+            self.smoothed_prob = self.forecasts(obs, theta, smoothing=True)
+
+        # get the transition matrix
+        self.transition_matrix = \
+            self._transition_matrix(*self._sigmoid(theta[:2]))
+
+        # store results of optimization
+        self.theta = theta
+        del theta
 
         return self
 
-    def qprob(self,
-              filtered_prob: np.ndarray,
-              predict_prob: np.ndarray,
-              P: np.ndarray,
-              ) -> np.ndarray:
-        """Computes the posterior probabilities
+    def kims_smoother(self,
+                      filter_prob: np.ndarray,
+                      predict_prob: np.ndarray,
+                      P: np.ndarray,
+                      ) -> np.ndarray:
+        """Computes the posterior using full information set
 
-        The posterior is simply the smoothing probability
-        computed via kim's algorithm
+        The posterior p(St=i|FT) is computed via kim's algorithm
 
         :param filtered_prob: hamilton filter probabilities
         :type filtered_prob: np.ndarray
@@ -231,16 +234,16 @@ class MarkovSwitchingRegression:
         :return: [description]
         :rtype: np.ndarray
         """
-        n = filtered_prob.shape[0]
-        smoothed_prob = np.zeros_like(filtered_prob)
+        n = filter_prob.shape[0]
+        smoothed_prob = np.zeros_like(filter_prob)
 
         # set smoothed prob at time T equal to Hamilton Filter at time T
-        smoothed_prob[-1] = filtered_prob[-1]
+        smoothed_prob[-1] = filter_prob[-1]
 
         # recursively compute the smoothed probabilities
         for t in range(n-1, 0, -1):
             terms = (P @ (smoothed_prob[t] / predict_prob[t]))
-            smoothed_prob[t-1] = filtered_prob[t-1] * terms
+            smoothed_prob[t-1] = filter_prob[t-1] * terms
 
         return smoothed_prob
 
