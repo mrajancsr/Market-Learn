@@ -261,6 +261,35 @@ class MarkovSwitchingRegression:
 
         return smoothed_prob
 
+    def _qprob(self,
+               filter_prob: np.ndarray,
+               predict_prob: np.ndarray,
+               P: np.ndarray,
+               ) -> np.ndarray:
+        """computes the posterior joint probabilities via kim's algorithm
+
+        Posterior joint are given by p(S(t+1)=k, St=i | FT; theta)
+        that are computed via
+        p(St=i|S(t+1)=k,FT;theta) * p(S(t+1)=k|FT;theta)
+        using kim's algorithm
+
+        :param filter_prob: the hamilton filter
+         given by p(st=k | Ft) based on info at time t
+        :type filter_prob: np.ndarray
+        :param predict_prob: prediction probabilities
+         given by p(s(t+1)=k | Ft) based on info at time t
+        :type predict_prob: np.ndarray
+        :param P: transition matrix
+        :type P: np.ndarray
+        :return: posterior joint probabilities
+        :rtype: np.ndarray
+        """
+        # get the smoothed probabilities
+        smoothed_prob = self.kims_smoother(filter_prob, predict_prob, P)
+
+        # compute the posterior joint probabilities
+        pass
+
     def estep(self,
               obs: np.ndarray,
               theta: np.ndarray,
