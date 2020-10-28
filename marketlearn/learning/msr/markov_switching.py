@@ -8,8 +8,17 @@ from marketlearn.toolz import timethis
 
 class MarkovSwitchingRegression:
     def __init__(self, regime: int = 2):
+        """Default constructor used to initialize regime
+
+        :param regime: number of regimes, defaults to 2
+        :type regime: int, optional
+        """
         self.regime = regime
         self.theta = None
+        self.tr_matrix = None
+        self.filtered_prob = None
+        self.predict_prob = None
+        self.smoothed_prob = None
 
     def _sigmoid(self, z: np.ndarray) -> np.ndarray:
         """Computes the sigmoid function
@@ -40,8 +49,25 @@ class MarkovSwitchingRegression:
         lik = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
         return np.column_stack(tuple(lik))
 
-    def _loglikelihood(self, obs, theta: np.ndarray):
-        """computes the loglikelihood of data observed"""
+    def _loglikelihood(self,
+                       obs: np.ndarray,
+                       theta: np.ndarray,
+                       store: bool = False,
+                       ) -> np.ndarray:
+        """Computes the loglikelihood of data observed
+
+        :param obs: observed response variable
+        :type obs: np.ndarray
+        :param theta: guess for optimization
+        :type theta: np.ndarray
+        :param store: if true, store results
+         of hamilton filter and predicted prob
+         defaults to False
+        :type store: bool, optional
+        :return: loglikelihood as a byproduct of computing
+         the optimal forecasts
+        :rtype: np.ndarray
+        """
         # get parameters from theta
         prob = theta[:2]
         means = theta[2:4]
@@ -83,6 +109,10 @@ class MarkovSwitchingRegression:
         loglik = exponent.sum()
         jointd[-1] = loglik
         hfilter[-1] = exponent / loglik
+
+        if store is True:
+            self.filtered_prob = hfilter
+            self.predict_prob = predict_prob
 
         # compute and return loglikelihood of data observed
         return np.log(jointd[1:]).mean()
@@ -140,7 +170,11 @@ class MarkovSwitchingRegression:
 
         return hfilter if not predict else (hfilter, predict_prob)
 
-    def _objective_func(self, guess: np.ndarray, obs: np.ndarray) -> float:
+    def _objective_func(self,
+                        guess: np.ndarray,
+                        obs: np.ndarray,
+                        store: bool = False,
+                        ) -> float:
         """The objective function to be minimized
 
         :param guess: parameters for optimization
@@ -150,7 +184,7 @@ class MarkovSwitchingRegression:
         :return: negative of loglikelihood of data observed
         :rtype: float
         """
-        f = self._loglikelihood(obs, theta=guess)
+        f = self._loglikelihood(obs, theta=guess, store=store)
         return -f
 
     def _transition_matrix(self, pii: float, pjj: float):
@@ -186,11 +220,7 @@ class MarkovSwitchingRegression:
                               guess_params,
                               method='BFGS',
                               options={'disp': True},
-                              args=(obs,))['x']
-
-        # recompute hamilton filter and prediction prob from above parameters
-        self.filtered_prob, self.predict_prob = \
-            self.hamilton_filter(obs, self.theta, predict=True)
+                              args=(obs, True))['x']
 
         # compute the smoothed probabilities
         self.smoothed_prob = \
