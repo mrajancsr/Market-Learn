@@ -10,6 +10,8 @@ class MarkovSwitchingRegression:
     def __init__(self, regime: int = 2):
         """Default constructor used to initialize regime
 
+        Currently only supports mean switching and two regimes
+
         :param regime: number of regimes, defaults to 2
         :type regime: int, optional
         """
@@ -285,10 +287,30 @@ class MarkovSwitchingRegression:
         :rtype: np.ndarray
         """
         # get the smoothed probabilities
-        smoothed_prob = self.kims_smoother(filter_prob, predict_prob, P)
+        smooth_prob = self.kims_smoother(filter_prob, predict_prob, P)
 
         # compute the posterior joint probabilities
-        pass
+        # each observation state is at 00, 01, 10, 11
+        n = smooth_prob.shape[0]
+        qprob = np.zeros((n, 2**self.regime))
+
+        # -- initial values don't really matter since for
+        # -- algorithm, we are starting at index 2
+        qprob[0, [0, 2]] = smooth_prob[0, 0]
+        qprob[0, [1, 3]] = smooth_prob[0, 1]
+
+        # calculate the joint
+        for t in range(1, n):
+            # for state (st=0, st+1=0) and (st=0, st+1=1)
+            qprob[t, :2] = \
+                P[0] * smooth_prob[t] * filter_prob[t-1, 0] / predict_prob[t]
+
+            # for state (st=1, st+1=0) and (st=1, st+1=1)
+            qprob[t, 2:] = \
+                P[1] * smooth_prob[t] * filter_prob[t-1, 1] / predict_prob[t]
+
+        # return the full posterior probabilities
+        return np.concatenate((smooth_prob, qprob), axis=1)
 
     def estep(self,
               obs: np.ndarray,
@@ -303,11 +325,13 @@ class MarkovSwitchingRegression:
         :return: posterior probabilities
         :rtype: np.ndarray
         """
-        # get the switching parameters from theta
-        filtered_prob, predict_prob, P = self.switching_probs(obs, theta)
+        # get hamilton filter and predictions
+        hfilter, predict_prob = self.hamilton_filter(obs, theta, predict=True)
 
-        # compute the posterior prob of each observation
-        return self.qprob(filtered_prob, predict_prob, P)
+        # compute and return posterior prob of each observation
+        return self._qprob(filter_prob=hfilter,
+                           predict_prob=predict_prob,
+                           P=self.tr_matrix)
 
     def mstep(self, obs: np.ndarray, qprob: np.ndarray):
         """Computes the m-step in the EM algorithm
