@@ -295,17 +295,15 @@ class MarkovSwitchingRegression:
         qprob = np.zeros((n, 2**self.regime))
 
         # -- initial values don't really matter since for
-        # -- algorithm, we are starting at index 2
-        qprob[0, [0, 2]] = smooth_prob[0, 0]
-        qprob[0, [1, 3]] = smooth_prob[0, 1]
+        # -- algorithm, we are starting at index 1
 
         # calculate the joint
         for t in range(1, n):
-            # for state (st=0, st+1=0) and (st=0, st+1=1)
+            # for state (st-1=0, st=0) and (st-1=0, st=1)
             qprob[t, :2] = \
                 P[0] * smooth_prob[t] * filter_prob[t-1, 0] / predict_prob[t]
 
-            # for state (st=1, st+1=0) and (st=1, st+1=1)
+            # for state (st-1=1, st=0) and (st-1=1, st=1)
             qprob[t, 2:] = \
                 P[1] * smooth_prob[t] * filter_prob[t-1, 1] / predict_prob[t]
 
@@ -341,4 +339,8 @@ class MarkovSwitchingRegression:
         :param qprob: [description]
         :type qprob: np.ndarray
         """
-        pass
+        poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
+        p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
+        mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1: 0].sum()
+        mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1: 1].sum()
+        
