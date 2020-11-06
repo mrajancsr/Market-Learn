@@ -297,7 +297,7 @@ class MarkovSwitchingRegression:
         # -- initial values don't really matter since for
         # -- algorithm, we are starting at index 1
 
-        # calculate the joint
+        # calculate the joint, t from t=1
         for t in range(1, n):
             # for state (st-1=0, st=0) and (st-1=0, st=1)
             qprob[t, :2] = \
@@ -310,10 +310,10 @@ class MarkovSwitchingRegression:
         # return the full posterior probabilities
         return np.concatenate((smooth_prob, qprob), axis=1)
 
-    def estep(self,
-              obs: np.ndarray,
-              theta: np.ndarray,
-              ) -> np.ndarray:
+    def _estep(self,
+               obs: np.ndarray,
+               theta: np.ndarray,
+               ) -> np.ndarray:
         """Computes the e-step in EM algorithm
 
         :param obs: observed response variables
@@ -331,7 +331,7 @@ class MarkovSwitchingRegression:
                            predict_prob=predict_prob,
                            P=self.tr_matrix)
 
-    def mstep(self, obs: np.ndarray, qprob: np.ndarray):
+    def _mstep(self, obs: np.ndarray, qprob: np.ndarray):
         """Computes the m-step in the EM algorithm
 
         :param obs: [description]
@@ -343,4 +343,20 @@ class MarkovSwitchingRegression:
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
         mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1: 0].sum()
         mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1: 1].sum()
-        
+        spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
+        sig = np.sqrt(
+            (qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2).mean())
+        return poo, p11, mu0, mu1, sig
+    
+    def expect_max(self, obs: np.ndarray) -> np.ndarray:
+        """Computes expectation maximization algorithm
+
+        :param obs: the actual observations
+        :type obs: np.ndarray
+        :return: initial parameters for
+         regime switching model
+        :rtype: np.ndarray
+        """
+        pass
+
+
