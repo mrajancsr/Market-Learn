@@ -220,10 +220,15 @@ class MarkovSwitchingRegression:
         :return: parameters from optimization
         :rtype: object
         """
-        guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
+        # get the initial guess from em algorithm
+        #guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
+        
+        self.fit_em(obs, n_iter=20)
+        guess_params = self.initial_params.tail(1).values.ravel()
+        guess_params[:2] = self.inv_sigmoid(guess_params[:2])
         self.theta = minimize(self._objective_func,
                               guess_params,
-                              method='BFGS',
+                              method='SLSQP',
                               options={'disp': True},
                               args=(obs, True))['x']
 
@@ -356,13 +361,13 @@ class MarkovSwitchingRegression:
         """
         poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
-        pkk = np.array([poo, p11])
-        mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1: 0].sum()
-        mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1: 1].sum()
+        pkk = np.array([poo, 1 - p11])
+        mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1:, 0].sum()
+        mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1:, 1].sum()
         muk = np.array([mu0, mu1])
         spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
         var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
-        return pkk, muk, np.sqrt(var.mean())
+        return pkk, muk, [np.sqrt(var.mean())]
 
     def fit_em(self,
                obs: np.ndarray,
@@ -407,7 +412,7 @@ class MarkovSwitchingRegression:
             pk = self.inv_sigmoid(pkk)
 
         cols = self._make_titles()
-        self.theta = pd.DataFrame(theta, columns=cols)
+        self.initial_params = pd.DataFrame(theta, columns=cols)
         return self
 
     def _make_titles(self) -> list:
@@ -419,7 +424,7 @@ class MarkovSwitchingRegression:
         # get the letters and create titles
         n = self.nregime
         letters = ascii_uppercase[:n]
-        col1 = list("p{ii}".format(i=i) for i in range(n))
+        col1 = list("p{i}{i}".format(i=i) for i in range(n))
         col2 = list("mean{i}".format(i=i) for i in range(n))
         col3 = ["sigma"]
         return list(chain(col1, col2, col3))
