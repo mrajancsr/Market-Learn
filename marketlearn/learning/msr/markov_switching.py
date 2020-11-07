@@ -1,21 +1,24 @@
 """Module Implements Markov Switching Regression"""
 
 import numpy as np
+import pandas as pd
+from itertools import chain
+from marketlearn.toolz import timethis
 from scipy.optimize import minimize
 from scipy.stats import norm
-from marketlearn.toolz import timethis
+from string import ascii_uppercase
 
 
 class MarkovSwitchingRegression:
-    def __init__(self, regime: int = 2):
+    def __init__(self, nregime: int = 2):
         """Default constructor used to initialize regime
 
         Currently only supports mean switching and two regimes
 
-        :param regime: number of regimes, defaults to 2
-        :type regime: int, optional
+        :param nregime: number of regimes, defaults to 2
+        :type nregime: int, optional
         """
-        self.regime = regime
+        self.nregime = nregime
         self.theta = None
         self.tr_matrix = None
         self.filtered_prob = None
@@ -77,9 +80,9 @@ class MarkovSwitchingRegression:
 
         # step 1: initate starting values
         n = obs.shape[0]
-        hfilter = np.zeros((n, self.regime))
-        eta = np.zeros((n, self.regime))
-        predict_prob = np.zeros((n, self.regime))
+        hfilter = np.zeros((n, self.nregime))
+        eta = np.zeros((n, self.nregime))
+        predict_prob = np.zeros((n, self.nregime))
         # joint density f(yt|St, Ft-1) * P(st|Ft-1)
         jointd = np.zeros(n)
 
@@ -143,9 +146,9 @@ class MarkovSwitchingRegression:
 
         # step 1: initate starting values
         n = obs.shape[0]
-        hfilter = np.zeros((n, self.regime))
-        eta = np.zeros((n, self.regime))
-        predict_prob = np.zeros((n, self.regime))
+        hfilter = np.zeros((n, self.nregime))
+        eta = np.zeros((n, self.nregime))
+        predict_prob = np.zeros((n, self.nregime))
 
         # construct transition matrix
         self._transition_matrix(*self._sigmoid(prob))
@@ -292,7 +295,7 @@ class MarkovSwitchingRegression:
         # compute the posterior joint probabilities
         # each observation state is at 00, 01, 10, 11
         n = smooth_prob.shape[0]
-        qprob = np.zeros((n, 2**self.regime))
+        qprob = np.zeros((n, 2**self.nregime))
 
         # -- initial values don't really matter since for
         # -- algorithm, we are starting at index 1
@@ -353,16 +356,18 @@ class MarkovSwitchingRegression:
         """
         poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
+        pkk = np.array([poo, p11])
         mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1: 0].sum()
         mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1: 1].sum()
+        muk = np.array([mu0, mu1])
         spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
         var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
-        return poo, p11, mu0, mu1, np.sqrt(var.mean())
-    
-    def run_em_algorithm(self,
-                         obs: np.ndarray,
-                         show: bool = False,
-                         n_iter: int = 20):
+        return pkk, muk, np.sqrt(var.mean())
+
+    def fit_em(self,
+               obs: np.ndarray,
+               show: bool = False,
+               n_iter: int = 20):
         """fits a markov switching model via EM algorithm
 
         :param obs: initial observations
@@ -372,4 +377,49 @@ class MarkovSwitchingRegression:
         :param n_iter: [description], defaults to 20
         :type n_iter: int, optional
         """
-        pass
+        n = obs.shape[0]
+        n_regime = self.nregime
+
+        # pick random index from obs for initial mean estimate
+        idx = np.random.randint(low=0, high=n, size=n_regime)
+
+        # initialize means for two regimes, transition probabilites
+        muk = obs[idx]
+        # ensures the transition probabilities are 0.5 each
+        pk = np.zeros(n_regime)
+        theta = [0] * n_iter
+        _theta = [0] * n_iter
+        sig = np.ones(1)
+
+        # iterate
+        for i in range(n_iter):
+            theta[i] = chain(self._sigmoid(pk), muk, sig)
+            _theta[i] = np.concatenate([pk, muk, sig])
+            if show:
+                items = chain(self._sigmoid(pk), muk, sig)
+                print(f"#{i} ", ", ".join(f"{c:.4f}" for c in items))
+
+            # compute the e-step
+            qprob = self._estep(obs, _theta[i])
+
+            # compute the m-step
+            pkk, muk, sig = self._mstep(obs, qprob)
+            pk = self.inv_sigmoid(pkk)
+
+        cols = self._make_titles()
+        self.theta = pd.DataFrame(theta, columns=cols)
+        return self
+
+    def _make_titles(self) -> list:
+        """Creates column titles after em is run
+
+        :return: list of dataframe column titles
+        :rtype: list
+        """
+        # get the letters and create titles
+        n = self.nregime
+        letters = ascii_uppercase[:n]
+        col1 = list("p{ii}".format(i=i) for i in range(n))
+        col2 = list("mean{i}".format(i=i) for i in range(n))
+        col3 = ["sigma"]
+        return list(chain(col1, col2, col3))
