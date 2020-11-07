@@ -94,7 +94,7 @@ class MarkovSwitchingRegression:
         predict_prob[1] = self.tr_matrix.T @ hfilter[0]
 
         # compute the densities at t=1
-        eta[1] = self._normpdf(obs[1], means, sig)
+        eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t = 1,...,T-1
         for t in range(1, n-1):
@@ -107,7 +107,6 @@ class MarkovSwitchingRegression:
 
             # compute predictions for t = 2,...,T
             predict_prob[t+1] = self.tr_matrix.T @ hfilter[t]
-            eta[t+1] = self._normpdf(obs[t+1], means, sig)
 
         # compute the filter and joint at time T
         exponent = eta[-1] * predict_prob[-1]
@@ -147,7 +146,7 @@ class MarkovSwitchingRegression:
         # step 1: initate starting values
         n = obs.shape[0]
         hfilter = np.zeros((n, self.nregime))
-        eta = np.zeros((n, self.nregime))
+        #eta = np.zeros((n, self.nregime))
         predict_prob = np.zeros((n, self.nregime))
 
         # construct transition matrix
@@ -158,7 +157,7 @@ class MarkovSwitchingRegression:
         predict_prob[1] = self.tr_matrix.T @ hfilter[0]
 
         # compute the densities at t=1
-        eta[1] = self._normpdf(obs[1], means, sig)
+        eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t =1,..., T-1
         for t in range(1, n-1):
@@ -167,7 +166,7 @@ class MarkovSwitchingRegression:
 
             # compute predictions for t = 2,...,T
             predict_prob[t+1] = self.tr_matrix.T @ hfilter[t]
-            eta[t+1] = self._normpdf(obs[t+1], means, sig)
+            #eta[t+1] = self._normpdf(obs[t+1], means, sig)
 
         # compute the filter at time T
         exponent = eta[-1] * predict_prob[-1]
@@ -221,10 +220,10 @@ class MarkovSwitchingRegression:
         :rtype: object
         """
         # get the initial guess from em algorithm
-        #guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
-        self.fit_em(obs, n_iter=50)
+        # remove this later
+        # guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
+        self.fit_em(obs, n_iter=20)
         guess_params = self.initial_params.tail(1).values.ravel()
-        guess_params[:2] = self.inv_sigmoid(guess_params[:2])
         self.theta = minimize(self._objective_func,
                               guess_params,
                               method='SLSQP',
@@ -392,19 +391,17 @@ class MarkovSwitchingRegression:
         # ensures the transition probabilities are 0.5 each
         pk = np.zeros(n_regime)
         theta = [0] * n_iter
-        _theta = [0] * n_iter
         sig = np.ones(1)
 
         # iterate
         for i in range(n_iter):
-            theta[i] = chain(self._sigmoid(pk), muk, sig)
-            _theta[i] = np.concatenate([pk, muk, sig])
+            theta[i] = np.concatenate((pk, muk, sig))
             if show:
                 items = chain(self._sigmoid(pk), muk, sig)
                 print(f"#{i} ", ", ".join(f"{c:.4f}" for c in items))
 
             # compute the e-step
-            qprob = self._estep(obs, _theta[i])
+            qprob = self._estep(obs, theta[i])
 
             # compute the m-step
             pkk, muk, sig = self._mstep(obs, qprob)
