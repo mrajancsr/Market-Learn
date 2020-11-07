@@ -310,6 +310,14 @@ class MarkovSwitchingRegression:
         # return the full posterior probabilities
         return np.concatenate((smooth_prob, qprob), axis=1)
 
+    def inv_sigmoid(self, x: np.ndarray):
+        """computes inverse of sigmoid function
+
+        :param x: the probability
+        :type x: np.ndarray
+        """
+        return -np.log((1-x) / x)
+
     def _estep(self,
                obs: np.ndarray,
                theta: np.ndarray,
@@ -331,32 +339,37 @@ class MarkovSwitchingRegression:
                            predict_prob=predict_prob,
                            P=self.tr_matrix)
 
-    def _mstep(self, obs: np.ndarray, qprob: np.ndarray):
-        """Computes the m-step in the EM algorithm
+    def _mstep(self, obs: np.ndarray, qprob: np.ndarray) -> tuple:
+        """Computes the m-step in the em algorithm
 
-        :param obs: [description]
+        :param obs: the actual observations
         :type obs: np.ndarray
-        :param qprob: [description]
+        :param qprob: posterior probabilities
         :type qprob: np.ndarray
+        :return: poo,p11,mu0,mu1,sig
+         which represents the transition prob,
+         means for two regimes and constant vol
+        :rtype: tuple
         """
         poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
         mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1: 0].sum()
         mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1: 1].sum()
         spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
-        sig = np.sqrt(
-            (qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2).mean())
-        return poo, p11, mu0, mu1, sig
+        var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
+        return poo, p11, mu0, mu1, np.sqrt(var.mean())
     
-    def expect_max(self, obs: np.ndarray) -> np.ndarray:
-        """Computes expectation maximization algorithm
+    def run_em_algorithm(self,
+                         obs: np.ndarray,
+                         show: bool = False,
+                         n_iter: int = 20):
+        """fits a markov switching model via EM algorithm
 
-        :param obs: the actual observations
+        :param obs: initial observations
         :type obs: np.ndarray
-        :return: initial parameters for
-         regime switching model
-        :rtype: np.ndarray
+        :param show: [description], defaults to False
+        :type show: bool, optional
+        :param n_iter: [description], defaults to 20
+        :type n_iter: int, optional
         """
         pass
-
-
