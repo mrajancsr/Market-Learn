@@ -224,6 +224,7 @@ class MarkovSwitchingRegression:
         # guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
         self.fit_em(obs, n_iter=20)
         guess_params = self.initial_params.tail(1).values.ravel()
+        guess_params[:2] = self.inv_sigmoid(guess_params[:2])
         self.theta = minimize(self._objective_func,
                               guess_params,
                               method='SLSQP',
@@ -409,6 +410,8 @@ class MarkovSwitchingRegression:
 
         cols = self._make_titles()
         self.initial_params = pd.DataFrame(theta, columns=cols)
+        self.initial_params[['p00', 'p11']] = \
+            self.initial_params[['p00', 'p11']].apply(self._sigmoid)
         return self
 
     def _make_titles(self) -> list:
