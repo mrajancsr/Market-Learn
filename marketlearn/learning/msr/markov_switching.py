@@ -222,8 +222,7 @@ class MarkovSwitchingRegression:
         """
         # get the initial guess from em algorithm
         #guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
-        
-        self.fit_em(obs, n_iter=20)
+        self.fit_em(obs, n_iter=50)
         guess_params = self.initial_params.tail(1).values.ravel()
         guess_params[:2] = self.inv_sigmoid(guess_params[:2])
         self.theta = minimize(self._objective_func,
