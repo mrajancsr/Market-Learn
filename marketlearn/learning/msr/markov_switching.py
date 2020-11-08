@@ -10,10 +10,32 @@ from string import ascii_uppercase
 
 
 class MarkovSwitchingRegression:
+    """Implementation of Hamilton's Regime Switching Model
+
+       c.f: https://personal.eur.nl/kole/rsexample.pdf
+       Currently, only a two state mean switching
+       model is supported
+
+       Notes:
+       - EM algorithm is used as initial parameter estimation
+         to augment the quasi maximum likelihood estimation
+         of joint density function f(yt,st)
+         where yt is response variable of observations
+         and st is the state transtion variable which
+         indicates the regime it came from
+         st ~ Bernoulli(0,1) r.v
+       - todo:
+            1) add variance switching
+            2) add beta parameter switching
+            3) add auto-regressive markov switching model
+
+
+    """
     def __init__(self, nregime: int = 2):
         """Default constructor used to initialize regime
 
-        Currently only supports mean switching and two regimes
+        Currently only supports Dynamic Mean Switching
+        with two regimes
 
         :param nregime: number of regimes, defaults to 2
         :type nregime: int, optional
@@ -146,7 +168,6 @@ class MarkovSwitchingRegression:
         # step 1: initate starting values
         n = obs.shape[0]
         hfilter = np.zeros((n, self.nregime))
-        #eta = np.zeros((n, self.nregime))
         predict_prob = np.zeros((n, self.nregime))
 
         # construct transition matrix
@@ -166,7 +187,6 @@ class MarkovSwitchingRegression:
 
             # compute predictions for t = 2,...,T
             predict_prob[t+1] = self.tr_matrix.T @ hfilter[t]
-            #eta[t+1] = self._normpdf(obs[t+1], means, sig)
 
         # compute the filter at time T
         exponent = eta[-1] * predict_prob[-1]
@@ -220,8 +240,6 @@ class MarkovSwitchingRegression:
         :rtype: object
         """
         # get the initial guess from em algorithm
-        # remove this later
-        # guess_params = np.array([0.5, 0.5, 4, 10, 2.0])
         self.fit_em(obs, n_iter=20)
         guess_params = self.initial_params.tail(1).values.ravel()
         guess_params[:2] = self.inv_sigmoid(guess_params[:2])
@@ -237,6 +255,8 @@ class MarkovSwitchingRegression:
                                self.predict_prob,
                                self.tr_matrix)
 
+        # convert the first two parameters to transition prob
+        self.theta[:2] = self._sigmoid(self.theta[:2])
         return self
 
     def kims_smoother(self,
