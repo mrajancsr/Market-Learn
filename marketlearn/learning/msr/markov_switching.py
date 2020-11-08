@@ -1,4 +1,8 @@
-"""Module Implements Markov Switching Regression"""
+"""
+Module Implements Markov Switching Regression
+Author: Rajan Subramanian
+Date: Nov, 7, 2020
+"""
 
 import numpy as np
 import pandas as pd
@@ -24,12 +28,11 @@ class MarkovSwitchingRegression:
          and st is the state transtion variable which
          indicates the regime it came from
          st ~ Bernoulli(0,1) r.v
+
        - todo:
             1) add variance switching
             2) add beta parameter switching
             3) add auto-regressive markov switching model
-
-
     """
     def __init__(self, nregime: int = 2):
         """Default constructor used to initialize regime
