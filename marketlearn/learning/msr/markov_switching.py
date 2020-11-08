@@ -18,7 +18,10 @@ class MarkovSwitchingRegression:
 
        c.f: https://personal.eur.nl/kole/rsexample.pdf
        Currently, only a two state mean switching
-       model is supported
+       model is supported, i.e
+                yt = mu_st + et
+       where et~N(0, sigma), mu_st is means corresponding to r.v st
+       st ~ Bernoulli(0,1) indicates regime 0 or 1
 
        Notes:
        - EM algorithm is used as initial parameter estimation
