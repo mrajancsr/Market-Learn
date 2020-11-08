@@ -244,7 +244,7 @@ class MarkovSwitchingRegression:
         """
         # get the initial guess from em algorithm
         self.fit_em(obs, n_iter=20)
-        guess_params = self.initial_params.tail(1).values.ravel()
+        guess_params = self.em_params.tail(1).values.ravel()
         guess_params[:2] = self.inv_sigmoid(guess_params[:2])
         self.theta = minimize(self._objective_func,
                               guess_params,
@@ -432,9 +432,9 @@ class MarkovSwitchingRegression:
             pk = self.inv_sigmoid(pkk)
 
         cols = self._make_titles()
-        self.initial_params = pd.DataFrame(theta, columns=cols)
-        self.initial_params[['p00', 'p11']] = \
-            self.initial_params[['p00', 'p11']].apply(self._sigmoid)
+        self.em_params = pd.DataFrame(theta, columns=cols)
+        self.em_params[['p00', 'p11']] = \
+            self.em_params[['p00', 'p11']].apply(self._sigmoid)
         return self
 
     def _make_titles(self) -> list:
