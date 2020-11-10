@@ -14,6 +14,7 @@ Assumptions:
        - Assumes all rates are continuous compounding
 """
 import numpy as np
+import pandas as pd
 
 
 class BoundsError(Exception):
@@ -38,9 +39,9 @@ class ZeroRateCurve:
          shape = (n_samnples,)
         """
         self.maturities = maturities
-        self.zcb_prices = zcb
-        self.disc_factors = zcb / 100.0
         self.zero_rates = zero_rates
+        self.disc_factors = self.discount_factor(maturities, zero_rates)
+        self.zcb_prices = self.disc_factors * 100.0
 
     def discount_factor(self, t: float, rcont: float) -> float:
         """computes the discount factor corresponding to continuous rates
@@ -56,7 +57,7 @@ class ZeroRateCurve:
         :rtype: float
         """
         return np.exp(-rcont*t)
-    
+
     def rates_from_discount_factors(self, t: float, discount_factor: float):
         """computes the continuous rates from discount factors
 
@@ -71,8 +72,8 @@ class ZeroRateCurve:
         :rtype: float
         """
         return (1.0 / t) * np.log(1 / discount_factor)
-        
-    def linear_interp(self, k: float) -> float:
+
+    def linear_interp(self, t: float) -> float:
         """performs linear interpolation of spot rate
 
         :param k: maturity of payment date of $1
@@ -80,19 +81,48 @@ class ZeroRateCurve:
         :return: rate corresponding to maturity t
         :rtype: float
         """
-        r = self.rates
-        t = self.maturities
-        tmin = t[0]
-        tmax = t[-1]
+        r = self.zero_rates
+        expiry = self.maturities
+        tmin = expiry[0]
+        tmax = expiry[-1]
 
-        if k < tmin or k > tmax:
+        if t < tmin or t > tmax:
             raise BoundsError("Maturity out of bounds")
 
         # find index where t1 < t < t2
-        told = len(t[t < k]) - 1
+        told = len(expiry[expiry < t]) - 1
         tnew = told + 1
-        terms = (r[tnew] - r[told]) / (t[tnew] - t[told])
-        return terms * (k - t[told]) + r[told]
+        terms = (r[tnew] - r[told]) / (expiry[tnew] - expiry[told])
+        return terms * (t - expiry[told]) + r[told]
 
+    def logfwd_interp(self, t: float) -> float:
+        """performs linear interpolation of log of discount factors
 
-        
+        :param t: maturity of payment date of $1
+        :type t: float
+        :return: spot rate corresponding to maturity t
+        :rtype: float
+        """
+        pass
+
+    def cubic_spline(self, t: float) -> float:
+        """performs cubic spline interpolation of spot rates"""
+        pass
+
+    def build_curve(self, fit_type: str ='linear_spot') -> pd.Series:
+        """builds a zero rate curve based on type of interpolation
+
+        :param fit_type: type of fit
+         supports one of linear_spot, constant_fwd, cubic_spline
+         defaults to 'linear_spot'
+        :type fit_type: str, optional
+        :return: zero rate curve
+        :rtype: pd.Series
+        """
+        tmax = self.maturities[-1]
+        knot_points = np.arange(0, tmax, 0.01)
+        if fit_type == 'linear_spot':
+            zero_rates = map(self.linear_interp, knot_points)
+        elif fit_type == 'constant_fwd':
+            pass
+        return pd.Series(zero_rates, index=knot_points)
