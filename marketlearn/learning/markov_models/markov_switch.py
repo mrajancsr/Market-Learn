@@ -1,5 +1,5 @@
 """
-Module Implements Markov Switching Regression
+Module Implements Hamilton's Regime Switching Regression
 Author: Rajan Subramanian
 Date: Nov, 7, 2020
 """
@@ -13,13 +13,18 @@ from scipy.stats import norm
 from string import ascii_uppercase
 
 
-class MarkovSwitchingRegression:
+class RegimeSwitchModel:
     """Implementation of Hamilton's Regime Switching Model
 
-       c.f: https://personal.eur.nl/kole/rsexample.pdf
+       c.f:
+       https://econweb.ucsd.edu/~jhamilto/palgrav1.pdf
+       https://personal.eur.nl/kole/rsexample.pdf
+       https://www.stata.com/features/overview/markov-switching-models/
        Currently, only a two state mean switching
-       model is supported, i.e
+       model with constant variance is supported, i.e
+
                 yt = mu_st + et
+
        where et~N(0, sigma), mu_st is means corresponding to r.v st
        st ~ Bernoulli(0,1) indicates regime 0 or 1
 
@@ -37,7 +42,9 @@ class MarkovSwitchingRegression:
             2) add beta parameter switching
             3) add auto-regressive markov switching model
     """
-    def __init__(self, nregime: int = 2):
+    def __init__(self,
+                 nregime: int = 2,
+                 variance_switch: bool = False):
         """Default constructor used to initialize regime
 
         Currently only supports Dynamic Mean Switching
@@ -47,8 +54,9 @@ class MarkovSwitchingRegression:
         :type nregime: int, optional
         """
         self.nregime = nregime
+        self.variance_switch = variance_switch
         self.theta = None
-        self.tr_matrix = None
+        self.tr_matrix = np.zeros((2, 2))
         self.filtered_prob = None
         self.predict_prob = None
         self.smoothed_prob = None
@@ -121,7 +129,7 @@ class MarkovSwitchingRegression:
         hfilter[0] = np.array([0.5, 0.5])
         predict_prob[1] = self.tr_matrix.T @ hfilter[0]
 
-        # compute the densities at t=1
+        # compute the densities at t=1:T
         eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t = 1,...,T-1
@@ -183,7 +191,7 @@ class MarkovSwitchingRegression:
         hfilter[0] = np.array([0.5, 0.5])
         predict_prob[1] = self.tr_matrix.T @ hfilter[0]
 
-        # compute the densities at t=1
+        # compute the densities at t=1,..,T
         eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t =1,..., T-1
@@ -231,37 +239,39 @@ class MarkovSwitchingRegression:
         :return: transition matrix
         :rtype: np.ndarray
         """
-        self.tr_matrix = np.zeros((2, 2))
         self.tr_matrix[0, 0] = pii
         self.tr_matrix[0, 1] = 1 - pii
         self.tr_matrix[1, 1] = pjj
         self.tr_matrix[1, 0] = 1-pjj
-        return self
 
     @timethis
-    def fit(self, obs: np.ndarray) -> "MarkovSwitchingRegression":
-        """Fits two state markov switching model
+    def fit(self, obs: np.ndarray, n_iter=10) -> "RegimeSwitchModel":
+        """Fits two state Regime switching model
 
         :return: parameters from optimization
         :rtype: object
         """
         # get the initial guess from em algorithm
-        self.fit_em(obs, n_iter=20)
+        self.fit_em(obs, n_iter=n_iter)
         guess_params = self.em_params.tail(1).values.ravel()
+
+        # convert the first two parameters as they are transition probs
         guess_params[:2] = self.inv_sigmoid(guess_params[:2])
+
+        # find optimal parameters
         self.theta = minimize(self._objective_func,
                               guess_params,
                               method='SLSQP',
                               options={'disp': True},
                               args=(obs, True))['x']
 
-        # compute the smoothed probabilities
+        # compute the smoothed probabilities with final parameters
         self.smoothed_prob = \
             self.kims_smoother(self.filtered_prob,
                                self.predict_prob,
                                self.tr_matrix)
 
-        # convert the first two parameters to transition prob
+        # convert the first two parameters back to transition prob
         self.theta[:2] = self._sigmoid(self.theta[:2])
         return self
 
@@ -280,7 +290,7 @@ class MarkovSwitchingRegression:
         :type predict_prob: np.ndarray
         :param P: state transition matrix
         :type P: np.ndarray
-        :return: [description]
+        :return: smoothing probabilities
         :rtype: np.ndarray
         """
         n = filter_prob.shape[0]
@@ -372,6 +382,7 @@ class MarkovSwitchingRegression:
                            predict_prob=predict_prob,
                            P=self.tr_matrix)
 
+    # - check to see if more efficient way of summing the means
     def _mstep(self, obs: np.ndarray, qprob: np.ndarray) -> tuple:
         """Computes the m-step in the em algorithm
 
@@ -387,17 +398,22 @@ class MarkovSwitchingRegression:
         poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
         pkk = np.array([poo, 1 - p11])
+        # feels like below step can be done in one shot
         mu0 = (qprob[1:, 0] * obs[1:]).sum() / qprob[1:, 0].sum()
         mu1 = (qprob[1:, 1] * obs[1:]).sum() / qprob[1:, 1].sum()
         muk = np.array([mu0, mu1])
         spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
-        var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
+        # by default, assume mean switch with constant variance
+        if not self.variance_switch:
+            var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
+        else:
+            pass
         return pkk, muk, [np.sqrt(var.mean())]
 
     def fit_em(self,
                obs: np.ndarray,
                show: bool = False,
-               n_iter: int = 20):
+               n_iter: int = 10):
         """fits a markov switching model via EM algorithm
 
         :param obs: initial observations
@@ -436,8 +452,9 @@ class MarkovSwitchingRegression:
 
         cols = self._make_titles()
         self.em_params = pd.DataFrame(theta, columns=cols)
-        self.em_params[['p00', 'p11']] = \
-            self.em_params[['p00', 'p11']].apply(self._sigmoid)
+        self.em_params.index.name = "em_iterations"
+        self.em_params[['p11', 'p22']] = \
+            self.em_params[['p11', 'p22']].apply(self._sigmoid)
         return self
 
     def _make_titles(self) -> list:
@@ -449,7 +466,7 @@ class MarkovSwitchingRegression:
         # get the letters and create titles
         n = self.nregime
         letters = ascii_uppercase[:n]
-        col1 = list("p{i}{i}".format(i=i) for i in range(n))
-        col2 = list("mean{i}".format(i=i) for i in range(n))
-        col3 = ["sigma"]
+        col1 = list("p{i}{i}".format(i=i) for i in range(1, n+1))
+        col2 = list("regime{i}_mean".format(i=i) for i in range(1, n+1))
+        col3 = ["regime_vol"]
         return list(chain(col1, col2, col3))
