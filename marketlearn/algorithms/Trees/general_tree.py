@@ -6,6 +6,7 @@ Date: 11/11/2020
 from marketlearn.algorithms.Trees.tree_base import _GeneralTreeBase
 from typing import Any
 
+
 class GTree(_GeneralTreeBase):
     """Class representing general tree structure using linked lists
 
@@ -13,7 +14,7 @@ class GTree(_GeneralTreeBase):
     None
 
     Attributes:
-    root: (Node)        represents root of the binary tree
+    root: (Node)        represents root of the general tree
                         default set to None since its empty at time of creation
     size: (int)         length of tree
                         default to 0 since its empty at time of creation
@@ -28,7 +29,9 @@ class GTree(_GeneralTreeBase):
         def __init__(self, element, parent=None, child=None):
             self._element = element
             self._parent = parent
-            self._children = [child]
+            self._children = [] if child is None else [child]
+            self.num_child = len(self._children)
+            self.childidx = 0
 
     class Position(_GeneralTreeBase.Position):
         """Abstraction representing location of single element"""
@@ -110,7 +113,7 @@ class GTree(_GeneralTreeBase):
         if node._children is None:
             return None
         for child in node._children:
-            yield child
+            yield self._make_position(child)
 
     def _addroot(self, data: Any):
         """adds data to root of empty tree and return new position
@@ -143,6 +146,7 @@ class GTree(_GeneralTreeBase):
         if child_node._element in node._children:
             raise ValueError("position already has this child")
         # append child node to parent's child
+        self._size += 1
         child_node._parent = node
         node._children.append(child_node)
         return self._make_position(child_node)

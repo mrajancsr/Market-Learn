@@ -224,7 +224,7 @@ class BinaryTree(_BinaryTreeBase):
             type: (str) tree traversal type, one of pre(post,in)order or breadthfirst
                     default set to inorder
         """
-        if type not in set(('preorder','postorder','inorder','breadthfirst')):
+        if type not in ('preorder', 'postorder', 'inorder', 'breadthfirst'):
             raise AttributeError()
         return self._my_hash[type]()
 
