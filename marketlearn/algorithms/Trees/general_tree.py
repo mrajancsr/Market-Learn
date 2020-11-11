@@ -27,11 +27,20 @@ class GTree(_GeneralTreeBase):
         __slots__ = '_element', '_parent'
 
         def __init__(self, element, parent=None, child=None):
+            """default constructor used to initialize a node
+
+            :param element: data contained in the node
+            :type element: Any
+            :param parent: the parent of the node element,
+             defaults to None
+            :type parent: node, optional
+            :param child: child of the current node element,
+             defaults to None
+            :type child: node, optional
+            """
             self._element = element
             self._parent = parent
             self._children = [] if child is None else [child]
-            self.num_child = len(self._children)
-            self.childidx = 0
 
     class Position(_GeneralTreeBase.Position):
         """Abstraction representing location of single element"""
