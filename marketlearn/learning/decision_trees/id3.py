@@ -7,15 +7,15 @@ Date: 11/10/2020
 Notes:
     - todo Also include the c4.5 algorithm of Quinian
 """
-from marketlearn.algorithms.Trees.tree import BinaryTree
+from marketlearn.algorithms.Trees.general_tree import GTree
 from typing import Any, Union
 
 
-class ID3(BinaryTree):
+class ID3(GTree):
     """ID3 algorithm built from Binary Trees using linked lists"""
 
     def __init__(self,
-                 criterion: string = 'entropy',
+                 criterion: str = 'entropy',
                  max_depth: int = None,
                  min_samples_split: int = 2,
                  min_samples_leaf: Union[int, float] = 1,
@@ -49,7 +49,12 @@ class ID3(BinaryTree):
         self.min_samples_leaf = min_samples_leaf
         self.prune = prune
 
-    def entropy
+    def entropy(self):
+        pass
+
+
+id3 = ID3()
+
 
 
 

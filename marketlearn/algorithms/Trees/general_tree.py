@@ -137,7 +137,7 @@ class GTree(_GeneralTreeBase):
         return self._make_position(self._root)
 
     def _addchild(self,
-                  p: GTree.Position,
+                  p: Position,
                   data: Any
                   ):
         """adds data as child of position p
