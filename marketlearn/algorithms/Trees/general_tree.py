@@ -101,7 +101,7 @@ class GTree(_GeneralTreeBase):
         """
         node = self._validate(p)
         return self._make_position(node._parent)
-    
+
     def num_children(self, p):
         """return # of children that position p has
         takes O(1) time
@@ -152,11 +152,16 @@ class GTree(_GeneralTreeBase):
         """
         node = self._validate(p)
         child_node = self._Node(data)
+
+        # check if child is p's child
         if child_node._element in node._children:
             raise ValueError("position already has this child")
-        # append child node to parent's child
+
+        # associate child's parent to p's node
         self._size += 1
         child_node._parent = node
+
+        # add child to p's family and return child's position
         node._children.append(child_node)
         return self._make_position(child_node)
 
