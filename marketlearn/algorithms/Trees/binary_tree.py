@@ -134,7 +134,7 @@ class BinaryTree(_BinaryTreeBase):
             takes O(1) time
         """
         node = self._validate(p)
-        if node._left is not None: 
+        if node._left is not None:
             raise ValueError("left Child Exists")
         node._left = self._Node(data, parent=node)
         return self._make_position(node._left)
@@ -142,7 +142,7 @@ class BinaryTree(_BinaryTreeBase):
     def _add_right(self, p, data):
         """place data at right child of position p
             raise valueError if right child already exists
-            takes O(1) time 
+            takes O(1) time
         """
         node = self._validate(p)
         if node._right is not None:
@@ -152,12 +152,12 @@ class BinaryTree(_BinaryTreeBase):
 
     def _replace(self, p, data):
         """replace data at position p with data and returns old data
-            takes O(1) time 
+            takes O(1) time
         """
         node = self._validate(p)
         old = node._element
         node._element = data
-        return old 
+        return old
 
     def _delete(self, p):
         """delete node at position p and replace it with its child, if any
@@ -166,10 +166,10 @@ class BinaryTree(_BinaryTreeBase):
             takes O(1) time
         """
         node = self._validate(p)
-        if self.num_children(p) == 2: 
+        if self.num_children(p) == 2:
             raise ValueError("p has two children")
-        child = node._left if node._left else node._right  # might be None 
-        if child is not None: 
+        child = node._left if node._left else node._right  # might be None
+        if child is not None:
             child._parent = node._parent  # child's grandparent becomes parent
         if node is self._root:
             self._root = child  # child becomes root
@@ -190,7 +190,9 @@ class BinaryTree(_BinaryTreeBase):
         node = self._validate(p)
         if not self.is_leaf(p):
             raise ValueError("position must be a leaf")
-        if not type(self) is type(tree1) is type(tree2):  # all trees must be of same type
+
+        # all trees must be of same type
+        if not type(self) is type(tree1) is type(tree2):
             raise ValueError("Trees must match")
         self._size += len(tree1) + len(tree2)
         if not tree1.is_empty():

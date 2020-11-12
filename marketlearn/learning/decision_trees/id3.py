@@ -9,10 +9,11 @@ Notes:
 """
 from marketlearn.algorithms.Trees.general_tree import GTree
 from typing import Any, Union
+import numpy as np
 
 
 class ID3(GTree):
-    """ID3 algorithm built from Binary Trees using linked lists"""
+    """ID3 algorithm built from General Trees using linked lists"""
 
     def __init__(self,
                  criterion: str = 'entropy',
@@ -43,20 +44,26 @@ class ID3(GTree):
          defaults to False
         :type prune: bool, optional
         """
+        super().__init__()
         self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.prune = prune
 
-    def entropy(self):
+    def entropy(self, target: np.ndarray):
+        """calculates entropy of a system"""
+        unique, counts = np.unique(target, return_counts=True)
+        total = target.sum()
+        freq = np.asarray((unique, counts)).T
+        prob = freq.prod().flatten() / total
+        return -(prob * np.log(prob)).sum()
+
+    def information_gain(self, data: np.ndarray, p):
+        node = self._validate(p)
         pass
 
 
 id3 = ID3()
-
-
-
-
-
+print(id3)
 

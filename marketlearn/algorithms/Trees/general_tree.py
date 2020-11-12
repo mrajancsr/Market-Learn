@@ -67,7 +67,8 @@ class GTree(_GeneralTreeBase):
         if p._container is not self:
             raise ValueError("p does not belong to this container")
         if p._node._parent is p._node:
-            raise ValueError("p is no longer valid")  # convention for deprecated nodes
+            # convention for deprecated nodes
+            raise ValueError("p is no longer valid")
         return p._node
 
     # general tree constructor
@@ -196,3 +197,17 @@ class GTree(_GeneralTreeBase):
         if not self.is_empty():
             for p in self._subtree_postorder(self.root()):
                 yield p
+
+    def preorder(self):
+        """generate a preorder iteration of positions in a tree"""
+        if not self.is_empty():
+            for p in self._subtree_preorder(self.root()):
+                yield p
+
+    def _subtree_preorder(self, p):
+        """generate a preorder iteration of positions in a subtree rooted at position p
+            """
+        yield p  # visit p first before visiting its subtrees
+        for c in self.children(p):
+            for pos in self._subtree_preorder(c):
+                yield pos
