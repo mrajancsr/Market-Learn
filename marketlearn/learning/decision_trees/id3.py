@@ -54,9 +54,7 @@ class ID3(GTree):
     def entropy(self, target: np.ndarray):
         """calculates entropy of a system"""
         unique, counts = np.unique(target, return_counts=True)
-        total = target.sum()
-        freq = np.asarray((unique, counts)).T
-        prob = freq.prod().flatten() / total
+        prob = (unique * counts) / target.sum()
         return -(prob * np.log(prob)).sum()
 
     def information_gain(self, data: np.ndarray, p):
