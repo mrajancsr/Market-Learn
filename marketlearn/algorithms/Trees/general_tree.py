@@ -3,8 +3,8 @@
 Author: Rajan Subramanian
 Date: 11/11/2020
 """
-from marketlearn.algorithms.Trees.tree_base import _GeneralTreeBase
-from typing import Any
+from marketlearn.algorithms.trees.tree_base import _GeneralTreeBase
+from typing import Any, Iterator
 
 
 class GTree(_GeneralTreeBase):
@@ -22,22 +22,22 @@ class GTree(_GeneralTreeBase):
     """
     # Nested Node Class
     class _Node:
-        """To represent contents of a node in trees"""
+        """To represent contents of a node in trees
 
+        Parameters
+            ----------
+            element : Any
+                data to be inserted into node
+            parent : {Node, optional}, default=None
+                parent of current node, by default None
+            child : {Node, optional}, deault=None
+                child of current node, by default None
+        """
+        # - light weight slots for trees
         __slots__ = '_element', '_parent'
 
-        def __init__(self, element, parent=None, child=None):
-            """default constructor used to initialize a node
-
-            :param element: data contained in the node
-            :type element: Any
-            :param parent: the parent of the node element,
-             defaults to None
-            :type parent: node, optional
-            :param child: child of the current node element,
-             defaults to None
-            :type child: node, optional
-            """
+        def __init__(self, element: Any, parent=None, child=None):
+            """default constructor used to initialize a node"""
             self._element = element
             self._parent = parent
             self._children = [] if child is None else [child]
@@ -50,18 +50,68 @@ class GTree(_GeneralTreeBase):
             self._node = node
 
         def element(self):
-            """return element stored at position"""
+            """return element stored at position
+
+            Returns
+            -------
+            Any
+                element stored at a position
+            """
             return self._node._element
 
         def __eq__(self, other):
+            """tests if two positions are equal
+
+            Parameters
+            ----------
+            other : Position
+                the position we are comparing to
+
+            Returns
+            -------
+            bool
+                True if two positions are the same and they
+                contain the same node
+            """
             return type(other) is type(self) and other._node is self._node
 
     def _make_position(self, node):
-        """Return Position's instance for a given node"""
+        """Return Position's instance for a given node
+
+        Parameters
+        ----------
+        node : Node
+            [description]
+
+        Returns
+        -------
+        Position
+            position's instance for a given node
+        """
         return self.Position(self, node) if node is not None else None
 
     def _validate(self, p):
-        """return position's node or raise appropriate error if invalid"""
+        """return position's node or raise appropriate error if invalid
+
+        Parameters
+        ----------
+        p : [type]
+            position whose node will be returned
+
+        Returns
+        -------
+        Node
+            the node of the position
+
+        Raises
+        ------
+        ValueError
+            if p is not a Position object
+        ValueError
+            if p does not belong to same container
+        ValueError
+            if p's node is same as p's parent node
+        """
         if not isinstance(p, self.Position):
             raise("p must be proper Position type")
         if p._container is not self:
@@ -83,32 +133,54 @@ class GTree(_GeneralTreeBase):
                          "breadthfirst": self.breadthfirst}
 
     def __len__(self):
-        """returns total number of nodes in tree
-           takes O(1) time
+        """returns total number of nodes in a tree
+
+        Returns
+        -------
+        int
+            total number of nodes in a tree
+            takes O(1) time
         """
         return self._size
 
     def root(self):
-        """return root position of tree, return None if tree is empty
-           takes O(1) time
+        """return root of tree's position, or None if tree is empty
+
+        Returns
+        -------
+        Position
+            the root position or None if tree is empty
         """
         return self._make_position(self._root)
 
     def parent(self, p):
         """return position representing p's parent (or None if p is root)
 
-        :param p: positional object
-        :type p: position of p's parent or None if p is empty
+        Parameters
+        ----------
+        p : Position
+            position of interest
+
+        Returns
+        -------
+        Position
+            position of p's parent
         """
         node = self._validate(p)
         return self._make_position(node._parent)
 
     def num_children(self, p):
-        """return # of children that position p has
-        takes O(1) time
+        """return total children that position p has
 
-        :param p: positional object
-        :type p: positional class
+        Parameters
+        ----------
+        p : Position
+            position of interest
+
+        Returns
+        -------
+        int
+            the total number of p's children
         """
         node = self._validate(p)
         return len(node._children) if node._children else 0
@@ -116,14 +188,28 @@ class GTree(_GeneralTreeBase):
     def children(self, p):
         """returns iteration of p's children (or None if p is empty)
 
-        :param p: positional object
-        :type p: positional class
+        Parameters
+        ----------
+        p : Position
+            position of interest
+
+        Returns
+        -------
+        None
+            if p has no children
+
+        Yields
+        -------
+        Iterator
+            an iterator of p's children
+        """
         """
         node = self._validate(p)
         if node._children is None:
             return None
         for child in node._children:
-            yield self._make_position(child)
+            yield self._make_position(child)"""
+        pass
 
     def _addroot(self, data: Any):
         """adds data to root of empty tree and return new position
@@ -137,19 +223,25 @@ class GTree(_GeneralTreeBase):
         self._root = self._Node(data)
         return self._make_position(self._root)
 
-    def _addchild(self,
-                  p: Position,
-                  data: Any
-                  ):
-        """adds data as child of position p
-           raise valueError if child already exists
-           takes O(k) time where k is number of
-           children of p
+    def _addchild(self, p, data: Any):
+        """adds data as child to position p
 
-        :param p: [description]
-        :type p: GTree.Position
-        :param data: [description]
-        :type data: Any
+        Parameters
+        ----------
+        p : Position
+            current position to which child is added
+        data : Any
+            data to be used into child node
+
+        Returns
+        -------
+        Position
+            child position
+
+        Raises
+        ------
+        ValueError
+            if position p already has this child
         """
         node = self._validate(p)
         child_node = self._Node(data)
@@ -166,7 +258,7 @@ class GTree(_GeneralTreeBase):
         node._children.append(child_node)
         return self._make_position(child_node)
 
-    def _replace(self, p, data):
+    def _replace(self, p, data: Any):
         """replace data at position p with data and returns old data
             takes O(1) time
         """
@@ -178,7 +270,8 @@ class GTree(_GeneralTreeBase):
     def positions(self, type='postorder'):
         """generate iteration of trees positions
             params:
-            type: (str) tree traversal type, one of pre(post,in)order or breadthfirst
+            type: (str) tree traversal type, one of pre(post,in)order
+            or breadthfirst
                     default set to inorder
         """
         if type not in ('preorder', 'postorder', 'breadthfirst'):

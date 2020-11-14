@@ -2,6 +2,32 @@
 Module Implements Hamilton's Regime Switching Regression
 Author: Rajan Subramanian
 Date: Nov, 7, 2020
+
+Notes:
+- Implementation based on following papers c.f:
+  https://econweb.ucsd.edu/~jhamilto/palgrav1.pdf
+  https://personal.eur.nl/kole/rsexample.pdf
+  https://www.stata.com/features/overview/markov-switching-models/
+- Currently, only a two state mean switching
+  model with constant variance is supported, i.e
+
+            yt = mu_st + et
+
+  where et~N(0, sigma), mu_st is means corresponding to r.v st
+  st ~ Bernoulli(0,1) indicates regime 0 or 1
+
+- EM algorithm is used as initial parameter estimation
+  to augment the quasi maximum likelihood estimation
+  of joint density function f(yt,st)
+  where yt is response variable of observations
+  and st is the state transtion variable which
+  indicates the regime it came from
+  st ~ Bernoulli(0,1) r.v
+
+- todo:
+    1) add variance switching
+    2) add beta parameter switching
+    3) add auto-regressive markov switching model
 """
 
 import numpy as np
@@ -16,43 +42,29 @@ from string import ascii_uppercase
 class RegimeSwitchModel:
     """Implementation of Hamilton's Regime Switching Model
 
-       c.f:
-       https://econweb.ucsd.edu/~jhamilto/palgrav1.pdf
-       https://personal.eur.nl/kole/rsexample.pdf
-       https://www.stata.com/features/overview/markov-switching-models/
-       Currently, only a two state mean switching
-       model with constant variance is supported, i.e
+    Parameters
+    ----------
+    nregime : int, optional, default=2
+        the number of regimes in the model
+    variance_switch : bool, default=False
+        whether to perform variance switching
+        if False, do mean switching instead
 
-                yt = mu_st + et
-
-       where et~N(0, sigma), mu_st is means corresponding to r.v st
-       st ~ Bernoulli(0,1) indicates regime 0 or 1
-
-       Notes:
-       - EM algorithm is used as initial parameter estimation
-         to augment the quasi maximum likelihood estimation
-         of joint density function f(yt,st)
-         where yt is response variable of observations
-         and st is the state transtion variable which
-         indicates the regime it came from
-         st ~ Bernoulli(0,1) r.v
-
-       - todo:
-            1) add variance switching
-            2) add beta parameter switching
-            3) add auto-regressive markov switching model
+    Attributes
+    ----------
+    nregime : int
+        The number of regimes
+    variance_switch : bool
+        whether to perform variance switching
+    theta : ndarray
+        estimated parameters from minimizing loglikelihood
+    tr_matrix : ndarray, shape=(n_regimes,nregimes)
+        transition matrix
     """
     def __init__(self,
                  nregime: int = 2,
                  variance_switch: bool = False):
-        """Default constructor used to initialize regime
-
-        Currently only supports Dynamic Mean Switching
-        with two regimes
-
-        :param nregime: number of regimes, defaults to 2
-        :type nregime: int, optional
-        """
+        """Default constructor used to initialize regime"""
         self.nregime = nregime
         self.variance_switch = variance_switch
         self.theta = None
@@ -62,12 +74,17 @@ class RegimeSwitchModel:
         self.smoothed_prob = None
 
     def _sigmoid(self, z: np.ndarray) -> np.ndarray:
-        """Computes the sigmoid function
+        """computes the sigmoid function
 
-        :param z: intial guess for optimization
-        :type z: np.ndarray
-        :return: transition probabilities
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        z : np.ndarray
+            initial guess for optimization
+
+        Returns
+        -------
+        np.ndarray, shape=(n_regime, n_regime)
+            transition probabilities
         """
         return 1.0 / (1 + np.exp(-z))
 
@@ -78,14 +95,19 @@ class RegimeSwitchModel:
                  ) -> np.ndarray:
         """Computes the normal density f(yt|st,Ft-1) of each observation
 
-        :param obs: observed response variable
-        :type obs: np.ndarray
-        :param mean: means corresponding to 2 regimes
-        :type mean: np.ndarray
-        :param sigma: volatility corresponding to 2 regimes
-        :type sigma: np.ndarray
-        :return: normal density of each observation given regime
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        obs : np.ndarray
+            observed response variable
+        mean : np.ndarray
+            the mean of two regimes
+        sigma : np.ndarray
+            the volatility of two regimes
+
+        Returns
+        -------
+        np.ndarray
+            normal density given the information set
         """
         lik = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
         return np.column_stack(tuple(lik))
@@ -97,17 +119,19 @@ class RegimeSwitchModel:
                        ) -> np.ndarray:
         """Computes the loglikelihood of data observed
 
-        :param obs: observed response variable
-        :type obs: np.ndarray
-        :param theta: guess for optimization
-        :type theta: np.ndarray
-        :param store: if true, store results
-         of hamilton filter and predicted prob
-         defaults to False
-        :type store: bool, optional
-        :return: loglikelihood as a byproduct of computing
-         the optimal forecasts
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        obs : np.ndarray
+            the observed response variable
+        theta : np.ndarray
+            initial guess for optimization
+        store : bool, optional, default=False
+            if true, store results of prediction and filtered probabilities
+
+        Returns
+        -------
+        np.ndarray
+            loglikelihood of data observed
         """
         # get parameters from theta
         prob = theta[:2]
@@ -162,17 +186,21 @@ class RegimeSwitchModel:
                         theta: np.ndarray,
                         predict: bool = False,
                         ) -> np.ndarray:
-        """Computes the hamilton filter
+        """computes the hamilton filter
 
-        :param obs: observed response variable
-        :type obs: np.ndarray
-        :param theta: initial guess parameters
-        :type theta: np.ndarray
-        :param predict: prediction probabilities
-        defaults to False
-        :type predict: bool, optional
-        :return: filtered probabilities
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        obs : np.ndarray
+            the observations
+        theta : np.ndarray
+            initial guess for optimization
+        predict : bool, optional, default=False
+            whether to store result of predicted probabilities
+
+        Returns
+        -------
+        np.ndarray
+            the hamilton filter
         """
         # get parameters from theta
         prob = theta[:2]
@@ -213,31 +241,36 @@ class RegimeSwitchModel:
                         obs: np.ndarray,
                         store: bool = False,
                         ) -> float:
-        """The objective function to be minimized
+        """the objective function to be minimized
 
-        :param guess: parameters for optimization
-        :type guess: np.ndarray
-        :param obs: observed data
-        :type obs: np.ndarray
-        :return: negative of loglikelihood of data observed
-        :rtype: float
+        Parameters
+        ----------
+        guess : np.ndarray
+            initial guess for optimization
+        obs : np.ndarray
+            observed response variable
+        store : bool, optional
+            [description], by default False
+
+        Returns
+        -------
+        float
+            negative of loglikelihood to be minimized
         """
         f = self._loglikelihood(obs, theta=guess, store=store)
         return -f
 
     def _transition_matrix(self, pii: float, pjj: float):
-        """Constructs the transition matrix given the diagonal probabilities
+        """computes transition matrix from state transition probabilities
 
-        :param pii: probability that r.v
-         stays at state i given it starts at i
-         given by first element of diagonal
-        :type pii: float
-        :param pjj: probability that r.v
-         stays at state j given it starts at j
-         given by next element of diagonal
-        :type pjj: float
-        :return: transition matrix
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        pii : float
+            probability that r.v that starts at i, stays at i
+            given by first element of diagonal
+        pjj : float
+            probability that r.v that starts at j, stays at j
+            given by last element of diagonal matrix
         """
         self.tr_matrix[0, 0] = pii
         self.tr_matrix[0, 1] = 1 - pii
@@ -246,10 +279,19 @@ class RegimeSwitchModel:
 
     @timethis
     def fit(self, obs: np.ndarray, n_iter=10) -> "RegimeSwitchModel":
-        """Fits two state Regime switching model
+        """fits a two state regime switching model
 
-        :return: parameters from optimization
-        :rtype: object
+        Parameters
+        ----------
+        obs : np.ndarray
+            [description]
+        n_iter : int, optional, default=10
+            number of em iterations to perform
+
+        Returns
+        -------
+        RegimeSwitchModel
+            [description]
         """
         # get the initial guess from em algorithm
         self.fit_em(obs, n_iter=n_iter)
@@ -284,14 +326,21 @@ class RegimeSwitchModel:
 
         The posterior p(St=i|FT) is computed via kim's algorithm
 
-        :param filtered_prob: hamilton filter probabilities
-        :type filtered_prob: np.ndarray
-        :param predict_prob: predicted probabilities
-        :type predict_prob: np.ndarray
-        :param P: state transition matrix
-        :type P: np.ndarray
-        :return: smoothing probabilities
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        filter_prob : np.ndarray
+            the hamilton filter,
+            given by p(st=k | Ft) based on info at time t
+        predict_prob : np.ndarray
+            the predicted probabilities,
+            given by p(s(t+1)=k | Ft) based on info at time t
+        P : np.ndarray
+            transition matrix
+
+        Returns
+        -------
+        np.ndarray
+            kim's smoothed probabilities
         """
         n = filter_prob.shape[0]
         smoothed_prob = np.zeros_like(filter_prob)
@@ -318,16 +367,21 @@ class RegimeSwitchModel:
         p(St=i|S(t+1)=k,FT;theta) * p(S(t+1)=k|FT;theta)
         using kim's algorithm
 
-        :param filter_prob: the hamilton filter
-         given by p(st=k | Ft) based on info at time t
-        :type filter_prob: np.ndarray
-        :param predict_prob: prediction probabilities
-         given by p(s(t+1)=k | Ft) based on info at time t
-        :type predict_prob: np.ndarray
-        :param P: transition matrix
-        :type P: np.ndarray
-        :return: posterior joint probabilities
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        filter_prob : np.ndarray
+            the hamilton filter,
+            given by p(st=k | Ft) based on info at time t
+        predict_prob : np.ndarray
+            the predicted probability,
+            given by p(s(t+1)=k | Ft) based on info at time t
+        P : np.ndarray
+            transition matrix
+
+        Returns
+        -------
+        np.ndarray
+            [description]
         """
         # get the smoothed probabilities
         smooth_prob = self.kims_smoother(filter_prob, predict_prob, P)
@@ -365,14 +419,19 @@ class RegimeSwitchModel:
                obs: np.ndarray,
                theta: np.ndarray,
                ) -> np.ndarray:
-        """Computes the e-step in EM algorithm
+        """computes the e-step in the EM algorithm
 
-        :param obs: observed response variables
-        :type obs: np.ndarray
-        :param theta: parameters to be estimated
-        :type theta: np.ndarray
-        :return: posterior probabilities
-        :rtype: np.ndarray
+        Parameters
+        ----------
+        obs : np.ndarray
+            the observed response variable
+        theta : np.ndarray
+            intial guess in EM algorithm
+
+        Returns
+        -------
+        np.ndarray
+            the posterior probabilities computed in the e-step
         """
         # get hamilton filter and predictions
         hfilter, predict_prob = self.hamilton_filter(obs, theta, predict=True)
@@ -384,16 +443,21 @@ class RegimeSwitchModel:
 
     # - check to see if more efficient way of summing the means
     def _mstep(self, obs: np.ndarray, qprob: np.ndarray) -> tuple:
-        """Computes the m-step in the em algorithm
+        """computes m-step in the EM Algorithm
 
-        :param obs: the actual observations
-        :type obs: np.ndarray
-        :param qprob: posterior probabilities
-        :type qprob: np.ndarray
-        :return: poo,p11,mu0,mu1,sig
-         which represents the transition prob,
-         means for two regimes and constant vol
-        :rtype: tuple
+        Parameters
+        ----------
+        obs : np.ndarray
+            the actual observations
+        qprob : np.ndarray
+            posterior probabilities
+
+        Returns
+        -------
+        tuple
+            poo,p11,mu0,mu1,sig
+            which represents the transition prob,
+            means for two regimes and constant vol
         """
         poo = qprob[2:, 2].sum() / qprob[1:, 0].sum()
         p11 = qprob[2:, 4].sum() / qprob[1:, 1].sum()
@@ -414,14 +478,21 @@ class RegimeSwitchModel:
                obs: np.ndarray,
                show: bool = False,
                n_iter: int = 10):
-        """fits a markov switching model via EM algorithm
+        """fits a markov switching model via EM Algorithm
 
-        :param obs: initial observations
-        :type obs: np.ndarray
-        :param show: [description], defaults to False
-        :type show: bool, optional
-        :param n_iter: [description], defaults to 20
-        :type n_iter: int, optional
+        Parameters
+        ----------
+        obs : np.ndarray
+            observations
+        show : bool, optional, default=False
+            if true, show iterations of EM
+        n_iter : int, optional, default=10
+            number of EM iterations to perform
+
+        Returns
+        -------
+        [type]
+            [description]
         """
         n = obs.shape[0]
         n_regime = self.nregime
@@ -458,10 +529,12 @@ class RegimeSwitchModel:
         return self
 
     def _make_titles(self) -> list:
-        """Creates column titles after em is run
+        """creates column titles after em is run
 
-        :return: list of dataframe column titles
-        :rtype: list
+        Returns
+        -------
+        list
+            list of column titles
         """
         # get the letters and create titles
         n = self.nregime

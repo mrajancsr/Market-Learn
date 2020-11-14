@@ -1,4 +1,4 @@
-from marketlearn.algorithms.linked_lists.linked_collections import LinkedQueue
+from marketlearn.algorithms.linked_collections import LinkedQueue
 
 
 class Tree:

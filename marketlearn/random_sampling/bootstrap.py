@@ -26,10 +26,10 @@ class Boot:
     - A implementation of residual bootstrap for regression
     - Sequential Bootstrap-todo
     """
-    
+
     def __init__(self):
         pass 
-        
+
     def empirical_bootstrap(self, pop_data: np.ndarray, n = None, B = 1000, func=None):
         """returns the sample statistic from empirical bootstrap method
         Args:
@@ -51,14 +51,14 @@ class Boot:
             est = func(pop_data[idx], axis=0)
             boot_est[index] = est
             index += 1
-        
+
         result = {}
         result['estimates'] = boot_est
         result['est_mean'] = np.mean(boot_est)
         result['est_err'] = np.std(boot_est, ddof=1)
-        
+
         return result
-    
+
     def residual_bootstrap(self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None):
         """computes standard error from regression model using residual bootstrapping
             - use only if residuals have no heteroscedacity or autocorrelation
@@ -127,7 +127,3 @@ class Boot:
     def plot_hist(self):
         plt.title(f"""Histogram of Sample {self.stat_name}""")
         plt.hist(self.statistic, orientation='horizontal')
-
-    
-        
-        

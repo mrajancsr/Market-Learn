@@ -3,6 +3,7 @@ Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
 """
 
+
 class LinkedStack:
     """LIFO Stack Implementation using a singly linked list
         Takes O(1) time
@@ -391,9 +392,3 @@ class PositionalList(DoublyLinkedBase):
         old_value = node._element
         node._element = data 
         return old_value
-
-
-
-
-
-

@@ -3,7 +3,7 @@
 Author: Rajan Subramanian
 Date: 11/11/2020
 """
-from marketlearn.algorithms.Trees.tree_base import _BinaryTreeBase
+from marketlearn.algorithms.trees.tree_base import _BinaryTreeBase
 
 
 class BinaryTree(_BinaryTreeBase):
