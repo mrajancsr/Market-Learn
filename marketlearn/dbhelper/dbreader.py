@@ -16,25 +16,41 @@ from typing import Iterator, List, Tuple, Dict, Any
 
 class DbReader:
     """Establishes a sql connection with the PostGres Database
-    params:
+
+    Parameters
+    ----------
     None
-    Attributes:
-    conn (conn) connection objevct for psycopg2
+
+    Attributes
+    ----------
+    conn
+        connection objevct for psycopg2
     """
 
     def __init__(self):
+        """default constructor used to establish constructor"""
         self.conn = None
 
     def _read_db_config(self, section: str = 'postgresql-dev') -> Dict:
-        """
-        Reads the database configuration from config.ini file
-        Args:
-        section: one of postgressql-dev or postgresql-prod
-        Returns:
-        DataBase Configuration
+        """reads database configuration from config.ini file
+
+        Parameters
+        ----------
+        section : str, optional, default='postgresql-dev'
+            one of postgresql-dev or postgresql-prod
+
+        Returns
+        -------
+        Dict
+            contains database configuration
+
+        Raises
+        ------
+        Exception
+            raises error if wrong environment is chosen
         """
         # create the parser
-        filename =  'config.ini'
+        filename = 'config.ini'
 
         parser = ConfigParser()
         parser.read(filename)
@@ -46,7 +62,7 @@ class DbReader:
             for param in params:
                 config[param[0]] = param[1]
         else:
-            raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+            raise Exception(f'{section} not found in the {filename}')
         return config
 
     def connect(self, section: str = 'dev'):
@@ -74,7 +90,6 @@ class DbReader:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    @timethis
     def fetch(self, query: str, section: str = 'dev'):
         """Returns the data associated with table
         Args:
@@ -110,7 +125,6 @@ class DbReader:
         """
         yield from iter(datadf.to_dict(orient='rows'))
 
-    @timethis
     def push(self,
              data: Iterator[Dict[str, Any]],
              table_name: str,

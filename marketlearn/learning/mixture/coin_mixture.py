@@ -1,12 +1,11 @@
 """Implementation of coin mixture via EM algorithm"""
 
-
-from scipy.stats import bernoulli, binom
-from scipy.optimize import minimize
-from numpy.random import sample
-from itertools import chain
 import pandas as pd
 import numpy as np
+from itertools import chain
+from numpy.random import sample
+from scipy.optimize import minimize
+from scipy.stats import bernoulli, binom
 from string import ascii_uppercase
 
 

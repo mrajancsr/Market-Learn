@@ -1,9 +1,9 @@
 """Implementation of Gaussian Mixture Model EM Algorithm"""
 
-from scipy.stats import norm
-from itertools import chain
 import numpy as np
 import pandas as pd
+from itertools import chain
+from scipy.stats import norm
 from string import ascii_uppercase
 
 
