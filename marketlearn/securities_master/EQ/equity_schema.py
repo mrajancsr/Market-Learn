@@ -6,7 +6,7 @@ Date: 11/16/2020
 
 import pandas as pd
 from marketlearn.dbhelper.dbreader import DbReader
-from typing import List
+from typing import Dict, List
 
 
 class EquitySchema:
@@ -39,7 +39,7 @@ class EquitySchema:
         self.eq_daily_price = 'eq_daily_price'
         self._db = DbReader()
 
-    def create_table_exchange(self):
+    def create_exchange_query(self):
         """creates the exchange table"""
         query = \
             """Create table exchange(
@@ -54,11 +54,9 @@ class EquitySchema:
                 constaint pk_exchange primary key (id)
                 );
             """
-        # create the above table with given constraints
-        self._db.execute(query)
         return query
 
-    def create_table_data_vendor(self):
+    def create_data_vendor_query(self):
         """creates the data_vendor table"""
         query = \
             """create table data_vendor(
@@ -71,10 +69,9 @@ class EquitySchema:
                 constraint pk_vendor primary key (id)
             );
             """
-        # create the above table with given constraints
-        self._db.execute(query)
+        return query
 
-    def create_table_security(self):
+    def create_security_query(self):
         """creates the symbol table"""
         query = \
             """create table security(
@@ -92,9 +89,9 @@ class EquitySchema:
                 constraint pk_symbol primary key (id)
             );
             """
-        self._db.execute(query)
+        return query
 
-    def create_table_eq_daily_price(self):
+    def create_eq_daily_price_query(self):
         """creates daily equity price information"""
         query = \
             """create table eq_daily_price(
@@ -117,7 +114,7 @@ class EquitySchema:
                 constraint pk_eq_daily_price primary key (id)
                 );
             """
-        self._db.execute(query)
+        return query
 
     def clear_tables(self, table_names: List[str]):
         """clears tables from database given by table_names
@@ -132,10 +129,14 @@ class EquitySchema:
 
     def create_tables(self):
         """creates tables"""
-        # create the exchange table and datavendor table
-        self.create_table_exchange()
-        self.create_table_data_vendor()
+        # create a list of table queries
+        queries = (
+            self.create_exchange_query(),
+            self.create_security_query(),
+            self.create_data_vendor_query(),
+            self.create_eq_daily_price_query()
+            )
 
-        # create the security and daily price table
-        self.create_table_security()
-        self.create_table_eq_daily_price()
+        # create the tables
+        self._db.execute(queries)
+
