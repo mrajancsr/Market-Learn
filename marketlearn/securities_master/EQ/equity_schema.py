@@ -6,6 +6,7 @@ Date: 11/16/2020
 
 import pandas as pd
 from marketlearn.dbhelper.dbreader import DbReader
+from typing import List
 
 
 class EquitySchema:
@@ -117,6 +118,17 @@ class EquitySchema:
                 );
             """
         self._db.execute(query)
+
+    def clear_tables(self, table_names: List[str]):
+        """clears tables from database given by table_names
+
+        Parameters
+        ----------
+        table_names : List[str]
+            clear the tables but doesn't delete the schema
+        """
+        queries = (f"delete from {table_name}" for table_name in table_names)
+        self._db.execute(queries)
 
     def create_tables(self):
         """creates tables"""

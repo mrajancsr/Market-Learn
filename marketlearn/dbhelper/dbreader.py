@@ -11,7 +11,7 @@ import psycopg2
 from configparser import ConfigParser
 from marketlearn.toolz import timethis
 from psycopg2.extras import execute_values, DictCursor, execute_batch
-from typing import Iterator, List, Tuple, Dict, Any
+from typing import Any, Dict, Iterator, List, Tuple, Union
 
 
 class DbReader:
@@ -74,7 +74,7 @@ class DbReader:
         Returns:
         connection object to database
         """
-        if self.conn is None or self.conn.closed == True:
+        if self.conn is None or self.conn.closed is True:
             try:
                 # read connection parameters
                 section = 'postgresql-' + section
@@ -224,15 +224,25 @@ class DbReader:
         query = f'delete from {table_name};'
         self.execute(query, section)
 
-    def execute(self, query: str, section: str = 'dev'):
+    def execute(self, query: Union[str, List[str]], section: str = 'dev'):
+        """executes a sql query statement
+
+        Parameters
+        ----------
+        query : Union[str, List[str]]
+            can be either a statement or list of queries
+        section : str, optional, default='dev'
+            supposed one of dev or prod
+        """
         try:
             self.connect(section)
             with self.conn.cursor() as curr:
-                curr.execute(query)
+                if isinstance(query, str):
+                    curr.execute(query)
+                elif isinstance(query, list):
+                    for q in query:
+                        curr.execute(q)
             self.conn.commit()
             self.conn.close()
         except Exception as e:
             print(e)
-        else:
-            return
-    
