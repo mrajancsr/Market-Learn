@@ -30,12 +30,12 @@ class EquitySchema:
         this table stores daily pricing information for each security
         """
 
-    def __init__(self, exchange: str, data_vendor: str, symbol: str, daily_price: str):
+    def __init__(self):
         """default constructor used to create schema"""
-        self.exchange = None
-        self.data_vendor = None
-        self.security = None
-        self.eq_daily_price = None
+        self.exchange = 'exchange'
+        self.data_vendor = 'data_venddor'
+        self.security = 'security'
+        self.eq_daily_price = 'eq_daily_price'
         self._db = DbReader()
 
     def create_table_exchange(self):
@@ -55,6 +55,7 @@ class EquitySchema:
             """
         # create the above table with given constraints
         self._db.execute(query)
+        return query
 
     def create_table_data_vendor(self):
         """creates the data_vendor table"""
@@ -75,7 +76,7 @@ class EquitySchema:
     def create_table_security(self):
         """creates the symbol table"""
         query = \
-            """create table symbol(
+            """create table security(
                 id serial,
                 exchange_id int not null,
                 ticker varchar(32) not null,
@@ -91,6 +92,38 @@ class EquitySchema:
             );
             """
         self._db.execute(query)
-    
+
     def create_table_eq_daily_price(self):
-        pass
+        """creates daily equity price information"""
+        query = \
+            """create table eq_daily_price(
+                id serial,
+                data_vendor_id int not null,
+                security_id int not null,
+                price_date timestamp not null,
+                created_date timestamp not null,
+                last_updated_date timestamp not null,
+                open_price numeric(19,4) null,
+                high_price numeric(19,4) null,
+                low_price numeric(19,4) null,
+                close_price numeric(19,4) null,
+                adj_close_price numeric(19,4) null,
+                volume bigint null,
+                constraint fk_data_vendor_id
+                  foreign key (data_vendor_id) references data_vendor (id),
+                constraint fk_security_id
+                  foreign key (security_id) references security (id),
+                constraint pk_eq_daily_price primary key (id)
+                );
+            """
+        self._db.execute(query)
+
+    def create_tables(self):
+        """creates tables"""
+        # create the exchange table and datavendor table
+        self.create_table_exchange()
+        self.create_table_data_vendor()
+
+        # create the security and daily price table
+        self.create_table_security()
+        self.create_table_eq_daily_price()
