@@ -32,7 +32,7 @@ class ID3(GTree):
         min_samples_leaf : int, optional, default=1
             the minimum number of samples required to split internal node
         prune : bool, optional
-            if True, prue tree, by default False
+            if True, prune tree, by default False
     """
 
     def __init__(self,
