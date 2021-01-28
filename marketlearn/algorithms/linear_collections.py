@@ -52,10 +52,12 @@ class Stack:
         return self._data[-1]
 
     def size(self) -> int:
-        """returns number of items in stack
+        """returns number of items in a stack
 
-        :return: length of stack
-        :rtype: int
+        Returns
+        -------
+        int
+            the length of stack
         """
         return len(self._data)
 

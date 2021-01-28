@@ -37,7 +37,7 @@ class DbReader:
         Parameters
         ----------
         section : str, optional, default='postgresql-dev'
-            one of postgresql-dev or postgresql-prod
+            one of postgresql-dev or postgresql-practice
 
         Returns
         -------
@@ -66,13 +66,17 @@ class DbReader:
         return config
 
     def connect(self, section: str = 'dev'):
-        """Connects to PostGreSql Database
-        Args:
-        section (string) one of 'dev' or 'prod'
-                default to 'dev'
+        """Connects to PostGresSql Database
 
-        Returns:
-        connection object to database
+        Parameters
+        ----------
+        section : str, optional, default='dev'
+            one of dev or practice
+
+        Returns
+        -------
+        connection object
+            connection to the PostGresSQL DB
         """
         if self.conn is None or self.conn.closed is True:
             try:
@@ -189,7 +193,6 @@ class DbReader:
                   table_name=table_name,
                   columns=col_names,
                   section=section)
-        return
 
     def copy_from(self,
                   data: Iterator[Dict[str, Any]],
@@ -200,17 +203,6 @@ class DbReader:
         """copies data from csv file and writes to Db"""
         raise NotImplementedError("Will be Implemented Later")
 
-    def push1(self, df, conn, hide=False, table_name=None):
-        """Deprecated and no longer used"""
-        raise DeprecationWarning("function has been deprecated and no longer used")
-        columns = ",".join(list(df))
-        # create INSERT INTO table (columns) VALUES('%s',...)
-        insert_stmt = "INSERT INTO {} ({}) values %s".format(table_name, columns)
-        curr = conn.cursor()
-        args = list(df.itertuples(index=False, name=None))
-        execute_values(curr, insert_stmt, args)
-        conn.commit()
-        curr.close()
 
     def drop(self, table_name, conn):
         """removes table given by table_name from dev db"""
@@ -232,7 +224,7 @@ class DbReader:
         query : Union[str, List[str]]
             can be either a statement or list of queries
         section : str, optional, default='dev'
-            supposed one of dev or prod
+            supposed one of dev or practice
         """
         try:
             self.connect(section)
@@ -246,3 +238,8 @@ class DbReader:
             self.conn.close()
         except Exception as e:
             print(e)
+
+"""db = DbReader()
+customer = db.fetchdf("select * from Customer", section='practice')
+print(customer.head())
+"""

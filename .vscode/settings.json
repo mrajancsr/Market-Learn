@@ -4,9 +4,11 @@
     { 
         "python": "$pythonPath -u $fullFileName" 
     },
-    "python.linting.pylintEnabled": true,
     "python.terminal.executeInFileDir": true,
     "code-runner.fileDirectoryAsCwd": true,
-    "python.linting.flake8Enabled": true,
-    "autoDocstring.docstringFormat": "sphinx"
+    "code-runner.saveFileBeforeRun": true,
+    "code-runner.clearPreviousOutput" : true,
+    "autoDocstring.docstringFormat": "numpy",
+    "python.linting.enabled": true,
+    "python.linting.pycodestyleEnabled": true,
 }

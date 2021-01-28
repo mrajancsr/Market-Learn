@@ -37,6 +37,7 @@ from marketlearn.toolz import timethis
 from scipy.optimize import minimize
 from scipy.stats import norm
 from string import ascii_uppercase
+from typing import Optional
 
 
 class RegimeSwitchModel:
@@ -278,7 +279,10 @@ class RegimeSwitchModel:
         self.tr_matrix[1, 0] = 1-pjj
 
     @timethis
-    def fit(self, obs: np.ndarray, n_iter=10) -> "RegimeSwitchModel":
+    def fit(self,
+            obs: np.ndarray,
+            n_iter: Optional[int] = 10,
+            ) -> "RegimeSwitchModel":
         """fits a two state regime switching model
 
         Parameters
@@ -476,8 +480,8 @@ class RegimeSwitchModel:
 
     def fit_em(self,
                obs: np.ndarray,
-               show: bool = False,
-               n_iter: int = 10):
+               show: Optional[bool] = False,
+               n_iter: Optional[int] = 10):
         """fits a markov switching model via EM Algorithm
 
         Parameters

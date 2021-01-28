@@ -1,39 +1,71 @@
-"""class for singly and doubly linked lists"""
+"""Implementation for Singly and DoublyLinked List
+Author: Rajan Subramanian
+"""
+
+from typing import Any, Optional
 
 
 class SinglyLinkedList:
-    """Create a new Singly Linked List
+    """Create a Singly Linked List
         Takes O(1) time
 
-    params:
+    Parameters
+    ----------
     None
 
-    Attributes:
-    start_node:  (Node) represents head of the linked list
-                        default set to None since its empty at time of creation
+    Attributes
+    ----------
+    start_node: Node, default=None
+        represents head of the linked list
+        default set to None since its empty at time of creation
 
+    size: int
+        represents the length of the linked list
     """
     class Node:
-        """
-        Nested Node Class.
+        """Nested Node Class
         Create a node to store value and reference for LinkedList
         Takes O(1) time
 
-        params:
-        element: represents element of the node
-        nref:    next reference of the node
-
+        Parameters
+        ----------
+        data : Any
+            represents element stored in a node
+        reference : Node, optional, default=None
+            next reference of the Node
         """
 
-        def __init__(self, data, reference=None):
+        def __init__(self, data: Any, reference: Node = None):
             self.element = data
             self.nref = reference
 
     def __init__(self):
+        """Create a new Singly Linked List
+        Takes O(1) time
+
+        Parameters
+        ----------
+        None
+
+        Attributes
+        ----------
+        start_node : Node, default=None
+            represents head of the linked list and set
+            to None at time of creation
+        size : int
+            keeps track of number of elements in linkedlist
+        """
         self.start_node = None
         self.size = 0
 
     def __len__(self):
+        """returns length of linked list
+
+        Returns
+        -------
+        int
+            returns length of linked list
+        """
         return self.size
 
     def traverse(self):
@@ -48,19 +80,29 @@ class SinglyLinkedList:
                 print(n.element, " ")
                 n = n.nref
 
-    def insert_at_start(self, data):
+    def insert_at_start(self, data: Any):
         """inserts data at start of the list
         takes O(1) time
+
+        Parameters
+        ----------
+        data : Any
+            data to be inserted into linkedlist
         """
         new_node = self.Node(data)  # create a node
         new_node.nref = self.start_node  # new nodes nextref is old nodes start
         self.start_node = new_node  # new node is now the start_node
         self.size += 1
 
-    def insert_at_end(self, data):
+    def insert_at_end(self, data: Any) -> None:
         """inserts value at end of the list
         if list is empty, takes O(1) time.  Otherwise:
         O(n) time
+
+        Parameters
+        ----------
+        data : Any
+            data to be inserted into linkedlist
         """
         new_node = self.Node(data)
         if self.start_node is None:  # if list is empty
@@ -74,9 +116,16 @@ class SinglyLinkedList:
         n.nref = new_node  # set the next reference to point to new node
         self.size += 1
 
-    def insert_after_item(self, item, data):
+    def insert_after_item(self, item: Any, data: Any):
         """inserts data after item is found
         if found, takes O(k+1), Otherwise, O(n)
+
+        Parameters
+        ----------
+        item : Any
+            item in the linkedlist
+        data : Any
+            data to be inserted after above item is found
         """
         n = self.start_node
         while n:  # iterate until x is found
@@ -92,7 +141,7 @@ class SinglyLinkedList:
             n.nref = new_node  # set the current nodes next ref to new node
             self.size += 1
 
-    def insert_before_item(self, item, data) -> None:
+    def insert_before_item(self, item: Any, data: Any) -> None:
         """Inserts data before item is found
         if found, takes O(k+1), otherwise, O(n)
 
@@ -249,28 +298,38 @@ class DoublyLinkedList:
     """Create a new Doubly Linked List (dLinklist)
         Takes O(1) time
 
-    params:
+    Parameters
+    ----------
     None
 
-    Attributes:
-    start_node:  (Node) represents head of the linked list
-                        default set to None since its empty at time of creation
+    Attributes
+    ----------
+    start_node: Node, default=None
+        represents head of the linked list
+        default set to None since its empty at time of creation
+
+    size: int
+        represents the length of the linked list
 
     """
     class Node:
-        """
-        Nested Node Class.
-        Create a node to store value and 2 references for LinkedList
+        """Nested Node Class
+        Create a node to store v alue and 2 references for LinkedList
         Takes O(1) time
 
-        params:
-        element: represents element of the node
-        nref:    next reference of the node
-        pref:    previous reference of the node
-
+        Parameters
+        ----------
+        data : Any, default=None
+            represents element of the node
+        next_ref : optional[self.Node], default=None
+            next referernce of the node
+        prev_ref : optional[self.Node], default=None
+            previous reference of the node
         """
-
-        def __init__(self, data, next_ref=None, prev_ref=None):
+        def __init__(self,
+                     data: Any,
+                     next_ref: optional[self.Node] = None, 
+                     prev_ref: optional[self.Node] = None):
             self.element = data
             self.nref = next_ref
             self.pref = prev_ref
@@ -478,11 +537,11 @@ class DoublyLinkedBase(metaclass=ABCMeta):
         self._size = 0
 
     def __len__(self):
-        return self._size 
+        return self._size
 
     def is_empty(self):
         """Returns True if dlinklist is empty"""
-        return self.size == 0
+        return self._size == 0
 
     def _insert_between(self, data, node1, node2):
         """Adds data between two nodes"""
@@ -492,16 +551,16 @@ class DoublyLinkedBase(metaclass=ABCMeta):
         self._size += 1
         return new_node
 
-    def _delete_node(self,node):
+    def _delete_node(self, node):
         """delete node from list and return the element"""
-        before = node._pref 
-        after = node._nref 
-        before._nref = after 
-        after._pref = before 
+        before = node._pref
+        after = node._nref
+        before._nref = after
+        after._pref = before
         self._size -= 1
-        element = node._element 
+        element = node._element
         node._nref = node._pref = node._element = None   # deprecate Node
-        return element 
+        return element
 
     def _traverse(self):
         """Traverses a Linked List

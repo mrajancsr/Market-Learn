@@ -93,7 +93,6 @@ def main3():
     ld.add_rear(66)
     ld.traverse()
     print("success test")
-main()
 """
 from linked_collections import PositionalList
 pl = PositionalList()
@@ -103,3 +102,4 @@ for i in pl:
     print(i)
 
 """
+print("hello")

@@ -342,4 +342,5 @@ class LinearRegressionGD(LinearBase):
             return X @ self.theta
         return X @ thetas
 
-
+lg = LinearRegression()
+print(lg)
