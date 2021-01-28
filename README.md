@@ -11,4 +11,5 @@ Tech Stack Used:
 - Python 3.6
 - PostGreSql 
 - Libraries Used: Numpy, Scipy, matplotlib, pandas, sklearn, arch, statsmodels
+- Jenkins
 
