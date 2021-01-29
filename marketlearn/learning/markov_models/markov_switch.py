@@ -474,8 +474,6 @@ class MarkovSwitchModel:
         # by default, assume mean switch with constant variance
         if not self.variance_switch:
             var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
-        else:
-            pass
         return pkk, muk, [np.sqrt(var.mean())]
 
     def fit_em(self,
@@ -542,7 +540,6 @@ class MarkovSwitchModel:
         """
         # get the letters and create titles
         n = self.nregime
-        letters = ascii_uppercase[:n]
         col1 = list("p{i}{i}".format(i=i) for i in range(1, n+1))
         col2 = list("regime{i}_mean".format(i=i) for i in range(1, n+1))
         col3 = ["regime_vol"]

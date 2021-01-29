@@ -125,7 +125,6 @@ class LogisticRegression(LinearBase):
         Returns:
             float: value from loglikelihood function
         """
-        # z = X @ theta
         z = self.net_input(X, thetas=guess)
         f = self._loglikelihood(y, z)
         return -f
@@ -158,8 +157,16 @@ class LogisticRegression(LinearBase):
                               options={'disp': True},
                               args=(X, y))['x']
         return self
-    
-    def newton_system(self, X, y, func, jac, x, tol_approx=10E-9, tol_consec=10E-6):
+
+    def newton_system(self,
+                      X,
+                      y,
+                      func,
+                      jac,
+                      x,
+                      tol_approx=10E-9,
+                      tol_consec=10E-6
+                      ):
         """Solves N-dimensional newton's problem for F(x) = 0
 
         Args:
@@ -176,7 +183,7 @@ class LogisticRegression(LinearBase):
         """
         xnew, xold = x, x - 1
         count = 0
-        while norm(xnew - xold, ord=2) > tol_consec or count > niter:
+        while norm(xnew - xold, ord=2) > tol_consec or count > self.niter:
             xold = xnew
             z = self.net_input(X, thetas=xold)
             predictions = self.predict(X, xold)
@@ -232,7 +239,7 @@ class LogisticRegression(LinearBase):
 
 class LogisticRegressionGD(LinearBase):
     """Implements Logistic Regression via Gradient Descent
-       
+
        Args:
        eta:             Learning rate (between 0.0 and 1.0)
        n_iter:          passees over the training set
@@ -255,7 +262,7 @@ class LogisticRegressionGD(LinearBase):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
-   
+
     def fit(self, X: np.ndarray, y: np.ndarray) -> 'LogisticRegressionGD':
         """fits training data
         Args:
@@ -264,7 +271,7 @@ class LogisticRegressionGD(LinearBase):
                     p_features is number of features (the dimension of dataset)
 
         y: shape = {n_samples,}
-                    Target values      
+                    Target values
         Returns:
         object
         """
@@ -279,7 +286,7 @@ class LogisticRegressionGD(LinearBase):
             self.cost.append(self._cost(y, z) / n_samples)
         self.run = True
         return self
-    
+
     def _jacobian(self,
                   guess: np.ndarray,
                   X: np.ndarray,
@@ -299,7 +306,7 @@ class LogisticRegressionGD(LinearBase):
         """
         predictions = self.predict(X, guess)
         return (X.T @ (y - predictions))
-  
+
     def _cost(self, y, z):
         """computes cost of likelihood function
 
@@ -328,7 +335,7 @@ class LogisticRegressionGD(LinearBase):
             np.ndarray: linear transformation
         """
         return X @ thetas
-    
+
     def sigm(self, z: np.ndarray) -> np.ndarray:
         """Computes the sigmoid function
 
@@ -357,8 +364,6 @@ class LogisticRegressionGD(LinearBase):
             Union[np.ndarray, Dict]: predicted probabilities
             shape = {n_samples,}
         """
-        if thetas is None:
-            if isinstance(self.theta, np.ndarray):
-                return self.sigm(self.net_input(X, self.theta))
+        if thetas is None and isinstance(self.theta, np.ndarray):
+            return self.sigm(self.net_input(X, self.theta))
         return self.sigm(self.net_input(X, thetas))
-
