@@ -40,7 +40,7 @@ from string import ascii_uppercase
 from typing import Optional
 
 
-class RegimeSwitchModel:
+class MarkovSwitchModel:
     """Implementation of Hamilton's Regime Switching Model
 
     Parameters
@@ -282,7 +282,7 @@ class RegimeSwitchModel:
     def fit(self,
             obs: np.ndarray,
             n_iter: Optional[int] = 10,
-            ) -> "RegimeSwitchModel":
+            ) -> "MarkovSwitchModel":
         """fits a two state regime switching model
 
         Parameters

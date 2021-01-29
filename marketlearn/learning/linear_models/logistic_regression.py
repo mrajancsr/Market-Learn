@@ -5,7 +5,7 @@ Created: May 25, 2020
 
 import numpy as np
 from scipy.optimize import minimize
-from learning.base import LinearBase
+from marketlearn.learning.base import LinearBase
 from typing import Union, Dict
 from numpy.linalg import norm
 
