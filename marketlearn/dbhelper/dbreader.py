@@ -238,8 +238,3 @@ class DbReader:
             self.conn.close()
         except Exception as e:
             print(e)
-
-"""db = DbReader()
-customer = db.fetchdf("select * from Customer", section='practice')
-print(customer.head())
-"""
