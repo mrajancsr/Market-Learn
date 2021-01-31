@@ -5,12 +5,12 @@ Created May 10 2020
 Todo - add a copy from
 """
 
-import os
+
 import pandas as pd
 import psycopg2
 from configparser import ConfigParser
 from marketlearn.toolz import timethis
-from psycopg2.extras import execute_values, DictCursor, execute_batch
+from psycopg2.extras import execute_values, DictCursor
 from typing import Any, Dict, Iterator, List, Tuple, Union
 
 
@@ -31,7 +31,7 @@ class DbReader:
         """default constructor used to establish constructor"""
         self.conn = None
 
-    def _read_db_config(self, section: str = 'postgresql-dev') -> Dict:
+    def _read_db_config(self, section: str = "postgresql-dev") -> Dict:
         """reads database configuration from config.ini file
 
         Parameters
@@ -50,10 +50,10 @@ class DbReader:
             raises error if wrong environment is chosen
         """
         # create the parser
-        filename = 'config.ini'
+        file_name = "config.ini"
 
         parser = ConfigParser()
-        parser.read(filename)
+        parser.read(file_name)
 
         # get the section, default to postgressql
         config = {}
@@ -62,10 +62,10 @@ class DbReader:
             for param in params:
                 config[param[0]] = param[1]
         else:
-            raise Exception(f'{section} not found in the {filename}')
+            raise Exception(f"{section} not found in the {file_name}")
         return config
 
-    def connect(self, section: str = 'dev'):
+    def connect(self, section: str = "dev"):
         """Connects to PostGresSql Database
 
         Parameters
@@ -81,7 +81,7 @@ class DbReader:
         if self.conn is None or self.conn.closed is True:
             try:
                 # read connection parameters
-                section = 'postgresql-' + section
+                section = "postgresql-" + section
                 params = self._read_db_config(section=section)
                 # connect to the PostgresSql Server
                 self.conn = psycopg2.connect(**params)
@@ -94,7 +94,7 @@ class DbReader:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    def fetch(self, query: str, section: str = 'dev'):
+    def fetch(self, query: str, section: str = "dev"):
         """Returns the data associated with table
         Args:
         query:  database query parameter
@@ -119,22 +119,23 @@ class DbReader:
             return rows
 
     @timethis
-    def fetchdf(self, query: str, section: str = 'dev'):
+    def fetchdf(self, query: str, section: str = "dev"):
         """Returns a pandas dataframe of the db query"""
         return pd.DataFrame(self.fetch(query, section), columns=self.col_names)
 
     def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator:
-        """Convenience function to transform pandas dataframe to 
-            Iterator for db push
+        """Convenience function to transform pandas dataframe to
+        Iterator for db push
         """
-        yield from iter(datadf.to_dict(orient='rows'))
+        yield from iter(datadf.to_dict(orient="rows"))
 
-    def push(self,
-             data: Iterator[Dict[str, Any]],
-             table_name: str,
-             columns: List[str],
-             section: str = 'dev',
-             ) -> None:
+    def push(
+        self,
+        data: Iterator[Dict[str, Any]],
+        table_name: str,
+        columns: List[str],
+        section: str = "dev",
+    ) -> None:
         """Pushes data given as an Iterator to PostGresDB
 
         :param data: data to be pushed
@@ -167,11 +168,12 @@ class DbReader:
             return
 
     @timethis
-    def pushdf(self,
-               datadf: pd.DataFrame,
-               table_name: str,
-               section: str = 'dev',
-               ) -> None:
+    def pushdf(
+        self,
+        datadf: pd.DataFrame,
+        table_name: str,
+        section: str = "dev",
+    ) -> None:
         """Pushes pandas dataframe to database
 
         :param datadf: data to be pushed
@@ -183,40 +185,37 @@ class DbReader:
         :type section: str, optional
         """
         # get the column names
-        col_names = list(datadf)
+        cols = list(datadf)
 
         # create an iterator from pandas df prior to push
         data = self.iterator_from_df(datadf)
 
         # push the data to table given by table_name
-        self.push(data,
-                  table_name=table_name,
-                  columns=col_names,
-                  section=section)
+        self.push(data, table_name=table_name, columns=cols, section=section)
 
-    def copy_from(self,
-                  data: Iterator[Dict[str, Any]],
-                  table_name: str,
-                  columns: List[str],
-                  section: str = 'dev',
-                  ) -> None:
+    def copy_from(
+        self,
+        data: Iterator[Dict[str, Any]],
+        table_name: str,
+        columns: List[str],
+        section: str = "dev",
+    ) -> None:
         """copies data from csv file and writes to Db"""
         raise NotImplementedError("Will be Implemented Later")
 
-
     def drop(self, table_name, conn):
         """removes table given by table_name from dev db"""
-        query = f'drop table {table_name};'
+        query = f"drop table {table_name};"
         self.execute(query, conn)
 
-    def delete(self, table_name, section='dev'):
+    def delete(self, table_name, section="dev"):
         """deletes all rows given by table_name from dev deb
-          table schema is retained
+        table schema is retained
         """
-        query = f'delete from {table_name};'
+        query = f"delete from {table_name};"
         self.execute(query, section)
 
-    def execute(self, query: Union[str, List[str]], section: str = 'dev'):
+    def execute(self, query: Union[str, List[str]], section: str = "dev"):
         """executes a sql query statement
 
         Parameters

@@ -29,20 +29,19 @@ class EquitySchema:
         security table stores list of ticker symbols and company information
     eq_daily_price : str
         this table stores daily pricing information for each security
-        """
+    """
 
     def __init__(self):
         """default constructor used to create schema"""
-        self.exchange = 'exchange'
-        self.data_vendor = 'data_venddor'
-        self.security = 'security'
-        self.eq_daily_price = 'eq_daily_price'
+        self.exchange = "exchange"
+        self.data_vendor = "data_venddor"
+        self.security = "security"
+        self.eq_daily_price = "eq_daily_price"
         self._db = DbReader()
 
     def create_exchange_query(self):
         """creates the exchange table"""
-        query = \
-            """Create table exchange(
+        query = """Create table exchange(
                 id serial,
                 abbrev varchar(32) not null,
                 name varchar(255) not null,
@@ -58,8 +57,7 @@ class EquitySchema:
 
     def create_data_vendor_query(self):
         """creates the data_vendor table"""
-        query = \
-            """create table data_vendor(
+        query = """create table data_vendor(
                 id serial,
                 name varchar(64) not null,
                 website_url varchar(255) null,
@@ -73,8 +71,7 @@ class EquitySchema:
 
     def create_security_query(self):
         """creates the symbol table"""
-        query = \
-            """create table security(
+        query = """create table security(
                 id serial,
                 exchange_id int not null,
                 ticker varchar(32) not null,
@@ -93,8 +90,7 @@ class EquitySchema:
 
     def create_eq_daily_price_query(self):
         """creates daily equity price information"""
-        query = \
-            """create table eq_daily_price(
+        query = """create table eq_daily_price(
                 id serial,
                 data_vendor_id int not null,
                 security_id int not null,
@@ -134,9 +130,8 @@ class EquitySchema:
             self.create_exchange_query(),
             self.create_security_query(),
             self.create_data_vendor_query(),
-            self.create_eq_daily_price_query()
-            )
+            self.create_eq_daily_price_query(),
+        )
 
         # create the tables
         self._db.execute(queries)
-

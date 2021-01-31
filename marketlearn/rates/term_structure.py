@@ -24,10 +24,12 @@ class BoundsError(Exception):
 class ZeroRateCurve:
     """Builds zero-rate curve using ZCBs with continuous discounting"""
 
-    def __init__(self,
-                 maturities: np.ndarray,
-                 zcb: np.ndarray = None,
-                 zero_rates: np.ndarray = None):
+    def __init__(
+        self,
+        maturities: np.ndarray,
+        zcb: np.ndarray = None,
+        zero_rates: np.ndarray = None,
+    ):
         """Default Constructor used to initialize zero rate curve
 
         :param maturities: maturity corresponding to each
@@ -56,7 +58,7 @@ class ZeroRateCurve:
         :return: discount factor corresponding to continuous rate
         :rtype: float
         """
-        return np.exp(-rcont*t)
+        return np.exp(-rcont * t)
 
     def rates_from_discount_factors(self, t: float, discount_factor: float):
         """computes the continuous rates from discount factors
@@ -96,12 +98,17 @@ class ZeroRateCurve:
         return terms * (t - expiry[told]) + r[told]
 
     def logfwd_interp(self, t: float) -> float:
-        """performs linear interpolation of log of discount factors
+        """performs linear intepolation of log of discount factors
 
-        :param t: maturity of payment date of $1
-        :type t: float
-        :return: spot rate corresponding to maturity t
-        :rtype: float
+        Parameters
+        ----------
+        t : float
+            maturity of payment date of one dollar
+
+        Returns
+        -------
+        float
+            spot rate corresponding to maturity t
         """
         pass
 
@@ -109,20 +116,29 @@ class ZeroRateCurve:
         """performs cubic spline interpolation of spot rates"""
         pass
 
-    def build_curve(self, fit_type: str ='linear_spot') -> pd.Series:
+    def build_curve(self, fit_type: str = "linear_spot") -> pd.Series:
         """builds a zero rate curve based on type of interpolation
 
-        :param fit_type: type of fit
-         supports one of linear_spot, constant_fwd, cubic_spline
-         defaults to 'linear_spot'
-        :type fit_type: str, optional
-        :return: zero rate curve
-        :rtype: pd.Series
+        Parameters
+        ----------
+        fit_type : str, optional, default="linear_spot"
+            type of fit
+            supports one of linear_spot, constant_fwd, cubic_spline
+
+        Returns
+        -------
+        pd.Series
+            zero rate curve for all maturities
+
+        Raises
+        ------
+        NotImplementedError
+            [description]
         """
         tmax = self.maturities[-1]
         knot_points = np.arange(0, tmax, 0.01)
-        if fit_type == 'linear_spot':
+        if fit_type == "linear_spot":
             zero_rates = map(self.linear_interp, knot_points)
-        elif fit_type == 'constant_fwd':
-            pass
+        elif fit_type == "constant_fwd":
+            raise NotImplementedError("Not yet Implemented")
         return pd.Series(zero_rates, index=knot_points)
