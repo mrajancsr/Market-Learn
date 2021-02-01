@@ -36,7 +36,6 @@ from itertools import chain
 from marketlearn.toolz import timethis
 from scipy.optimize import minimize
 from scipy.stats import norm
-from string import ascii_uppercase
 from typing import Optional
 
 
@@ -61,10 +60,15 @@ class MarkovSwitchModel:
         estimated parameters from minimizing loglikelihood
     tr_matrix : ndarray, shape=(n_regimes,nregimes)
         transition matrix
+    filtered_prob : ndarray
+        hamilton's filter
+    predict_prob : ndarray
+        predictions
+    smoothed_prob : ndarray
+        hamilton's smoothed probabilities
     """
-    def __init__(self,
-                 nregime: int = 2,
-                 variance_switch: bool = False):
+
+    def __init__(self, nregime: int = 2, variance_switch: bool = False):
         """Default constructor used to initialize regime"""
         self.nregime = nregime
         self.variance_switch = variance_switch
@@ -89,11 +93,12 @@ class MarkovSwitchModel:
         """
         return 1.0 / (1 + np.exp(-z))
 
-    def _normpdf(self,
-                 obs: np.ndarray,
-                 mean: np.ndarray,
-                 sigma: np.ndarray,
-                 ) -> np.ndarray:
+    def _normpdf(
+        self,
+        obs: np.ndarray,
+        mean: np.ndarray,
+        sigma: np.ndarray,
+    ) -> np.ndarray:
         """Computes the normal density f(yt|st,Ft-1) of each observation
 
         Parameters
@@ -113,11 +118,12 @@ class MarkovSwitchModel:
         lik = map(lambda x, y: norm(loc=x, scale=y).pdf(obs), mean, sigma)
         return np.column_stack(tuple(lik))
 
-    def _loglikelihood(self,
-                       obs: np.ndarray,
-                       theta: np.ndarray,
-                       store: bool = False,
-                       ) -> np.ndarray:
+    def _loglikelihood(
+        self,
+        obs: np.ndarray,
+        theta: np.ndarray,
+        store: bool = False,
+    ) -> np.ndarray:
         """Computes the loglikelihood of data observed
 
         Parameters
@@ -158,7 +164,7 @@ class MarkovSwitchModel:
         eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t = 1,...,T-1
-        for t in range(1, n-1):
+        for t in range(1, n - 1):
             exponent = eta[t] * predict_prob[t]
             loglik = exponent.sum()
 
@@ -167,7 +173,7 @@ class MarkovSwitchModel:
             hfilter[t] = exponent / loglik
 
             # compute predictions for t = 2,...,T
-            predict_prob[t+1] = self.tr_matrix.T @ hfilter[t]
+            predict_prob[t + 1] = self.tr_matrix.T @ hfilter[t]
 
         # compute the filter and joint at time T
         exponent = eta[-1] * predict_prob[-1]
@@ -182,11 +188,12 @@ class MarkovSwitchModel:
         # compute and return loglikelihood of data observed
         return np.log(jointd[1:]).mean()
 
-    def hamilton_filter(self,
-                        obs: np.ndarray,
-                        theta: np.ndarray,
-                        predict: bool = False,
-                        ) -> np.ndarray:
+    def hamilton_filter(
+        self,
+        obs: np.ndarray,
+        theta: np.ndarray,
+        predict: bool = False,
+    ) -> np.ndarray:
         """computes the hamilton filter
 
         Parameters
@@ -224,12 +231,12 @@ class MarkovSwitchModel:
         eta = self._normpdf(obs, means, sig)
 
         # step2: start filter for t =1,..., T-1
-        for t in range(1, n-1):
+        for t in range(1, n - 1):
             exponent = eta[t] * predict_prob[t]
             hfilter[t] = exponent / exponent.sum()
 
             # compute predictions for t = 2,...,T
-            predict_prob[t+1] = self.tr_matrix.T @ hfilter[t]
+            predict_prob[t + 1] = self.tr_matrix.T @ hfilter[t]
 
         # compute the filter at time T
         exponent = eta[-1] * predict_prob[-1]
@@ -237,11 +244,12 @@ class MarkovSwitchModel:
 
         return hfilter if not predict else (hfilter, predict_prob)
 
-    def _objective_func(self,
-                        guess: np.ndarray,
-                        obs: np.ndarray,
-                        store: bool = False,
-                        ) -> float:
+    def _objective_func(
+        self,
+        guess: np.ndarray,
+        obs: np.ndarray,
+        store: bool = False,
+    ) -> float:
         """the objective function to be minimized
 
         Parameters
@@ -276,13 +284,14 @@ class MarkovSwitchModel:
         self.tr_matrix[0, 0] = pii
         self.tr_matrix[0, 1] = 1 - pii
         self.tr_matrix[1, 1] = pjj
-        self.tr_matrix[1, 0] = 1-pjj
+        self.tr_matrix[1, 0] = 1 - pjj
 
     @timethis
-    def fit(self,
-            obs: np.ndarray,
-            n_iter: Optional[int] = 10,
-            ) -> "MarkovSwitchModel":
+    def fit(
+        self,
+        obs: np.ndarray,
+        n_iter: Optional[int] = 10,
+    ) -> "MarkovSwitchModel":
         """fits a two state regime switching model
 
         Parameters
@@ -305,27 +314,29 @@ class MarkovSwitchModel:
         guess_params[:2] = self.inv_sigmoid(guess_params[:2])
 
         # find optimal parameters
-        self.theta = minimize(self._objective_func,
-                              guess_params,
-                              method='SLSQP',
-                              options={'disp': True},
-                              args=(obs, True))['x']
+        self.theta = minimize(
+            self._objective_func,
+            guess_params,
+            method="SLSQP",
+            options={"disp": True},
+            args=(obs, True),
+        )["x"]
 
         # compute the smoothed probabilities with final parameters
-        self.smoothed_prob = \
-            self.kims_smoother(self.filtered_prob,
-                               self.predict_prob,
-                               self.tr_matrix)
+        self.smoothed_prob = self.kims_smoother(
+            self.filtered_prob, self.predict_prob, self.tr_matrix
+        )
 
         # convert the first two parameters back to transition prob
         self.theta[:2] = self._sigmoid(self.theta[:2])
         return self
 
-    def kims_smoother(self,
-                      filter_prob: np.ndarray,
-                      predict_prob: np.ndarray,
-                      P: np.ndarray,
-                      ) -> np.ndarray:
+    def kims_smoother(
+        self,
+        filter_prob: np.ndarray,
+        predict_prob: np.ndarray,
+        P: np.ndarray,
+    ) -> np.ndarray:
         """Computes the posterior using full information set
 
         The posterior p(St=i|FT) is computed via kim's algorithm
@@ -353,17 +364,18 @@ class MarkovSwitchModel:
         smoothed_prob[-1] = filter_prob[-1]
 
         # recursively compute the smoothed probabilities
-        for t in range(n-1, 0, -1):
-            terms = (P @ (smoothed_prob[t] / predict_prob[t]))
-            smoothed_prob[t-1] = filter_prob[t-1] * terms
+        for t in range(n - 1, 0, -1):
+            terms = P @ (smoothed_prob[t] / predict_prob[t])
+            smoothed_prob[t - 1] = filter_prob[t - 1] * terms
 
         return smoothed_prob
 
-    def _qprob(self,
-               filter_prob: np.ndarray,
-               predict_prob: np.ndarray,
-               P: np.ndarray,
-               ) -> np.ndarray:
+    def _qprob(
+        self,
+        filter_prob: np.ndarray,
+        predict_prob: np.ndarray,
+        P: np.ndarray,
+    ) -> np.ndarray:
         """computes the posterior joint probabilities via kim's algorithm
 
         Posterior joint are given by p(S(t+1)=k, St=i | FT; theta)
@@ -393,7 +405,7 @@ class MarkovSwitchModel:
         # compute the posterior joint probabilities
         # each observation state is at 00, 01, 10, 11
         n = smooth_prob.shape[0]
-        qprob = np.zeros((n, 2**self.nregime))
+        qprob = np.zeros((n, 2 ** self.nregime))
 
         # -- initial values don't really matter since for
         # -- algorithm, we are starting at index 1
@@ -401,12 +413,14 @@ class MarkovSwitchModel:
         # calculate the joint, t from t=1
         for t in range(1, n):
             # for state (st-1=0, st=0) and (st-1=0, st=1)
-            qprob[t, :2] = \
-                P[0] * smooth_prob[t] * filter_prob[t-1, 0] / predict_prob[t]
+            qprob[t, :2] = (
+                P[0] * smooth_prob[t] * filter_prob[t - 1, 0] / predict_prob[t]
+            )
 
             # for state (st-1=1, st=0) and (st-1=1, st=1)
-            qprob[t, 2:] = \
-                P[1] * smooth_prob[t] * filter_prob[t-1, 1] / predict_prob[t]
+            qprob[t, 2:] = (
+                P[1] * smooth_prob[t] * filter_prob[t - 1, 1] / predict_prob[t]
+            )
 
         # return the full posterior probabilities
         return np.concatenate((smooth_prob, qprob), axis=1)
@@ -417,12 +431,13 @@ class MarkovSwitchModel:
         :param x: the probability
         :type x: np.ndarray
         """
-        return -np.log((1-x) / x)
+        return -np.log((1 - x) / x)
 
-    def _estep(self,
-               obs: np.ndarray,
-               theta: np.ndarray,
-               ) -> np.ndarray:
+    def _estep(
+        self,
+        obs: np.ndarray,
+        theta: np.ndarray,
+    ) -> np.ndarray:
         """computes the e-step in the EM algorithm
 
         Parameters
@@ -441,9 +456,9 @@ class MarkovSwitchModel:
         hfilter, predict_prob = self.hamilton_filter(obs, theta, predict=True)
 
         # compute and return posterior prob of each observation
-        return self._qprob(filter_prob=hfilter,
-                           predict_prob=predict_prob,
-                           P=self.tr_matrix)
+        return self._qprob(
+            filter_prob=hfilter, predict_prob=predict_prob, P=self.tr_matrix
+        )
 
     # - check to see if more efficient way of summing the means
     def _mstep(self, obs: np.ndarray, qprob: np.ndarray) -> tuple:
@@ -473,13 +488,12 @@ class MarkovSwitchModel:
         spread1, spread2 = obs[1:] - mu0, obs[1:] - mu1
         # by default, assume mean switch with constant variance
         if not self.variance_switch:
-            var = qprob[1:, 0] * spread1**2 + qprob[1:, 1] * spread2**2
+            var = qprob[1:, 0] * spread1 ** 2 + qprob[1:, 1] * spread2 ** 2
         return pkk, muk, [np.sqrt(var.mean())]
 
-    def fit_em(self,
-               obs: np.ndarray,
-               show: Optional[bool] = False,
-               n_iter: Optional[int] = 10):
+    def fit_em(
+        self, obs: np.ndarray, show: Optional[bool] = False, n_iter: Optional[int] = 10
+    ):
         """fits a markov switching model via EM Algorithm
 
         Parameters
@@ -526,8 +540,9 @@ class MarkovSwitchModel:
         cols = self._make_titles()
         self.em_params = pd.DataFrame(theta, columns=cols)
         self.em_params.index.name = "em_iterations"
-        self.em_params[['p11', 'p22']] = \
-            self.em_params[['p11', 'p22']].apply(self._sigmoid)
+        self.em_params[["p11", "p22"]] = self.em_params[["p11", "p22"]].apply(
+            self._sigmoid
+        )
         return self
 
     def _make_titles(self) -> list:
@@ -540,7 +555,7 @@ class MarkovSwitchModel:
         """
         # get the letters and create titles
         n = self.nregime
-        col1 = list("p{i}{i}".format(i=i) for i in range(1, n+1))
-        col2 = list("regime{i}_mean".format(i=i) for i in range(1, n+1))
+        col1 = list("p{i}{i}".format(i=i) for i in range(1, n + 1))
+        col2 = list("regime{i}_mean".format(i=i) for i in range(1, n + 1))
         col3 = ["regime_vol"]
         return list(chain(col1, col2, col3))
