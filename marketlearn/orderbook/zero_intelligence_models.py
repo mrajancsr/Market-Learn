@@ -20,6 +20,7 @@ from typing import Tuple, Callable, Union
 
 class Vectorize:
     """vectorization decorator that works with instance methods"""
+
     def vectorize(self, otypes=None, signature=None):
         # Decorator as an instance method
         def decorator(fn):
@@ -28,7 +29,9 @@ class Vectorize:
             @wraps(fn)
             def wrapper(*args, **kwargs):
                 return vectorized(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
 
@@ -43,6 +46,7 @@ class LimitOrderBook:
 
     Currently only supports placing orders of size 1
     """
+
     # decorator function
     v = Vectorize()
 
@@ -52,7 +56,7 @@ class LimitOrderBook:
         self._depth = 5
         self.price = np.arange(-self._levels, self._levels + 1)
         self.bid_size, self.ask_size = self._initialize_orders()
-        self.events = self._create_events()
+        self.events = LimitOrderBook._create_events()
         self.run = False
 
     def _get_levels(self) -> int:
@@ -147,42 +151,43 @@ class LimitOrderBook:
         :param qty: the quantity to sell
          if not specified, defaults to 1.
         :type qty: int, optional
+
+        Places limit buy order at a given price level
         """
         # get best bid and remove orders at that price
         p = self.best_bid()
         remaining_orders = self.bid_size[self.price == p][0] - qty
         self.bid_size[self.price == p] = remaining_orders
 
-    def limit_buy(self, price: int, qty: int = 1):
-        """Places limit buy order at a given price level
+    def limit_buy(self, price: int, qty: int = 1) -> None:
+        """ "Places limit buy order at a given price level
 
-        :param price: the price at which to place the LBO
-        :type price: int
-        :param qty: the quantity agent wishes to buy
-         if not specified, defaults to 1
-        :type qty: int, optional
+        Parameters
+        ----------
+        price : int
+            the price at which to place the LBO
+        qty : int, optional, default=1
+            the quantity agent wishes to buy
         """
         # add orders at the price specified
         new_orders = self.bid_size[self.price == price][0] + qty
         self.bid_size[self.price == price] = new_orders
 
-    def limit_sell(self, price: int, qty: int = 1):
+    def limit_sell(self, price: int, qty: int = 1) -> None:
         """Places limit sell order at a given price level
 
-        :param price: price at which to place the LSO
-        :type price: int
-        :param qty: the quantity agent wishes to sell
-         if not specified, defaults to 1
-        :type qty: int, optional
+        Parameters
+        ----------
+        price : int
+            the price at which to place the LSO
+        qty : int, optional, default=1
+            the quantity agent wishes to sell
         """
         # add orders at the price specified
         new_orders = self.ask_size[self.price == price][0] + qty
         self.ask_size[self.price == price] = new_orders
 
-    def cancel_buy(self,
-                   price: int,
-                   cancelable_orders: int = None,
-                   qty: int = 1):
+    def cancel_buy(self, price: int, cancelable_orders: int = None, qty: int = 1):
         """Places a cancel order at given price level on bid side
 
         :param price: price at which we cancel order
@@ -205,10 +210,7 @@ class LimitOrderBook:
         remaining_orders = self.bid_size[self.price == price][0] - qty
         self.bid_size[self.price == price] = remaining_orders
 
-    def cancel_sell(self,
-                    price: int,
-                    cancelable_orders: int = None,
-                    qty: int = 1):
+    def cancel_sell(self, price: int, cancelable_orders: int = None, qty: int = 1):
         """Places a cancel order at given price level on ask side
 
         :param price: price at which we cancel order
@@ -261,7 +263,7 @@ class LimitOrderBook:
         """
         returns the #of shares up to band on each side of book around mid-price
         """
-        buy_qty = self.bid_size[self._mid_position() + np.arange(-band-1, 0)]
+        buy_qty = self.bid_size[self._mid_position() + np.arange(-band - 1, 0)]
         sell_qty = self.ask_size[self._mid_position() + np.arange(band)]
         return np.append(buy_qty, sell_qty)
 
@@ -294,21 +296,24 @@ class LimitOrderBook:
         # otherwise pick based on given probability
         return np.random.choice(np.arange(1, price_level + 1), 1, p=prob)[0]
 
+    @staticmethod
     def _create_events(self) -> dict:
         """creates events based on simulation
 
         :return: dictionary of events
         :rtype: dict
         """
-        events = ["market_buy", "market_sell", "limit_buy", "limit_sell",
-                  "cancel_buy", "cancel_sell"]
+        events = [
+            "market_buy",
+            "market_sell",
+            "limit_buy",
+            "limit_sell",
+            "cancel_buy",
+            "cancel_sell",
+        ]
         return dict(zip(range(6), events))
 
-    def sfgk_model(self,
-                   mu: float,
-                   lamda: float,
-                   theta: float,
-                   L: int = 20):
+    def sfgk_model(self, mu: float, lamda: float, theta: float, L: int = 20):
         """Generates an agent based event simulation
 
         Calling this function generates a market event
@@ -326,7 +331,7 @@ class LimitOrderBook:
         :type L: int
         """
         # get cancelable orders on bid side from opposte best quote from L
-        cancelable_bids = self.price >= (self.best_ask()-L)
+        cancelable_bids = self.price >= (self.best_ask() - L)
         cancelable_bids = self.bid_size[cancelable_bids][:L][::-1]
 
         # get cancelable orders on ask side from opposite best quote from L
@@ -345,8 +350,14 @@ class LimitOrderBook:
 
         # set the probability of each event based on market rates
         cum_rate = mu + 2 * L * lamda + net_buys * theta + net_sells * theta
-        pevent = [0.5*mu, 0.5*mu, L*lamda, L*lamda,
-                  net_buys*theta, net_sells*theta]
+        pevent = [
+            0.5 * mu,
+            0.5 * mu,
+            L * lamda,
+            L * lamda,
+            net_buys * theta,
+            net_sells * theta,
+        ]
         pevent = np.array(pevent) / cum_rate
 
         # randomly pick a event based on above poisson rates
@@ -386,14 +397,15 @@ class LimitOrderBook:
             p = self.best_bid() + q
             self.cancel_sell(price=p)
 
-    def simulate_book(self,
-                      mu: float,
-                      lamda: Union[float, np.ndarray],
-                      theta: Union[float, np.ndarray],
-                      L: int,
-                      func: Callable,
-                      max_events: int = 10000,
-                      ) -> np.ndarray:
+    def simulate_book(
+        self,
+        mu: float,
+        lamda: Union[float, np.ndarray],
+        theta: Union[float, np.ndarray],
+        L: int,
+        func: Callable,
+        max_events: int = 10000,
+    ) -> np.ndarray:
         """Monte-Carlo Simulation of average book shape
 
         :param mu: rate of arrival of market orders
@@ -430,7 +442,7 @@ class LimitOrderBook:
             avg_book_shape += self.book_shape(L) / max_events
 
         # calculate average of bid/ask orders a distance L ticks
-        result = (avg_book_shape[:L][::-1]+avg_book_shape[L+1:])*0.5
+        result = (avg_book_shape[:L][::-1] + avg_book_shape[L + 1 :]) * 0.5
         return np.append(avg_book_shape[L], result)
 
     def cst_model(self, mu, lamdas, thetas, L):
@@ -451,7 +463,7 @@ class LimitOrderBook:
         :type L: [type]
         """
         # get cancelable orders on bid side from opposte best quote from L
-        cancelable_bids = self.price >= (self.best_ask()-L)
+        cancelable_bids = self.price >= (self.best_ask() - L)
         cancelable_bids = self.bid_size[cancelable_bids][:L][::-1]
 
         # get cancelable orders on ask side from opposite best quote from L
@@ -472,7 +484,7 @@ class LimitOrderBook:
         cum_lam = lamdas.sum()
 
         # set the probability of each event based on market rates
-        cum_rate = 2*mu + 2*cum_lam + cb_rates + cs_rates
+        cum_rate = 2 * mu + 2 * cum_lam + cb_rates + cs_rates
         pevent = np.array([mu, mu, cum_lam, cum_lam, cb_rates, cs_rates])
         pevent /= cum_rate
         market_event = self.events[np.random.choice(6, 1, p=pevent)[0]]
@@ -520,10 +532,11 @@ class LimitOrderBook:
         """
         return k * L ** (-alpha)
 
-    def _powerlawfit(self,
-                     emp_estimates: np.ndarray,
-                     L: np.ndarray,
-                     ) -> np.ndarray:
+    def _powerlawfit(
+        self,
+        emp_estimates: np.ndarray,
+        L: np.ndarray,
+    ) -> np.ndarray:
         """Estimates and returns fitted values from power law function
 
         :param emp_estimates: empirical arrival rates of limit orders
@@ -534,19 +547,20 @@ class LimitOrderBook:
          from opposite best quote
         :rtype: np.ndarray
         """
-        model = Model(self._objective_func,
-                      independent_vars=['L'],
-                      param_names=['k', 'alpha'])
+        model = Model(
+            self._objective_func, independent_vars=["L"], param_names=["k", "alpha"]
+        )
 
         # make initial guess for k and alpha
         fit = model.fit(emp_estimates, L=np.arange(1, 6), k=1.2, alpha=0.4)
-        return fit.values['k'] * L ** -fit.values['alpha']
+        return fit.values["k"] * L ** -fit.values["alpha"]
 
-    def set_market_params(self,
-                          mu: float,
-                          lamda: float,
-                          theta: float,
-                          ) -> "Book":
+    def set_market_params(
+        self,
+        mu: float,
+        lamda: float,
+        theta: float,
+    ) -> "Book":
         """sets top of book parameters for market events
 
         This function needs to be called prior to laplace transformation
@@ -593,7 +607,7 @@ class LimitOrderBook:
         """
         if self.run is False:
             raise ValueError("set_market_params needs to be called first")
-        return -self.lamda * self._dk(k+j-1)
+        return -self.lamda * self._dk(k + j - 1)
 
     def _bj(self, k: int, j: int, s: float):
         """helper to compute continued fractions
@@ -607,7 +621,7 @@ class LimitOrderBook:
         """
         if self.run is False:
             raise ValueError("set_market_params needs to be called first")
-        return self.lamda + self._dk(k+j-1) + s
+        return self.lamda + self._dk(k + j - 1) + s
 
     @v.vectorize(signature=("(),(),(),()->()"))
     def _laplace_transform(self, k: int, s: float, n: int):
@@ -628,7 +642,7 @@ class LimitOrderBook:
         :param n: levels of a continued fraction
         :type n: int
         """
-        f0 = 10E-30
+        f0 = 10e-30
         c0 = f0
         c = np.zeros(n)
         c[0] = c0
@@ -639,11 +653,11 @@ class LimitOrderBook:
 
         # iterate
         for j in range(1, n):
-            d[j] = self._bj(k, j, s) + self._aj(k, j) * d[j-1]
-            c[j] = self._bj(k, j, s) + self._aj(k, j) / c[j-1]
+            d[j] = self._bj(k, j, s) + self._aj(k, j) * d[j - 1]
+            c[j] = self._bj(k, j, s) + self._aj(k, j) / c[j - 1]
             d[j] = 1.0 / d[j]
             delta[j] = c[j] * d[j]
-            f[j] = f[j-1] * delta[j]
+            f[j] = f[j - 1] * delta[j]
 
         return -f[-1] / self.lamda
 
@@ -659,7 +673,7 @@ class LimitOrderBook:
         :param s: [description]
         :type s: [type]
         """
-        orders = np.arange(1, b+1)
+        orders = np.arange(1, b + 1)
         return self._laplace_transform(b, s, 20).prod()
 
     def _ghat(self, ask_qty: int, bid_qty: int, s):
@@ -682,22 +696,22 @@ class LimitOrderBook:
         """
         shift = 100
         result = self.fhat(ask_qty, s) * self.fhat(bid_qty, -s) / s
-        return result * mpm.exp(-shift*s)
+        return result * mpm.exp(-shift * s)
 
     def prob_mid(self, a, b):
         shift = 100
         f = lambda x: self._ghat(a, b, x)
-        return mpm.invertlaplace(f, shift, method='talbot')
-
+        return mpm.invertlaplace(f, shift, method="talbot")
 
     def prob_mid(self, n=10000, xb=1, xs=1):
         """ calculates probability of mid-price to go up"""
-        def send_orders(xb, xs, mu = 0.94, lamda = 1.85,theta = 0.71):
-            cum_rate = 2*mu + 2*lamda + theta*xb + theta*xs
-            bid_qty_down = mu+theta*xb
-            ask_qty_down = mu+theta*xs
-            pevent = np.array([lamda,lamda,bid_qty_down,ask_qty_down])/cum_rate
-            ans = np.random.choice(np.arange(4),size=1,p=pevent)[0]
+
+        def send_orders(xb, xs, mu=0.94, lamda=1.85, theta=0.71):
+            cum_rate = 2 * mu + 2 * lamda + theta * xb + theta * xs
+            bid_qty_down = mu + theta * xb
+            ask_qty_down = mu + theta * xs
+            pevent = np.array([lamda, lamda, bid_qty_down, ask_qty_down]) / cum_rate
+            ans = np.random.choice(np.arange(4), size=1, p=pevent)[0]
 
             if ans == 0:
                 xb += 1
@@ -711,9 +725,9 @@ class LimitOrderBook:
 
         count = 0
         for i in range(n):
-            qb_old,qs_old = xb,xs
+            qb_old, qs_old = xb, xs
             while True:
-                qb_new,qs_new = send_orders(xb=qb_old,xs=qs_old)
+                qb_new, qs_new = send_orders(xb=qb_old, xs=qs_old)
                 if qb_new == 0:
                     break
                 elif qs_new == 0:
@@ -724,11 +738,15 @@ class LimitOrderBook:
 
     def limit_order_prob(self, n=10000, xb=5, xs=5, dpos=5):
         # assumes my order is first at the bid
-        def send_orders(xb, xs, d,mu=0.94, lamda=1.85, theta=0.71):
-            cum_rate = 2*mu + 2*lamda + theta*(xb-1) + theta*xs
-            ask_qty_down = mu+theta*xs
-            pevent = np.array([lamda,lamda,mu,theta*(xb-1), ask_qty_down])/cum_rate
-            ans = np.random.choice(np.arange(5), size=1, p=pevent)[0]  # pick based on respetive probabilities
+        def send_orders(xb, xs, d, mu=0.94, lamda=1.85, theta=0.71):
+            cum_rate = 2 * mu + 2 * lamda + theta * (xb - 1) + theta * xs
+            ask_qty_down = mu + theta * xs
+            pevent = (
+                np.array([lamda, lamda, mu, theta * (xb - 1), ask_qty_down]) / cum_rate
+            )
+            ans = np.random.choice(np.arange(5), size=1, p=pevent)[
+                0
+            ]  # pick based on respetive probabilities
 
             if ans == 0:  # limit buy
                 xb += 1
@@ -739,7 +757,7 @@ class LimitOrderBook:
                 d -= 1 if d > 0 else 0
             elif ans == 3:  # cancel buy
                 r = np.random.uniform()
-                if r > (xb-d) / (xb-1):
+                if r > (xb - d) / (xb - 1):
                     d -= 1
                 xb -= 1
             else:  # market buy
@@ -748,9 +766,9 @@ class LimitOrderBook:
 
         count = 0
         for i in range(n):
-            qb_old,qs_old,d_old = xb,xs,dpos
+            qb_old, qs_old, d_old = xb, xs, dpos
             while True:
-                qb_new,qs_new,d_new = send_orders(xb=qb_old, xs=qs_old, d=d_old)
+                qb_new, qs_new, d_new = send_orders(xb=qb_old, xs=qs_old, d=d_old)
                 if d_new == 0:  # my order has been executed
                     count += 1
                     break
@@ -760,7 +778,6 @@ class LimitOrderBook:
         return count / n
 
     def prob_making_spread(self, n=10000, xb=5, xs=5, bid_pos=5, ask_pos=5):
-
         def send_orders(xb, xs, bid_pos, ask_pos, mu=0.94, lamda=1.85, theta=0.71):
             xb_rate = xb - 1
             xs_rate = xs - 1
@@ -769,8 +786,11 @@ class LimitOrderBook:
             if ask_pos == 0:
                 xs_rate = xs
 
-            cum_rate = 2*mu + 2*lamda + theta*xb_rate + theta*xs_rate
-            pevent = np.array([lamda,lamda,mu,mu,theta*xb_rate,theta*xs_rate])/cum_rate
+            cum_rate = 2 * mu + 2 * lamda + theta * xb_rate + theta * xs_rate
+            pevent = (
+                np.array([lamda, lamda, mu, mu, theta * xb_rate, theta * xs_rate])
+                / cum_rate
+            )
             ans = np.random.choice(np.arange(6), size=1, p=pevent)[0]
 
             if ans == 0:
@@ -798,7 +818,7 @@ class LimitOrderBook:
 
         count = 0
         for i in range(n):
-            qb_old, qs_old, b_old, a_old = xb,xs,bid_pos,ask_pos
+            qb_old, qs_old, b_old, a_old = xb, xs, bid_pos, ask_pos
             while True:
                 qb_new, qs_new, b_new, a_new = send_orders(qb_old, qs_old, b_old, a_old)
                 if b_new == 0 and a_new == 0:
