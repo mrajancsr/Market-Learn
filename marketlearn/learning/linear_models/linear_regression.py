@@ -22,7 +22,7 @@ class LinearRegression(LinearBase):
     tss:            Total sum of squares
     ess:            explained sum of squares
     r2:             Rsquared or proportion of variance
-    s2:             Residual Standard error or RSE         
+    s2:             Residual Standard error or RSE
 
 
     Notes:
@@ -33,9 +33,10 @@ class LinearRegression(LinearBase):
       but computing an inverse is expensive
     - A implementation based on QR decomposition is given based on
         min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
-        based on decomposing nxp matrix A = QR, Q is orthogonal, R is upper triangular
+        based on decomposing nxp matrix A = QR, Q is orthogonal, R is upper
+        triangular
     - A cholesky implementation is also included based on converting an n x p
-        into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, then we need to 
+        into a pxp matrix: A'A = A'b, then letting M = A'A & y = A'b, then
         solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
     """
 
@@ -43,8 +44,10 @@ class LinearRegression(LinearBase):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
-    
-    def estimate_params(self, A: np.ndarray, b: np.ndarray, method: str = 'ols-qr') -> np.ndarray:
+
+    def estimate_params(
+        self, A: np.ndarray, b: np.ndarray, method: str = "ols-qr"
+    ) -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
         based on ||Ax - b||
         Args:
@@ -53,20 +56,22 @@ class LinearRegression(LinearBase):
         b:
             target values (n_samples, 1)
         """
-        if method == 'ols-naive':
+        if method == "ols-naive":
             # based on (A'A)^-1 A'b = x
             return np.linalg.inv(A.T @ A) @ A.T @ b
-        elif method == 'ols-qr':
+        elif method == "ols-qr":
             # min||(Rx - Q'b)
             q, r = np.linalg.qr(A)
             # solves by forward substitution
             return solve_triangular(r, q.T @ b)
-        elif method == 'ols-cholesky':
-            l = np.linalg.cholesky(A.T @ A)
-            y = solve_triangular(l, A.T @ b, lower=True)
-            return solve_triangular(l.T, y)
+        elif method == "ols-cholesky":
+            M = np.linalg.cholesky(A.T @ A)
+            y = solve_triangular(M, A.T @ b, lower=True)
+            return solve_triangular(M.T, y)
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str = 'ols') -> 'LinearRegression':
+    def fit(
+        self, X: np.ndarray, y: np.ndarray, method: str = "ols"
+    ) -> "LinearRegression":
         """fits training data via ordinary least Squares (ols)
         Args:
         X:
@@ -76,13 +81,13 @@ class LinearRegression(LinearBase):
         y:
             shape = (n_samples)
             Target values
-        covar: 
+        covar:
             covariance matrix of fitted parameters i.e theta hat
             set to True if desired
 
         method:
             the fitting procedure default to cholesky decomposition
-            Also supports 'ols-qr' for QR decomposition & 
+            Also supports 'ols-qr' for QR decomposition &
             'ols-naive'
 
         Returns:
@@ -90,20 +95,20 @@ class LinearRegression(LinearBase):
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         X = self.make_polynomial(X)
-        if method == 'ols-naive':
+        if method == "ols-naive":
             self.theta = np.linalg.inv(X.T @ X) @ X.T @ y
-        elif method == 'ols':
+        elif method == "ols":
             l = np.linalg.cholesky(X.T @ X)
             v = solve_triangular(l, X.T @ y, lower=True)
             self.theta = solve_triangular(l.T, v)
-        elif method == 'ols-qr':
+        elif method == "ols-qr":
             # min||(Rx - Q'b)||
             q, r = np.linalg.qr(X)
             # solves by forward substitution
             self.theta = solve_triangular(r, q.T @ y)
         # Make the predictions using estimated coefficients
         self.predictions = self.predict(X)
-        self.residuals = (y - self.predictions)
+        self.residuals = y - self.predictions
         self.rss = self.residuals @ self.residuals
 
         # Total parameters fitted
@@ -117,26 +122,27 @@ class LinearRegression(LinearBase):
         self.tss = (y - ybar) @ (y - ybar)
         self.ess = self.tss - self.rss
         self.r2 = self.ess / self.tss
-        self.bic = n_samples * np.log(self.rss / n_samples) + \
-            k * np.log(n_samples)
+        self.bic = n_samples * np.log(self.rss / n_samples) + k * np.log(n_samples)
         self.run = True
 
         return self
 
-    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
+    def predict(
+        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
+    ) -> np.ndarray:
         """makes predictions of response variable given input params
         Args:
         X:
             shape = (n_samples, p_features)
             n_samples is number of instances
-            p_features is number of features 
+            p_features is number of features
             - if fit_intercept is true, a ones column is needed
         thetas:
             if initialized to None:
                 uses estimated theta from fitting process
             if array is given:
                 makes prediction from given thetas
-    
+
         Returns:
         predicted values:
             shape = (n_samples,)
@@ -144,8 +150,8 @@ class LinearRegression(LinearBase):
         if thetas is None:
             return X @ self.theta
         return X @ thetas
-    
-    def _param_covar(self, X: np.ndarray) -> np.ndarray: 
+
+    def _param_covar(self, X: np.ndarray) -> np.ndarray:
         return np.linalg.inv(X.T @ X) * self.s2
 
 
@@ -172,7 +178,8 @@ class LinearRegressionMLE(LinearBase):
     - Levenberg-Marquardt Algorithm
 
     """
-    def __init__(self, fit_intercept: bool=True, degree: int=1):
+
+    def __init__(self, fit_intercept: bool = True, degree: int = 1):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
@@ -184,20 +191,20 @@ class LinearRegressionMLE(LinearBase):
     def _objective_func(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
         """the objective function to be minimized, returns estimated x for Ax=b
         Args:
-        guess: 
+        guess:
             initial guess for paramter x
             shape = {1, p_features}
             p_features is the number of columns of design matrix A
 
-        A: 
+        A:
             the coefficient matrix
             shape = {n_samples, n_features}
 
-        b: 
+        b:
             the response variable
             shape = {n_samples, 1}
 
-        Returns: 
+        Returns:
         Scaler value from loglikelihood function
         """
         y_guess = self.predict(A, thetas=guess)
@@ -205,27 +212,29 @@ class LinearRegressionMLE(LinearBase):
         return f
 
     def _jacobian(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
-        return (A.T @ (guess @ A.T - b))
+        return A.T @ (guess @ A.T - b)
 
     def _hessian(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
-        return (A.T @ (A @ guess[:, np.newaxis] - b) @ A)
-    
+        return A.T @ (A @ guess[:, np.newaxis] - b) @ A
+
     def _levenberg_marqdt(self):
         raise NotImplementedError("Not yet Implemented")
 
-    def fit(self, X: np.ndarray, y: np.ndarray, method: str='mle_bfgs') -> 'LinearRegressionMLE':
+    def fit(
+        self, X: np.ndarray, y: np.ndarray, method: str = "mle_bfgs"
+    ) -> "LinearRegressionMLE":
         """fits training data via maximum likelihood Estimate
-        
+
         Args:
-        X: 
+        X:
             shape = (n_samples, p_features)
             n_samples is number of instances i.e rows
             p_features is number of features i.e columns
-        y: 
+        y:
             shape = (n_samples)
             Target values
 
-        method: 
+        method:
             the fitting procedure default to 'mle-bfgs'
             Also supports 'mle_newton_cg'
 
@@ -236,42 +245,47 @@ class LinearRegressionMLE(LinearBase):
         # generate random guess
         rng = np.random.RandomState(1)
         guess_params = rng.uniform(low=0, high=10, size=X.shape[1])
-        if method == 'mle_bfgs':
+        if method == "mle_bfgs":
             # doesn't require hessian
-            self.theta = minimize(self._objective_func,
-                                  guess_params,
-                                  jac=self._jacobian, 
-                                  method='BFGS',
-                                  options={'disp': True}, 
-                                  args=(X, y))
-        elif method == 'mle_newton_cg':
+            self.theta = minimize(
+                self._objective_func,
+                guess_params,
+                jac=self._jacobian,
+                method="BFGS",
+                options={"disp": True},
+                args=(X, y),
+            )
+        elif method == "mle_newton_cg":
             # hess is optional but speeds up the iterations
-            self.theta = minimize(self._objective_func, 
-                                  guess_params, 
-                                  jac=self._jacobian, 
-                                  hess=self._hessian,
-                                  method='Newton-CG', 
-                                  options={'disp': True}, 
-                                  args=(X, y))
+            self.theta = minimize(
+                self._objective_func,
+                guess_params,
+                jac=self._jacobian,
+                hess=self._hessian,
+                method="Newton-CG",
+                options={"disp": True},
+                args=(X, y),
+            )
         self.predictions = self.predict(X)
         self.run = True
         return self
 
-    def predict(self, X: np.ndarray,
-        thetas: Union[np.ndarray, None] = None) -> Union[np.ndarray, Dict]:
+    def predict(
+        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
+    ) -> Union[np.ndarray, Dict]:
         """makes predictions of response variable given input params
         Args:
-        X: 
+        X:
             shape = (n_samples, p_features)
             n_samples is number of instances
-            p_features is number of features 
+            p_features is number of features
             - if fit_intercept is true, a ones column is needed
         thetas:
             if initialized to None:
                 uses estimated theta from fitting process
             if array is given:
                 it serves as initial guess for optimization
-        
+
         Returns:
         predicted values:
             shape = (n_samples, 1)
@@ -280,38 +294,46 @@ class LinearRegressionMLE(LinearBase):
             if isinstance(self.theta, np.ndarray):
                 return X @ self.theta
             else:
-                return X @ self.theta['x']
+                return X @ self.theta["x"]
         return X @ thetas
 
-    def get_residual_diagnostics(self) -> 'LinearRegressionMLE':
+    def get_residual_diagnostics(self) -> "LinearRegressionMLE":
         """returns the residual diagnostics from fitting process"""
 
-        self.rss = (self.resid**2).sum() 
+        self.rss = (self.resid ** 2).sum()
         self.s2 = self.rss / (n - p)
+
 
 class LinearRegressionGD(LinearBase):
     """Implements the ols regression via Gradient Descent
-       
-       Args:
-       eta:             Learning rate (between 0.0 and 1.0)
-       n_iter:          passees over the training set
-       random_state:    Random Number Generator seed
-                        for random weight initilization
 
-       Attributes:
-       theta:           Weights after fitting
-       residuals:       Number of incorrect predictions
+    Args:
+    eta:             Learning rate (between 0.0 and 1.0)
+    n_iter:          passees over the training set
+    random_state:    Random Number Generator seed
+                     for random weight initilization
+
+    Attributes:
+    theta:           Weights after fitting
+    residuals:       Number of incorrect predictions
     """
-    def __init__(self, eta: float = 0.001, n_iter: int = 20, random_state: int = 1,
-    fit_intercept: bool = True, degree: int=1):
+
+    def __init__(
+        self,
+        eta: float = 0.001,
+        n_iter: int = 20,
+        random_state: int = 1,
+        fit_intercept: bool = True,
+        degree: int = 1,
+    ):
         self.eta = eta
         self.n_iter = n_iter
         self.random_state = random_state
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
-    
-    def fit(self, X: np.ndarray, y: np.ndarray) -> 'LinearRegressionGD':
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "LinearRegressionGD":
         """fits training data
         Args:
         X: shape = {n_samples, p_features}
@@ -320,27 +342,30 @@ class LinearRegressionGD(LinearBase):
 
         y: shape = {n_samples,}
                     Target values
-        
+
         Returns:
         object
         """
         n_samples, p_features = X.shape[0], X.shape[1]
-        self.theta = np.zeros(shape = 1 + p_features)
+        self.theta = np.zeros(shape=1 + p_features)
         self.cost = []
         X = self.make_polynomial(X)
 
         for _ in range(self.n_iter):
             # calculate the error
-            error = (y - self.predict(X))
+            error = y - self.predict(X)
             self.theta += self.eta * X.T @ error / n_samples
             self.cost.append((error.T @ error) / (2.0 * n_samples))
         self.run = True
         return self
 
-    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None) -> np.ndarray:
-        if thetas is None: 
+    def predict(
+        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
+    ) -> np.ndarray:
+        if thetas is None:
             return X @ self.theta
         return X @ thetas
+
 
 lg = LinearRegression()
 print(lg)
