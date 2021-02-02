@@ -1,5 +1,5 @@
 """
-Implementation of Modern Portfolio Theory
+Implementation of Harry Markowitz's Modern Portfolio Theory
 Author: Rajan Subramanian 
 Created May 15 2020
 """
