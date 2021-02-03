@@ -2,6 +2,7 @@
 Author: Rajan Subramanian
 """
 
+from __future__ import annotations
 from typing import Any, Optional
 
 
@@ -18,12 +19,13 @@ class SinglyLinkedList:
     start_node: Node, default=None
         represents head of the linked list
         default set to None since its empty at time of creation
-
     size: int
         represents the length of the linked list
     """
+
     class Node:
         """Nested Node Class
+
         Create a node to store value and reference for LinkedList
         Takes O(1) time
 
@@ -40,21 +42,6 @@ class SinglyLinkedList:
             self.nref = reference
 
     def __init__(self):
-        """Create a new Singly Linked List
-        Takes O(1) time
-
-        Parameters
-        ----------
-        None
-
-        Attributes
-        ----------
-        start_node : Node, default=None
-            represents head of the linked list and set
-            to None at time of creation
-        size : int
-            keeps track of number of elements in linkedlist
-        """
         self.start_node = None
         self.size = 0
 
@@ -70,7 +57,7 @@ class SinglyLinkedList:
 
     def traverse(self):
         """Traverses a Singly Linked List
-            Takes O(n) time
+        Takes O(n) time
         """
         if self.start_node is None:
             print("list has no elements")
@@ -117,15 +104,15 @@ class SinglyLinkedList:
         self.size += 1
 
     def insert_after_item(self, item: Any, data: Any):
-        """inserts data after item is found
-        if found, takes O(k+1), Otherwise, O(n)
+        """nserts data before item is found
+        if found, takes O(k+1), otherwise, O(n)
 
         Parameters
         ----------
         item : Any
-            item in the linkedlist
+            element contained in Node
         data : Any
-            data to be inserted after above item is found
+            the data to be inserted before item if found
         """
         n = self.start_node
         while n:  # iterate until x is found
@@ -141,14 +128,16 @@ class SinglyLinkedList:
             n.nref = new_node  # set the current nodes next ref to new node
             self.size += 1
 
-    def insert_before_item(self, item: Any, data: Any) -> None:
-        """Inserts data before item is found
+    def insert_before_item(self, data: Any, item: Any) -> None:
+        """nserts data before item is found
         if found, takes O(k+1), otherwise, O(n)
 
-        :param item: the item in node
-        :type item: Any
-        :param data: the data to be inserted
-        :type data: Any
+        Parameters
+        ----------
+        data : Any
+            data to be inserted before item
+        item : Any
+            the item in Node
         """
         if self.start_node is None:
             print("list has no elements")
@@ -175,7 +164,7 @@ class SinglyLinkedList:
         else:
             new_node = self.Node(data)
             new_node.nref = n.nref  # new nodes next ref is previous nodes next
-            n.nref = new_node       # previous node's next ref is now new node
+            n.nref = new_node  # previous node's next ref is now new node
             self.size += 1
 
     def insert_at_index(self, index, data):
@@ -225,10 +214,10 @@ class SinglyLinkedList:
         return False
 
     def reverse(self):
-        n = self.start_node # current node
-        prev_node = None  
-        next_node = None 
-        while n: # assume first node case...
+        n = self.start_node  # current node
+        prev_node = None
+        next_node = None
+        while n:  # assume first node case...
             next_node = n.nref  # save the next reference of current node
             n.nref = prev_node  # replace next reference to prev node
             prev_node = n  # prev_node now is the current node
@@ -288,7 +277,7 @@ class SinglyLinkedList:
         n3 = l3.start_node
 
         while n1:
-            l3.insert_at_end(n1.element+n2.element)
+            l3.insert_at_end(n1.element + n2.element)
             n1 = n1.nref
             n2 = n2.nref
         return l3
@@ -312,6 +301,7 @@ class DoublyLinkedList:
         represents the length of the linked list
 
     """
+
     class Node:
         """Nested Node Class
         Create a node to store v alue and 2 references for LinkedList
@@ -326,10 +316,13 @@ class DoublyLinkedList:
         prev_ref : optional[self.Node], default=None
             previous reference of the node
         """
-        def __init__(self,
-                     data: Any,
-                     next_ref: optional[self.Node] = None, 
-                     prev_ref: optional[self.Node] = None):
+
+        def __init__(
+            self,
+            data: Any,
+            next_ref: optional[self.Node] = None,
+            prev_ref: optional[self.Node] = None,
+        ):
             self.element = data
             self.nref = next_ref
             self.pref = prev_ref
@@ -353,18 +346,22 @@ class DoublyLinkedList:
         """inserets data at start of dlinked list
         takes O(1) time
         """
-        if self.start_node is None: # if list is empty
+        if self.start_node is None:  # if list is empty
             new_node = self.Node(data)
-            self.start_node = new_node 
+            self.start_node = new_node
             self.size += 1
-            return 
-        new_node = self.Node(data) 
-        new_node.nref = self.start_node  # make next reference of new node to current node
-        self.start_node.pref = new_node # set previous reference of currenet node to new node
+            return
+        new_node = self.Node(data)
+        new_node.nref = (
+            self.start_node
+        )  # make next reference of new node to current node
+        self.start_node.pref = (
+            new_node  # set previous reference of currenet node to new node
+        )
         self.start_node = new_node
         self.size += 1
 
-    def insert_at_end(self,data):
+    def insert_at_end(self, data):
         """inserts data at end of dlinked list"""
         if self.start_node is None:
             new_node = self.Node(data)
@@ -373,14 +370,14 @@ class DoublyLinkedList:
             return
         n = self.start_node
         while n.nref:
-            n = n.nref 
+            n = n.nref
         new_node = self.Node(data)
         new_node.pref = n
         n.nref = new_node
 
     def traverse(self):
         """Traverses a Singly Linked List
-            Takes O(n) time
+        Takes O(n) time
         """
         if self.start_node is None:
             print("list has no elements")
@@ -394,7 +391,7 @@ class DoublyLinkedList:
         """inserts data after item x"""
         if self.start_node is None:
             print("list is empty")
-            return 
+            return
         n = self.start_node
         while n:
             if n.element == value:
@@ -406,11 +403,11 @@ class DoublyLinkedList:
             new_node = self.Node(data)
             new_node.pref = n
             new_node.nref = n.nref
-            if n.nref is not None: # if its not the last element
-                n.nref.pref = new_node 
+            if n.nref is not None:  # if its not the last element
+                n.nref.pref = new_node
             n.nref = new_node
 
-    def insert_before_value(self,value,data):
+    def insert_before_value(self, value, data):
         if self.start_node is None:
             print("empty dlinked list")
             return
@@ -418,7 +415,7 @@ class DoublyLinkedList:
             new_node = self.Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
-            return 
+            return
         n = self.start_node
         while n:
             if n.element == x:
@@ -429,12 +426,14 @@ class DoublyLinkedList:
         else:
             new_node = self.Node(data)
             new_node.nref = n  # set next ref of new to current node
-            new_node.pref = n.pref # set previous ref of new node to prev ref of curr node
-            n.pref = new_node # update pref reference of current node to new node
+            new_node.pref = (
+                n.pref
+            )  # set previous ref of new node to prev ref of curr node
+            n.pref = new_node  # update pref reference of current node to new node
 
     def delete_from_start(self):
         """deletes a node from the start of dlinklist
-            takes O(1) time
+        takes O(1) time
         """
         if self.start_node is None:
             print("dLinklist is empty")
@@ -447,7 +446,7 @@ class DoublyLinkedList:
 
     def delete_from_end(self):
         """Deletes the node at end of dlist
-            takes O(n) time
+        takes O(n) time
         """
         if self.start_node is None:
             print("dLinklist is empty")
@@ -483,26 +482,35 @@ class DoublyLinkedList:
         if n is None:
             print("value not found")
         else:
-            if n.nref is None: # last element case
+            if n.nref is None:  # last element case
                 n.pref.nref = None
-            else: # in the middle
-                n.pref.nref = n.nref  # set the next reference of previous node to current nodes next reference
-                n.nref.pref = n.pref # set the prev reference of next node to current nodes previous reference
-    
+            else:  # in the middle
+                n.pref.nref = (
+                    n.nref
+                )  # set the next reference of previous node to current nodes next reference
+                n.nref.pref = (
+                    n.pref
+                )  # set the prev reference of next node to current nodes previous reference
+
     def reverse(self):
         if self.start_node is None:
             print("list has no elements to reverse")
-            return 
-        n = self.start_node # current node 
-        prev_node = None 
-        while n: # assume first node case...
-            prev_node = n.pref  # save the previous reference 
-            n.pref = n.nref # next ref of current node is prev ref of curr node after flip
+            return
+        n = self.start_node  # current node
+        prev_node = None
+        while n:  # assume first node case...
+            prev_node = n.pref  # save the previous reference
+            n.pref = (
+                n.nref
+            )  # next ref of current node is prev ref of curr node after flip
             n.nref = prev_node
-            n = n.pref # since pref is the next reference.  we iterate backward
+            n = n.pref  # since pref is the next reference.  we iterate backward
         self.start_node = prev_node.pref
 
+
 from abc import ABCMeta
+
+
 class DoublyLinkedBase(metaclass=ABCMeta):
     """Abstract Base class for a doubly linked list
 
@@ -511,6 +519,7 @@ class DoublyLinkedBase(metaclass=ABCMeta):
                         default set to None since its empty at time of creation
     end_node:    (Node) represents tail of the linked list
                         default set to None since its empty at time of creation"""
+
     class _Node:
         """
         Nested Node Class.
@@ -533,7 +542,7 @@ class DoublyLinkedBase(metaclass=ABCMeta):
         self._start_node = self._Node(None)
         self._end_node = self._Node(None)
         self._start_node._nref = self._end_node  # creating circular reference
-        self._end_node._pref = self._start_node 
+        self._end_node._pref = self._start_node
         self._size = 0
 
     def __len__(self):
@@ -559,12 +568,12 @@ class DoublyLinkedBase(metaclass=ABCMeta):
         after._pref = before
         self._size -= 1
         element = node._element
-        node._nref = node._pref = node._element = None   # deprecate Node
+        node._nref = node._pref = node._element = None  # deprecate Node
         return element
 
     def _traverse(self):
         """Traverses a Linked List
-            Takes O(n) time
+        Takes O(n) time
         """
         if self._start_node is None:
             print("list has no elements")

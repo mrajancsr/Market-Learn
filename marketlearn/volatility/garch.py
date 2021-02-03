@@ -12,6 +12,7 @@ class Garch:
     See c.f https://math.berkeley.edu/~btw/thesis4.pdf
     todo - a two point estimation method for medium to large datasets
     """
+
     def __init__(self, order: tuple = (1, 1), mean: bool = True):
         """Constructor to specify order of Garch and specify mean equation
 
@@ -23,9 +24,7 @@ class Garch:
         self.mean = mean
         self.order = order
 
-    def _loglikelihood(self,
-                       vol: np.ndarray,
-                       at: np.ndarray) -> float:
+    def _loglikelihood(self, vol: np.ndarray, at: np.ndarray) -> float:
         """Returns the loglikelihood function of Garch(1,1) model
             see c.f https://math.berkeley.edu/~btw/thesis4.pdf pg. 19
 
@@ -36,15 +35,16 @@ class Garch:
         :return: loglikelihood function value
         :rtype: float
         """
-        #logliks = 0.5 * (np.log(2*np.pi) + np.log(vol) + a**2/vol)
-        #return np.sum(logliks)
-        #return 0.5 * (np.log(vol) + a**2 / vol).sum()
-        return 0.5 * (np.log(vol*2*np.pi) + at**2 / vol).sum()
+        # logliks = 0.5 * (np.log(2*np.pi) + np.log(vol) + a**2/vol)
+        # return np.sum(logliks)
+        # return 0.5 * (np.log(vol) + a**2 / vol).sum()
+        return 0.5 * (np.log(vol * 2 * np.pi) + at ** 2 / vol).sum()
 
-    def _simulate_vol(self,
-                      r: np.ndarray,
-                      theta: np.ndarray = None,
-                      ) -> np.ndarray:
+    def _simulate_vol(
+        self,
+        r: np.ndarray,
+        theta: np.ndarray = None,
+    ) -> np.ndarray:
         """Simulates the garch(1,1) volatility model
         Args:
             r (np.ndarray): Returns vector
@@ -60,11 +60,11 @@ class Garch:
         else:
             omega, gamma, beta = theta
         # set unconditional variance of garch(1,1) as init est
-        #vol[0] = omega / (1 - gamma - beta)
+        # vol[0] = omega / (1 - gamma - beta)
         vol[0] = r.var()
         # simulate the garch(1,1) process
         for idx in range(1, n):
-            vol[idx] = omega + gamma * r[idx-1]**2 + beta * vol[idx-1]
+            vol[idx] = omega + gamma * r[idx - 1] ** 2 + beta * vol[idx - 1]
         return vol
 
     def _constraint(self, params: np.ndarray):
@@ -105,33 +105,36 @@ class Garch:
         # omega, gamma and beta
         guess_params = np.array([a_t.var(), 0.09, 0.90])
         finfo = np.finfo(np.float64)
-        bounds = [(finfo.eps, 2*r.var(ddof=1)), (0.0, 1.0), (0.0, 1.0)]
-        cons = {'type': 'ineq', 'fun': self._constraint}
-        self.theta = minimize(self._objective_func,
-                              guess_params,
-                              method='SLSQP',
-                              jac=self._jacobian,
-                              options={'disp': True},
-                              bounds=bounds,
-                              args=(a_t),
-                              constraints=cons)['x']
+        bounds = [(finfo.eps, 2 * r.var(ddof=1)), (0.0, 1.0), (0.0, 1.0)]
+        cons = {"type": "ineq", "fun": self._constraint}
+        self.theta = minimize(
+            self._objective_func,
+            guess_params,
+            method="SLSQP",
+            jac=self._jacobian,
+            options={"disp": True},
+            bounds=bounds,
+            args=(a_t),
+            constraints=cons,
+        )["x"]
         return self
 
-    def _simulate_garch(self,
-                        omega: float = 0.1,
-                        gamma: float = 0.4,
-                        beta: float = 0.2,
-                        size: int = 10000,
-                        ) -> np.ndarray:
+    def _simulate_garch(
+        self,
+        omega: float = 0.1,
+        gamma: float = 0.4,
+        beta: float = 0.2,
+        size: int = 10000,
+    ) -> np.ndarray:
         """Monte-Carlo Simulation of Garch(1,1) model
 
         :param omega: the first parameter of model
          Defaults to 0.1
         :type omega: float, optional
-        :param gamma: the second parameter 
+        :param gamma: the second parameter
          Defaults to 0.4
         :type beta: float, optional
-        :param beta: the third paramter 
+        :param beta: the third paramter
          Defaults to 0.2
         :type beta: float, optional
         :param size: Number of samples
@@ -150,7 +153,7 @@ class Garch:
 
         # simulate the garch volatility model
         for t in range(1, size):
-            var[t] = omega + gamma * a[t-1]**2 + beta * var[t-1]
+            var[t] = omega + gamma * a[t - 1] ** 2 + beta * var[t - 1]
             a[t] = w[t] * np.sqrt(var[t])
         return var
 
@@ -159,14 +162,11 @@ class Garch:
             if j <= 1:
                 return 0
             else:
-                return beta ** (j-1)
+                return beta ** (j - 1)
+
         return list(map(lambda j: fun(beta, j), range(t)))
 
-
-    def _jacobian(self,
-                  guess: np.ndarray,
-                  at: np.ndarray
-                  ) -> np.ndarray:
+    def _jacobian(self, guess: np.ndarray, at: np.ndarray) -> np.ndarray:
         """Computes jacobian of log-likelihood function
 
         :param guess: initial guess used for optimization
@@ -177,12 +177,12 @@ class Garch:
         :rtype: np.ndarray
         """
         ht = self._simulate_vol(at, theta=guess)
-        integrand = (ht - at**2) / (ht**2)
+        integrand = (ht - at ** 2) / (ht ** 2)
         n = ht.shape[0]
         betas = np.cumsum(self._create_beta(guess[-1], n))
         htprime = np.zeros((n, 3))
         for t in range(1, n):
-            htprime[t, 0] = betas[t-1]
-            htprime[t, 1] = betas[t-1] * at[t-1]**2
-            htprime[t, 2] = betas[t-1] * ht[t-1]
-        return 0.5*(integrand * htprime.T).sum(axis=1)
+            htprime[t, 0] = betas[t - 1]
+            htprime[t, 1] = betas[t - 1] * at[t - 1] ** 2
+            htprime[t, 2] = betas[t - 1] * ht[t - 1]
+        return 0.5 * (integrand * htprime.T).sum(axis=1)

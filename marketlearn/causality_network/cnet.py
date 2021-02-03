@@ -14,9 +14,10 @@ from typing import Dict
 from itertools import combinations, product
 from scipy.stats import ttest_1samp
 from scipy.sparse.linalg import eigs
-from marketlearn.network_causality.sector_data import SectorPrice
-from marketlearn.network_causality.vector_ar.bivar import BiVariateVar
-from marketlearn.network_causality.graph import GraphAdMap
+from marketlearn.causality_network.sector_data import SectorPrice
+from marketlearn.causality_network.vector_ar.bivar import BiVariateVar
+from marketlearn.causality_network.graph import GraphAdMap
+
 
 # pylint: disable=invalid-name, undefined-loop-variable
 
@@ -25,12 +26,14 @@ class CNet:
     """
     Class Implements the granger causal flows in a complicated network
     """
+
     class PreProcess:
         """
         Nested Class to pre-process data before program start and create
         "sectors" attribute
         """
-        def __init__(self, start: str = '1999-12-31'):
+
+        def __init__(self, start: str = "1999-12-31"):
             """
             Constructor used to instantiate class
             :param start: (str) start date in format 'YYYY-MM-DD'
@@ -110,10 +113,7 @@ class CNet:
 
         return pca_risk
 
-    def is_connected(self,
-                     data: pd.DataFrame,
-                     n: int = 3,
-                     thresh: float = 0.3) -> bool:
+    def is_connected(self, data: pd.DataFrame, n: int = 3, thresh: float = 0.3) -> bool:
         """
         Determines the interconnectedness in a system
         see ref: formula (6) of main paper
@@ -125,11 +125,9 @@ class CNet:
         """
         return self.risk_fraction(data, n=n) >= thresh
 
-    def pcas(self,
-             data: pd.DataFrame,
-             institution_i: str,
-             n: int = 3,
-             thresh: float = 0.3) -> pd.Series():
+    def pcas(
+        self, data: pd.DataFrame, institution_i: str, n: int = 3, thresh: float = 0.3
+    ) -> pd.Series():
         """
         Measures connectedness for each company
         or exposure of company to total risk of system
@@ -157,11 +155,9 @@ class CNet:
         result = (weights @ loadings).sum() * var / system_var
         return result if institution_i is None else result[institution_i]
 
-    def linear_granger_causality(self,
-                                 data1: pd.Series(),
-                                 data2: pd.Series(),
-                                 alpha: float = 0.05
-                                 ) -> dict:
+    def linear_granger_causality(
+        self, data1: pd.Series(), data2: pd.Series(), alpha: float = 0.05
+    ) -> dict:
         """
         Tests if data1 granger causes data2
         :param data1: (pd.Series)
@@ -187,9 +183,9 @@ class CNet:
             # Sample mean is not zero
             if pval < 0.05:
                 r -= r.mean()
-            #g.fit(r)
-            am = arch_model(100*r, mean='Zero')
-            res = am.fit(disp='off')
+            # g.fit(r)
+            am = arch_model(100 * r, mean="Zero")
+            res = am.fit(disp="off")
             returns[idx] = r / res.conditional_volatility
             idx += 1
 
@@ -211,9 +207,7 @@ class CNet:
 
         return result
 
-    def _create_casual_network(self,
-                               data: pd.DataFrame()
-                               ) -> GraphAdMap:
+    def _create_casual_network(self, data: pd.DataFrame()) -> GraphAdMap:
         """
         Creates connections between N financial Institutions
         :param data: (pd.DataFrame) end of month prices
@@ -227,8 +221,8 @@ class CNet:
         vertices = iter([g.insert_vertex(v) for v in share_names])
 
         # Create granger causality network
-        key1 = 'x_granger_causes_y'
-        key2 = 'y_granger_causes_x'
+        key1 = "x_granger_causes_y"
+        key2 = "y_granger_causes_x"
         for c in combinations(vertices, 2):
             # Extract the vertices
             u, v = c
@@ -249,10 +243,9 @@ class CNet:
                 self.errors.append((u.get_value(), v.get_value()))
         return g
 
-    def _create_sector_casual_network(self,
-                                      sector1: pd.DataFrame(),
-                                      sector2: pd.DataFrame()
-                                      ) -> GraphAdMap:
+    def _create_sector_casual_network(
+        self, sector1: pd.DataFrame(), sector2: pd.DataFrame()
+    ) -> GraphAdMap:
         """
         Creates connections between instituions in sector 1
         :param sector1: (pd.DataFrame) Monthly prices of securities
@@ -268,8 +261,8 @@ class CNet:
         sector2_vectors = iter([g.insert_vertex(v) for v in list(sector2)])
 
         # Create granger causality network
-        key1 = 'x_granger_causes_y'
-        key2 = 'y_granger_causes_x'
+        key1 = "x_granger_causes_y"
+        key2 = "y_granger_causes_x"
         for v in product(sector1_vectors, sector2_vectors):
             # Extract the vertices
             sec1, sec2 = v
@@ -288,9 +281,7 @@ class CNet:
         return g
 
     @staticmethod
-    def granger_causality_degree(data: pd.DataFrame(),
-                                 graph: GraphAdMap
-                                 ) -> float:
+    def granger_causality_degree(data: pd.DataFrame(), graph: GraphAdMap) -> float:
         """
         Computes ratio of statistically significant Granger
         causality relationships among N(N-1) pairs of
@@ -309,13 +300,14 @@ class CNet:
 
         return count / (n * (n - 1))
 
-    def number_of_connections(self,
-                              data: pd.DataFrame(),
-                              institution_name: str = 'AAPL',
-                              thresh: float = 0.1,
-                              conn_type: str = 'out',
-                              graph: GraphAdMap = None
-                              ) -> float:
+    def number_of_connections(
+        self,
+        data: pd.DataFrame(),
+        institution_name: str = "AAPL",
+        thresh: float = 0.1,
+        conn_type: str = "out",
+        graph: GraphAdMap = None,
+    ) -> float:
         """
         *?
         :param data: (pd.DataFrame) end of month prices
@@ -344,22 +336,23 @@ class CNet:
             if v.get_value() != institution_name:
                 raise ValueError("institution name not found")
 
-            if conn_type == 'out':
+            if conn_type == "out":
                 result = graph.degree(v) / (n - 1)
-            elif conn_type == 'in':
+            elif conn_type == "in":
                 result = graph.degree(v, outgoing=False) / (n - 1)
-            elif conn_type == 'total':
+            elif conn_type == "total":
                 total = graph.degree(v) + graph.degree(v, outgoing=False)
-                result = total / (2*(n - 1))
+                result = total / (2 * (n - 1))
 
         return result
 
-    def sector_connections(self,
-                           data: Dict[str, pd.DataFrame],
-                           sector_name: str = 'bdealer',
-                           institution_name: str = 'AAPL',
-                           conn_type: str = 'out',
-                           ) -> float:
+    def sector_connections(
+        self,
+        data: Dict[str, pd.DataFrame],
+        sector_name: str = "bdealer",
+        institution_name: str = "AAPL",
+        conn_type: str = "out",
+    ) -> float:
         """
         Computes sector-conditional connections
         :param data: (Dict[str, pd.DataFrame]) Dictionary of sector prices
@@ -390,29 +383,26 @@ class CNet:
             if v.get_value() != institution_name:
                 raise ValueError("Institution name not found")
 
-            if conn_type == 'out':
+            if conn_type == "out":
                 count += g.degree(v)
-            elif conn_type == 'in':
+            elif conn_type == "in":
                 count += g.degree(v, outgoing=False)
-            elif conn_type == 'total':
+            elif conn_type == "total":
                 count += g.degree(v) + g.degree(v, outgoing=False)
 
         # Return the count
-        if conn_type  not in ('out', 'in', 'total'):
+        if conn_type not in ("out", "in", "total"):
             raise AttributeError("incorrect connection type")
 
-        if conn_type in ('out', 'in'):
+        if conn_type in ("out", "in"):
             result = count / denom
-        elif conn_type == 'total':
+        elif conn_type == "total":
             result = count / (2 * denom)
 
         return result
 
     @staticmethod
-    def _search(graph: 'GraphAdMap',
-                start: 'GraphAdMap._Vertex',
-                discovered: Dict
-                ):
+    def _search(graph: "GraphAdMap", start: "GraphAdMap._Vertex", discovered: Dict):
         """
         Performs a breadth first search on undiscovered portion
         of GraphAdMap graph starting at vertex start
@@ -435,10 +425,9 @@ class CNet:
             start_search = connected_institutions
 
     @staticmethod
-    def _construct_gc_path(start: 'GraphAdMap._Vertex',
-                           end: 'GraphAdMap._Vertex',
-                           discovered: Dict
-                           ) -> list:
+    def _construct_gc_path(
+        start: "GraphAdMap._Vertex", end: "GraphAdMap._Vertex", discovered: Dict
+    ) -> list:
         """
         Constructs Granger Causality path between two institutions
         given by start and end parameter
@@ -460,12 +449,13 @@ class CNet:
             path.reverse()
         return path
 
-    def closeness(self,
-                  data: pd.DataFrame(),
-                  institution_name: str,
-                  thresh: float = 0.1,
-                  graph: GraphAdMap = None
-                  ) -> float:
+    def closeness(
+        self,
+        data: pd.DataFrame(),
+        institution_name: str,
+        thresh: float = 0.1,
+        graph: GraphAdMap = None,
+    ) -> float:
         """
         Measures shortest path between financial institution
         and all other institutions reachable from it
@@ -504,12 +494,11 @@ class CNet:
                 path = self._construct_gc_path(start, end, discovered)
                 if path:
                     count += 1
-        return count / (n-1)
+        return count / (n - 1)
 
-    def eigen_vector_centrality(self,
-                                data: pd.DataFrame(),
-                                institution_name: str = 'AAPL',
-                                thresh: float = 0.1):
+    def eigen_vector_centrality(
+        self, data: pd.DataFrame(), institution_name: str = "AAPL", thresh: float = 0.1
+    ):
         """
         Computes the evc of institution given by inst.name
         :param data: (pd.DataFrame) *?
@@ -532,6 +521,11 @@ class CNet:
             _, evector = eigs(adj_matrix, k=1, sigma=1.0)
             df = pd.DataFrame(adj_matrix, columns=data.columns)
             df.index = data.columns
-            result = (df.loc[institution_name, ] * evector).sum()
+            result = (
+                df.loc[
+                    institution_name,
+                ]
+                * evector
+            ).sum()
 
         return result

@@ -36,7 +36,6 @@ from itertools import chain
 from marketlearn.toolz import timethis
 from scipy.optimize import minimize
 from scipy.stats import norm
-from typing import Optional
 
 
 class MarkovSwitchModel:
@@ -290,7 +289,7 @@ class MarkovSwitchModel:
     def fit(
         self,
         obs: np.ndarray,
-        n_iter: Optional[int] = 10,
+        n_iter: int = 10,
     ) -> "MarkovSwitchModel":
         """fits a two state regime switching model
 
@@ -491,9 +490,7 @@ class MarkovSwitchModel:
             var = qprob[1:, 0] * spread1 ** 2 + qprob[1:, 1] * spread2 ** 2
         return pkk, muk, [np.sqrt(var.mean())]
 
-    def fit_em(
-        self, obs: np.ndarray, show: Optional[bool] = False, n_iter: Optional[int] = 10
-    ):
+    def fit_em(self, obs: np.ndarray, show: bool = False, n_iter: int = 10):
         """fits a markov switching model via EM Algorithm
 
         Parameters
