@@ -3,7 +3,7 @@ Author: Rajan Subramanian
 """
 
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any
 
 
 class SinglyLinkedList:
@@ -37,7 +37,7 @@ class SinglyLinkedList:
             next reference of the Node
         """
 
-        def __init__(self, data: Any, reference: Node = None):
+        def __init__(self, data: Any, reference: "Node" = None):
             self.element = data
             self.nref = reference
 
@@ -112,7 +112,7 @@ class SinglyLinkedList:
         item : Any
             element contained in Node
         data : Any
-            the data to be inserted before item if found
+            the data to be inserted after item if found
         """
         n = self.start_node
         while n:  # iterate until x is found
@@ -128,16 +128,16 @@ class SinglyLinkedList:
             n.nref = new_node  # set the current nodes next ref to new node
             self.size += 1
 
-    def insert_before_item(self, data: Any, item: Any) -> None:
-        """nserts data before item is found
+    def insert_before_item(self, item: Any, data: Any):
+        """inserts data before item is found
         if found, takes O(k+1), otherwise, O(n)
 
         Parameters
         ----------
-        data : Any
-            data to be inserted before item
         item : Any
-            the item in Node
+            element contained in node
+        data : Any
+            data to be inserted before item is found
         """
         if self.start_node is None:
             print("list has no elements")
@@ -153,8 +153,8 @@ class SinglyLinkedList:
 
         # iterate until next node contains element
         n = self.start_node
-        while n.nref is not None:
-            if n.nref.element == data:
+        while n.nref:
+            if n.nref.element == item:
                 break
             n = n.nref
 
@@ -164,7 +164,7 @@ class SinglyLinkedList:
         else:
             new_node = self.Node(data)
             new_node.nref = n.nref  # new nodes next ref is previous nodes next
-            n.nref = new_node  # previous node's next ref is now new node
+            n.nref = new_node
             self.size += 1
 
     def insert_at_index(self, index, data):
@@ -192,13 +192,18 @@ class SinglyLinkedList:
         """Returns the count of nodes in Linked List"""
         return self.size
 
-    def search(self, item) -> bool:
-        """Returns True if item is found
+    def search(self, item: Any) -> bool:
+        """returns True if item is found
 
-        :param item: the item to look for
-        :type item: Any
-        :return: True if item is found, false otherwise
-        :rtype: bool
+        Parameters
+        ----------
+        item : Any
+            the item to look for
+
+        Returns
+        -------
+        bool
+            return True if item is found
         """
         # check if linked list is empty
         if self.start_node is None:
@@ -269,19 +274,6 @@ class SinglyLinkedList:
         else:
             n.nref = n.nref.nref
 
-    def add_two_linked_lists(self, other):
-        n1 = self.start_node
-        n2 = other.start_node
-        l3 = SinglyLinkedList()
-        l3.insert_at_start(0)
-        n3 = l3.start_node
-
-        while n1:
-            l3.insert_at_end(n1.element + n2.element)
-            n1 = n1.nref
-            n2 = n2.nref
-        return l3
-
 
 class DoublyLinkedList:
     """Create a new Doubly Linked List (dLinklist)
@@ -317,12 +309,7 @@ class DoublyLinkedList:
             previous reference of the node
         """
 
-        def __init__(
-            self,
-            data: Any,
-            next_ref: optional[self.Node] = None,
-            prev_ref: optional[self.Node] = None,
-        ):
+        def __init__(self, data: Any, next_ref: "Node" = None, prev_ref: "Node" = None):
             self.element = data
             self.nref = next_ref
             self.pref = prev_ref
@@ -352,12 +339,11 @@ class DoublyLinkedList:
             self.size += 1
             return
         new_node = self.Node(data)
-        new_node.nref = (
-            self.start_node
-        )  # make next reference of new node to current node
-        self.start_node.pref = (
-            new_node  # set previous reference of currenet node to new node
-        )
+        # make next reference of new node to current node
+        new_node.nref = self.start_node
+
+        # set previous reference of currenet node to new node
+        self.start_node.pref = new_node
         self.start_node = new_node
         self.size += 1
 
@@ -403,7 +389,9 @@ class DoublyLinkedList:
             new_node = self.Node(data)
             new_node.pref = n
             new_node.nref = n.nref
-            if n.nref is not None:  # if its not the last element
+
+            # if its not the last element
+            if n.nref is not None:
                 n.nref.pref = new_node
             n.nref = new_node
 
@@ -425,11 +413,14 @@ class DoublyLinkedList:
             print("dlinked list is empty")
         else:
             new_node = self.Node(data)
-            new_node.nref = n  # set next ref of new to current node
-            new_node.pref = (
-                n.pref
-            )  # set previous ref of new node to prev ref of curr node
-            n.pref = new_node  # update pref reference of current node to new node
+            # set next ref of new to current node
+            new_node.nref = n
+
+            # set previous ref of new node to prev ref of curr node
+            new_node.pref = n.pref
+
+            # update pref reference of current node to new node
+            n.pref = new_node
 
     def delete_from_start(self):
         """deletes a node from the start of dlinklist
@@ -439,7 +430,8 @@ class DoublyLinkedList:
             print("dLinklist is empty")
             return
         if self.start_node.nref is None:
-            self.start_node = None  # if only one element, delete this
+            # if only one element, delete this
+            self.start_node = None
             return
         self.start_node = self.start_node.nref
         self.start_node.pref = None
@@ -482,15 +474,16 @@ class DoublyLinkedList:
         if n is None:
             print("value not found")
         else:
-            if n.nref is None:  # last element case
+            # last element case
+            if n.nref is None:
                 n.pref.nref = None
-            else:  # in the middle
-                n.pref.nref = (
-                    n.nref
-                )  # set the next reference of previous node to current nodes next reference
-                n.nref.pref = (
-                    n.pref
-                )  # set the prev reference of next node to current nodes previous reference
+
+            # in the middle
+            else:
+                # set the next ref of prev node to current nodes next ref
+                n.pref.nref = n.nref
+                # set the prev ref of next node to current nodes previous ref
+                n.nref.pref = n.pref
 
     def reverse(self):
         if self.start_node is None:
