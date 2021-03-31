@@ -177,10 +177,11 @@ class SinglyLinkedList:
 
         # iterate until index is found
         n = self.start_node
-        while n and index > 0:
-            n = n.nref
+        while n and index > 1:
             index -= 1
-        if n is None:
+            n = n.nref
+
+        if n.nref is None:
             raise IndexError("Index out of bounds")
         else:
             new_node = self.Node(data)
