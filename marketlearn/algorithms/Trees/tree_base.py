@@ -12,7 +12,7 @@ class Tree:
 
             Raises
             ------
-            NotImplemented
+            NotImplementedError
                 must be implemented by subclass
             """
             raise NotImplementedError("must be implemented by subclass")
@@ -27,7 +27,7 @@ class Tree:
 
             Raises
             ------
-            NotImplemented
+            NotImplementedError
                 must be implemented by subclass
             """
             raise NotImplementedError("must be implemented by subclass")
@@ -75,72 +75,155 @@ class Tree:
         raise NotImplementedError("must be inmplemented in subclass")
 
     def num_children(self, p):
-        """return # of children that position p has"""
-        raise NotImplemented("must be implemented by subclass")
+        """return # of children that position p has
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Raises
+        ------
+        NotImplementedError
+            must be implemented in subclass
+        """
+        raise NotImplementedError("must be implemented by subclass")
 
     def children(self, p):
-        """generate iteration of p's children"""
-        raise NotImplemented("must be implemented by subclass")
+        """generate iteration of p's children
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Raises
+        ------
+        NotImplementedError
+            must be implemented in subclass
+        """
+        raise NotImplementedError("must be implemented by subclass")
 
     def __len__(self):
-        """return total number of elements in a tree"""
-        raise NotImplemented("must be implemented by subclass")
+        """return total number of elements in a tree
+
+        Raises
+        ------
+        NotImplementedError
+            must be implemented in subclass
+        """
+        raise NotImplementedError("must be implemented by subclass")
 
     def is_root(self, p):
         """return true if position p represents root of tree
-        takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Returns
+        -------
+        bool
+            True if positon p is root, false otherwise
         """
         return p == self.root()
 
     def is_leaf(self, p):
-        """return true if position p does not have any children
-        takes O(1) time since num_children takes O(1) time
+        """returns True if position p does not have any children
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Returns
+        -------
+        bool
+            True if p does not have any children, false otherwise
         """
         return self.num_children(p) == 0
 
-    def positions(self, type=None):
-        """generates iterations of tree's positions"""
-        raise NotImplemented("must be implemented by subclass")
+    def positions(self):
+        """generates iterations of tree's positions
+
+        Raises
+        ------
+        NotImplementedError
+            must be implemented in subclass
+        """
+        raise NotImplementedError("must be implemented by subclass")
 
     def is_empty(self):
-        """Return True if tree is empty
-        takes O(1) time
+        """returns True if tree is empty
+
+        Returns
+        -------
+        bool
+            True if Tree is empty, False otherwise
         """
         return len(self) == 0
 
     def depth(self, p):
-        """returns # of levels seperating position p from root
-        takes O(n) worse time
+        """Returns number of levels seperating position p from root
+
+        Takes O(n) worse time
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Returns
+        -------
+        int
+            the depth of tree from root to position p
         """
-        if self.is_root(p):
-            return 0
-        else:
-            return 1 + self.depth(self.parent(p))
+        return 0 if self.is_root(p) else 1 + self.depth(self.parent(p))
 
     def _height1(self, p):
-        """returns height of subtree rooted at position p
-        height of non empty tree T is is max of depth
+        """Returns height of subtree rooted at position p
+
+        Height of non empty tree T is is max of depth
         of its leaf positions
         Takes O(n^2) worse time
+
+        Parameters
+        ----------
+        p : Position
+            represents location of single element
+
+        Returns
+        -------
+        int
+            height of tree
         """
         return max(self.depth(p) for p in self.positions() if self.is_leaf(p))
 
     def _height2(self, p):
-        """returns height of subtre rooted at position p
+        """returns height of subtree rooted at position p
         takes O(n) time
         """
-        if self.is_leaf(p):
-            return 0
-        else:
-            return 1 + max(self._height2(c) for c in self.children(p))
+        return (
+            0
+            if self.is_leaf(p)
+            else 1 + max(self._height2(c) for c in self.children(p))
+        )
 
     def height(self, p=None):
         """returns height of subtree rooted at position p
-        params: p (position p, default = None for entire tree height)
-        takes O(n) time
+
+        Parameters
+        ----------
+        p : Position, optional, default=None for full tree
+            represents position of element
+
+        Returns
+        -------
+        int
+            height of tree, takes O(n) time
         """
-        if p is None:
-            p = self.root()
+        p = self.root() if p is None else p
         return self._height2(p)
 
     def __iter__(self):
@@ -179,7 +262,7 @@ class _BinaryTreeBase(Tree):
         """return position representing p's right child
         return None if p does not have right child"""
 
-        raise NotImplemented("must be implemented by subclass")
+        raise NotImplementedError("must be implemented by subclass")
 
     def sibling(self, p):
         """return position representing p's sibling (None if no siblings
@@ -210,4 +293,4 @@ class _GeneralTreeBase(Tree):
         :param p: position of parent
         :type p: positional object
         """
-        raise NotImplemented("Must be Implemented by subclass")
+        raise NotImplementedError("Must be Implemented by subclass")
