@@ -1,5 +1,5 @@
 """Linear Collections, consisting of stacks, queue and deque"""
-from typing import Any, Union, List, Optional
+from typing import Any, Union, Optional
 import collections
 
 
@@ -11,17 +11,19 @@ class _Empty(Exception):
     :return: Exception Message
     :rtype: Exception Error
     """
+
     pass
 
 
 class Stack:
     """Implementation of stacks using lists
 
-       O(1) time for all operations
-       O(n) time for max operation
-       Assumes LIFO;
-       items on the right is the top, left is bottom
+    O(1) time for all operations
+    O(n) time for max operation
+    Assumes LIFO;
+    items on the right is the top, left is bottom
     """
+
     def __init__(self, data: Optional[list] = None):
         self._data = [] if data is None else data
 
@@ -75,12 +77,13 @@ class Stack:
 class MaxStack:
     """Implementation of stacks using lists
 
-       O(1) time for all operations
-       Assumes LIFO;
-       items on the right is the top, left is bottom
+    O(1) time for all operations
+    Assumes LIFO;
+    items on the right is the top, left is bottom
     """
+
     # to keep track of maximum value after each push
-    _Items = collections.namedtuple("_Items", ('item', 'max'))
+    _Items = collections.namedtuple("_Items", ("item", "max"))
 
     def __init__(self, item: Optional[list] = None):
         self._data = []
@@ -137,8 +140,9 @@ class MaxStack:
         :param item: item to be pushed
         :type item: Any
         """
-        self._data.append(self._Items(item, item
-                          if self.empty() else max(item, self.max())))
+        self._data.append(
+            self._Items(item, item if self.empty() else max(item, self.max()))
+        )
 
 
 class Queue:
@@ -148,6 +152,7 @@ class Queue:
     O(n) for dequeue operation
     Assumes: First In First Out (FIFO)
     """
+
     def __init__(self):
         """Default constructor, needs no parameters"""
         self._data = []
@@ -174,6 +179,7 @@ class CircularQueue:
     O(1) time for all operations
     Assumes: First In First Out (FIFO)
     """
+
     # class constant
     _DEFAULT_CAPACITY = 10
 
@@ -229,6 +235,7 @@ class CircularQueue:
 
 class StackQueue:
     """Implementation of Queue using Stacks"""
+
     def __init__(self):
         self._enq, self._deq = Stack(), Stack()
 
@@ -246,8 +253,10 @@ class StackQueue:
     def front(self):
         return self._enq.peek()
 
+
 class MaxQueue:
     """Implementation of Queue withh max API using Deque"""
+
     def __init__(self):
         self._data = collections.deque()
         self._candidates_for_max = collections.deque()

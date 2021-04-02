@@ -2,11 +2,12 @@
    using lists
 """
 
+
 class Stack:
     """
-        O(1) time for all operations
-        Assumes items on the right
-        is the top
+    O(1) time for all operations
+    Assumes items on the right
+    is the top
     """
 
     def __init__(self):
@@ -30,10 +31,11 @@ class Stack:
 
 class Queue:
     """Assumes top is the left
-        and end is right
-        O(n) time for insertion
-        O(1) time for removal
+    and end is right
+    O(n) time for insertion
+    O(1) time for removal
     """
+
     def __init__(self):
         self.items = []
 
@@ -55,10 +57,11 @@ class Queue:
 
 class Deque:
     """Assumes front is left,
-        rear is right
-        front time in O(n)
-        rear time in O(1)
+    rear is right
+    front time in O(n)
+    rear time in O(1)
     """
+
     def __init__(self):
         self.items = []
 
