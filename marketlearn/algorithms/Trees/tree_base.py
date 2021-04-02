@@ -1,120 +1,104 @@
+from abc import ABCMeta, abstractmethod
 from marketlearn.algorithms.linked_collections import LinkedQueue
+from typing import Iterator
 
 
-class Tree:
+class Position(metaclass=ABCMeta):
+    """Abstract Base Class representing position of an element"""
+
+    @abstractmethod
+    def element(self):
+        """returns element stored in this position"""
+        pass
+
+    @abstractmethod
+    def __eq__(self, other):
+        """returns True if other position represents same location"""
+        pass
+
+    @abstractmethod
+    def __ne__(self, other):
+        """returns True if other does not represent the same location
+
+        Parameters
+        ----------
+        other : Position
+            position of single element
+
+        Returns
+        -------
+        bool
+            True if other does not represent same location
+        """
+        return not (self == other)
+
+
+class Tree(metaclass=ABCMeta):
     """Abstract Base Class representing tree structure"""
 
-    class Position:
-        """Abstraction representing location of a single element"""
+    @abstractmethod
+    def root(self) -> Position:
+        """return position representing T's root or None if Tree is empty
 
-        def element(self):
-            """Returns elements stored in this position
-
-            Raises
-            ------
-            NotImplementedError
-                must be implemented by subclass
-            """
-            raise NotImplementedError("must be implemented by subclass")
-
-        def __eq__(self, other):
-            """returns True if other position represents same location
-
-            Parameters
-            ----------
-            other : Position
-                location of element
-
-            Raises
-            ------
-            NotImplementedError
-                must be implemented by subclass
-            """
-            raise NotImplementedError("must be implemented by subclass")
-
-        def __ne__(self, other):
-            """returns True if other does not represent the same location
-
-            Parameters
-            ----------
-            other : Position
-                position of single element
-
-            Returns
-            -------
-            bool
-                return True if other does not represent same location
-                False otherwsie
-            """
-            return not (self == other)
-
-    # abstract methods that concrete subclass must support--------------------
-    def root(self):
-        """return position representing tree's root or None if empty
-
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+        Returns
+        -------
+        Position
+            position of root
         """
-        raise NotImplementedError("must be implemented by subclass")
+        pass
 
-    def parent(self, p):
+    @abstractmethod
+    def parent(self, p) -> Position:
         """return position representing p's parent (or None if p is root)
 
         Parameters
         ----------
         p : Position
-            represent location of element
+            position of single element
 
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+        Returns
+        -------
+        Position
+            position representing p's parent
         """
-        raise NotImplementedError("must be inmplemented in subclass")
+        pass
 
-    def num_children(self, p):
+    @abstractmethod
+    def num_children(self, p: Position) -> int:
         """return # of children that position p has
 
         Parameters
         ----------
         p : Position
-            represents location of single element
+            [description]
 
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+        Returns
+        -------
+        int
+            [description]
         """
-        raise NotImplementedError("must be implemented by subclass")
 
-    def children(self, p):
-        """generate iteration of p's children
+    @abstractmethod
+    def children(self, p: Position):
+        """generates iteration of p's children
 
         Parameters
         ----------
         p : Position
-            represents location of single element
-
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+            [description]
         """
-        raise NotImplementedError("must be implemented by subclass")
 
-    def __len__(self):
-        """return total number of elements in a tree
+    @abstractmethod
+    def __len__(self) -> int:
+        """returns total number of elements in a tree
 
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+        Returns
+        -------
+        int
+            number of elements in a tree
         """
-        raise NotImplementedError("must be implemented by subclass")
 
-    def is_root(self, p):
+    def is_root(self, p: Position) -> bool:
         """return true if position p represents root of tree
 
         Parameters
@@ -129,7 +113,7 @@ class Tree:
         """
         return p == self.root()
 
-    def is_leaf(self, p):
+    def is_leaf(self, p) -> bool:
         """returns True if position p does not have any children
 
         Parameters
@@ -144,17 +128,18 @@ class Tree:
         """
         return self.num_children(p) == 0
 
-    def positions(self):
-        """generates iterations of tree's positions
+    @abstractmethod
+    def positions(self) -> Iterator[Position]:
+        """generates iteration of Trees positions
 
-        Raises
-        ------
-        NotImplementedError
-            must be implemented in subclass
+        Yields
+        -------
+        Iterator[Position]
+            containing tree's positions
         """
-        raise NotImplementedError("must be implemented by subclass")
+        pass
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """returns True if tree is empty
 
         Returns
@@ -164,7 +149,7 @@ class Tree:
         """
         return len(self) == 0
 
-    def depth(self, p):
+    def depth(self, p: Position):
         """Returns number of levels seperating position p from root
 
         Takes O(n) worse time
@@ -181,7 +166,7 @@ class Tree:
         """
         return 0 if self.is_root(p) else 1 + self.depth(self.parent(p))
 
-    def _height1(self, p):
+    def _height1(self, p: Position):
         """Returns height of subtree rooted at position p
 
         Height of non empty tree T is is max of depth
@@ -200,7 +185,7 @@ class Tree:
         """
         return max(self.depth(p) for p in self.positions() if self.is_leaf(p))
 
-    def _height2(self, p):
+    def _height2(self, p: Position):
         """returns height of subtree rooted at position p
 
         Parameters
