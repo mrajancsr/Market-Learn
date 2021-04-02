@@ -202,13 +202,21 @@ class Tree:
 
     def _height2(self, p):
         """returns height of subtree rooted at position p
-        takes O(n) time
+
+        Parameters
+        ----------
+        p : Position
+            represents position of single element
+
+        Returns
+        -------
+        int
+            height of tree
         """
-        return (
-            0
-            if self.is_leaf(p)
-            else 1 + max(self._height2(c) for c in self.children(p))
-        )
+        if self.is_leaf(p):
+            return 0
+        else:
+            return 1 + max(self._height2(c) for c in self.children(p))
 
     def height(self, p=None):
         """returns height of subtree rooted at position p
