@@ -73,18 +73,18 @@ class Boot:
 
         Parameters
         ----------
-        X : np.ndarray, (n_samples, p_features)
+        X : np.ndarray, shape=(n_samples, p_features)
             coefficient matrix
             n_samples is number of instances i.e rows
             p_features is number of features i.e columns
-        y : np.ndarray, (n_samples,)
+        y : np.ndarray, shape=(n_samples,)
             the response variable
-        n : int, optional
-            the size of subsample, by default None
-        B : int, optional
-            the number of bootstrapped subsamples, by default 1000
-        model : obj, optional
-            regression model object, by default None
+        n : int, optional, default=None
+            the size of subsample
+        B : int, optional, default=1000
+            the number of bootstrapped subsamples
+        model : obj, optional, default=None
+            regression model object
 
         Returns
         -------
