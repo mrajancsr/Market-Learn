@@ -45,8 +45,10 @@ class BinaryTree(tb._BinaryTreeBase):
             raise ("p must be proper Position type")
         if p._container is not self:
             raise ValueError("p does not belong to this container")
+
+        # convention for deprecated nodes
         if p._node._parent is p._node:
-            raise ValueError("p is no longer valid")  # convention for deprecated nodes
+            raise ValueError("p is no longer valid")
         return p._node
 
     # binary tree constructor
