@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from marketlearn.algorithms.linked_collections import LinkedQueue
-from typing import Iterator
+from typing import Iterator, Union
 
 
 class Position(metaclass=ABCMeta):
@@ -16,7 +16,6 @@ class Position(metaclass=ABCMeta):
         """returns True if other position represents same location"""
         pass
 
-    @abstractmethod
     def __ne__(self, other):
         """returns True if other does not represent the same location
 
@@ -35,6 +34,11 @@ class Position(metaclass=ABCMeta):
 
 class Tree(metaclass=ABCMeta):
     """Abstract Base Class representing tree structure"""
+
+    def __iter__(self):
+        """generates iteration of tree's elements"""
+        for p in self.positions():
+            yield p.element()
 
     @abstractmethod
     def root(self) -> Position:
@@ -164,7 +168,10 @@ class Tree(metaclass=ABCMeta):
         int
             the depth of tree from root to position p
         """
-        return 0 if self.is_root(p) else 1 + self.depth(self.parent(p))
+        if self.is_root(p):
+            return 0
+        else:
+            return 1 + self.depth(self.parent(p))
 
     def _height1(self, p: Position):
         """Returns height of subtree rooted at position p
@@ -219,11 +226,6 @@ class Tree(metaclass=ABCMeta):
         p = self.root() if p is None else p
         return self._height2(p)
 
-    def __iter__(self):
-        """generates iteration of tree's elements"""
-        for p in self.positions():
-            yield p.element()
-
     def breadthfirst(self):
         """performs a breadth first tree traversal on tree
         Uses a LinkedQueue implementation"""
@@ -240,26 +242,54 @@ class Tree(metaclass=ABCMeta):
 class _BinaryTreeBase(Tree):
     """Abstract class representing binary tree methods"""
 
-    def left(self, p):
+    @abstractmethod
+    def left(self, p: Position) -> Union[Position, None]:
         """return position representing p's left child
 
         return None if p does not have left child
 
-        :param p: position of p (parent)
-        :type p: PositionalObj
-        :raises NotImplementedError: needs to be implemented in subclass
+        Parameters
+        ----------
+        p : Position
+            represents the parent
+
+        Returns
+        -------
+        Position
+            represents p's left child or None if p has no child
         """
-        raise NotImplementedError("must be implemented by subclass")
+        pass
 
-    def right(self, p):
+    @abstractmethod
+    def right(self, p: Position) -> Union[Position, None]:
         """return position representing p's right child
-        return None if p does not have right child"""
+        return None if p does not have right child"
 
-        raise NotImplementedError("must be implemented by subclass")
+        Parameters
+        ----------
+        p : Position
+            represents the parent
 
-    def sibling(self, p):
+        Returns
+        -------
+        Union[Position, None]
+            return p's right child or None if p has no child
+        """
+        pass
+
+    def sibling(self, p: Position) -> Union[Position, None]:
         """return position representing p's sibling (None if no siblings
         takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            represents one of the siblings
+
+        Returns
+        -------
+        Union[Position, None]
+            position representing p's sibling or None if p has no siblings
         """
         parent = self.parent(p)
         if parent is None:
@@ -269,21 +299,20 @@ class _BinaryTreeBase(Tree):
                 return self.right(parent)
             return self.left(parent)
 
-    def children(self, p):
-        """generates an iteration of p's children"""
+    def children(self, p: Position) -> Iterator[Position]:
+        """generates an iteration of p's children
+
+        Parameters
+        ----------
+        p : Position
+            the parent position
+
+        Yields
+        -------
+        Iterator[Position]
+            of p's children
+        """
         if self.left(p) is not None:
             yield self.left(p)
         if self.right(p) is not None:
             yield self.right(p)
-
-
-class _GeneralTreeBase(Tree):
-    """Abstract Base Class representing tree structure"""
-
-    def children(self, p):
-        """generates an iteration of p's children
-
-        :param p: position of parent
-        :type p: positional object
-        """
-        raise NotImplementedError("Must be Implemented by subclass")

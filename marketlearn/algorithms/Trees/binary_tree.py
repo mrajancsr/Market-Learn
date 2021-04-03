@@ -3,22 +3,13 @@
 Author: Rajan Subramanian
 Date: 11/11/2020
 """
+from __future__ import annotations
 from marketlearn.algorithms.trees import tree_base as tb
+from typing import Union
 
 
 class BinaryTree(tb._BinaryTreeBase):
-    """Class representing binary tree structure using linked representation
-
-    Attributes:
-    root:  (Node)       represents root of the binary tree
-                        default set to None since its empty at time of creation
-    size:   (int)       length of the tree
-                        default to 0 since its empty at time of creation
-
-    my_hash (dict)      calls the tree traversal based on traversal type
-                        traversal type one of pre(in,post) order and
-                        breadthfirst
-    """
+    """Class representing binary tree structure using linked representation"""
 
     class _Node:
 
@@ -44,11 +35,11 @@ class BinaryTree(tb._BinaryTreeBase):
         def __eq__(self, other):
             return type(other) is type(self) and other._node is self._node
 
-    def _make_position(self, node):
+    def _make_position(self, node: _Node) -> Union[Position, None]:
         """Return Position's instance for a given node"""
         return self.Position(self, node) if node is not None else None
 
-    def _validate(self, p):
+    def _validate(self, p: Position) -> _Node:
         """return position's node or raise appropriate error if invalid"""
         if not isinstance(p, self.Position):
             raise ("p must be proper Position type")
@@ -60,37 +51,29 @@ class BinaryTree(tb._BinaryTreeBase):
 
     # binary tree constructor
     def __init__(self):
-        """Creates a initially empty binary tree
-        takes O(1) time
-        """
+        """Creates a initially empty binary tree"""
         self._root = None
         self._size = 0
-        self._my_hash = {
-            "preorder": self.preorder,
-            "postorder": self.postorder,
-            "inorder": self.inorder,
-            "breadthfirst": self.breadthfirst,
-        }
 
     def __len__(self):
         """returns total number of nodes in a tree
         takes O(1) time"""
         return self._size
 
-    def root(self):
+    def root(self) -> Position:
         """return root position of tree, return None if tree is empty
         takes O(1) time
         """
         return self._make_position(self._root)
 
-    def parent(self, p):
+    def parent(self, p) -> Union[Position, None]:
         """return position representing p's parent (or None if p is root)
         takes O(1) time
         """
         node = self._validate(p)
         return self._make_position(node._parent)
 
-    def left(self, p):
+    def left(self, p) -> Union[Position, None]:
         """return position representing p's left child
         return None if p does not have left child
         takes O(1) time
@@ -98,18 +81,38 @@ class BinaryTree(tb._BinaryTreeBase):
         node = self._validate(p)
         return self._make_position(node._left)
 
-    def right(self, p):
+    def right(self, p: Position) -> Union[Position, None]:
         """return position representing p's right child
-        return None if p does not have right child
+
         takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            represents the parent
+
+        Returns
+        -------
+        Union[Position, None]
+            position representing p's right child or
+            None if p doens't have any children
         """
 
         node = self._validate(p)
         return self._make_position(node._right)
 
-    def num_children(self, p):
-        """return # of children that position p has
-        takes O(1) time
+    def num_children(self, p: Position) -> int:
+        """return count of total children of position p
+
+        Parameters
+        ----------
+        p : Position
+            represents the parent position
+
+        Returns
+        -------
+        int
+            count of total children at position p
         """
         node = self._validate(p)
         count = 0
@@ -161,16 +164,32 @@ class BinaryTree(tb._BinaryTreeBase):
         node._element = data
         return old
 
-    def _delete(self, p):
+    def _delete(self, p: Position):
         """delete node at position p and replace it with its child, if any
-        return the data stored at position p
-        raise ValueError if p is invalid or p has 2 children
-        takes O(1) time
+
+        Takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            position of node to be removed
+
+        Returns
+        -------
+        Any
+            element in the node
+
+        Raises
+        ------
+        ValueError
+            if p's total children is 2 or p is invalid position
         """
         node = self._validate(p)
         if self.num_children(p) == 2:
             raise ValueError("p has two children")
-        child = node._left if node._left else node._right  # might be None
+
+        # get one of the children
+        child = node._left if node._left else node._right
         if child is not None:
             child._parent = node._parent  # child's grandparent becomes parent
         if node is self._root:
@@ -182,7 +201,9 @@ class BinaryTree(tb._BinaryTreeBase):
             else:
                 parent._right = child
         self._size -= 1
-        node._parent = node  # convention for deprecated nodes
+
+        # deprecate the node (convention)
+        node._parent = node
         return node._element
 
     def _attach(self, p, tree1=None, tree2=None):
