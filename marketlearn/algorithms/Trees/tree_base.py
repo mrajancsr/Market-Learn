@@ -316,3 +316,50 @@ class _BinaryTreeBase(Tree):
             yield self.left(p)
         if self.right(p) is not None:
             yield self.right(p)
+
+
+class _GeneralTreeBase(Tree):
+    """Abstract class representing General tree methods"""
+
+    def siblings(self, p: Position) -> Iterator[Position]:
+        """return iterator representing p's sibling (None if no siblings
+        takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            represents one of the siblings
+
+        Returns
+        -------
+        Union[Position, None]
+            position representing p's sibling or None if p has no siblings
+        """
+        parent = self.parent(p)
+        if parent is None:
+            return None
+        else:
+            for child in self.children(parent):
+                if p != child:
+                    yield child
+
+    @abstractmethod
+    def children(self, p: Position) -> Iterator[Position]:
+        """generates an iteration of p's children
+
+        Parameters
+        ----------
+        p : Position
+            the parent position
+
+        Yields
+        -------
+        Iterator[Position]
+            of p's children
+        """
+        pass
+
+    @abstractmethod
+    def add_children(self, p: Position):
+        """adds children to p's position"""
+        pass
