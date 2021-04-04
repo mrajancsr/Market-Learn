@@ -5,7 +5,7 @@ Date: 11/11/2020
 """
 from __future__ import annotations
 from marketlearn.algorithms.trees import tree_base as tb
-from typing import Any, Union
+from typing import Any, Iterator, Union
 
 
 class BinaryTree(tb._BinaryTreeBase):
@@ -218,10 +218,14 @@ class BinaryTree(tb._BinaryTreeBase):
 
         # get one of the children
         child = node._left if node._left else node._right
+
+        # replace child's parent with his grandpa if not empty
         if child is not None:
-            child._parent = node._parent  # child's grandparent becomes parent
+            child._parent = node._parent
+
+        # edge case
         if node is self._root:
-            self._root = child  # child becomes root
+            self._root = child
         else:
             parent = node._parent
             if node is parent._left:
@@ -257,27 +261,50 @@ class BinaryTree(tb._BinaryTreeBase):
             tree2._root = None  # set tree2 root instance to empty
             tree2.size = 0
 
-    def preorder(self):
-        """generate a preorder iteration of positions in a tree"""
-        if not self.is_empty():
-            for p in self._subtree_preorder(self.root()):
-                yield p
+    def preorder(self) -> Iterator[Position]:
+        """generate a preorder iteration of positions in a tree
 
-    def _subtree_preorder(self, p):
-        """generate a preorder iteration of positions in a subtree rooted at position p"""
+        Yields
+        -------
+        Iterator[Position]
+            [preorder iteration of positions in a tree
+        """
+        if not self.is_empty():
+            yield from self._subtree_preorder(self.root())
+
+    def _subtree_preorder(self, p: Position) -> Iterator[Position]:
+        """generate a preorder iteration of positions in a subtree rooted at position p
+
+        Parameters
+        ----------
+        p : Position
+            iteration starts from this position
+
+        Yields
+        -------
+        Iterator[Position]
+            preorder iteration of positions in a subtree rooted at position p
+        """
         yield p  # visit p first before visiting its subtrees
         for c in self.children(p):
             for pos in self._subtree_preorder(c):
                 yield pos
 
-    def positions(self, traversal="inorder"):
-        """generate iteration of trees positions
-        params:
-        type: (str) tree traversal type, one of pre(post,in)order or breadthfirst
-                default set to inorder
+    def positions(self, traversal="inorder") -> Iterator[Position]:
+        """generates iterations of tree's positions
+
+        Parameters
+        ----------
+        traversal : str, optional, default='inorder'
+            one of inorder, preorder, postorder, breadthfirst
+
+        Yields
+        -------
+        Iterator[Position]
+            iteration of tree's positions
         """
 
-        return getattr(self, traversal)()
+        yield from getattr(self, traversal)()
 
     def _subtree_postorder(self, p):
         """generate postorder iteration of positions in a subtree rooted at p"""
@@ -289,8 +316,7 @@ class BinaryTree(tb._BinaryTreeBase):
     def postorder(self):
         """generate a postorder iteration of postions in a tree"""
         if not self.is_empty():
-            for p in self._subtree_postorder(self.root()):
-                yield p
+            yield from self._subtree_postorder(self.root())
 
     def _subtree_inorder(self, p):
 
