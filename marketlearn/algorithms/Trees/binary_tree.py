@@ -313,8 +313,7 @@ class BinaryTree(tb._BinaryTreeBase):
         """
         yield p  # visit p first before visiting its subtrees
         for c in self.children(p):
-            for pos in self._subtree_preorder(c):
-                yield pos
+            yield from self._subtree_preorder(c)
 
     def positions(self, traversal="inorder") -> Iterator[Position]:
         """generates iterations of tree's positions
@@ -335,8 +334,7 @@ class BinaryTree(tb._BinaryTreeBase):
     def _subtree_postorder(self, p):
         """generate postorder iteration of positions in a subtree rooted at p"""
         for c in self.children(p):
-            for pos in self._subtree_postorder(c):
-                yield pos
+            yield from self._subtree_postorder(c)
         yield p
 
     def postorder(self):
@@ -347,12 +345,10 @@ class BinaryTree(tb._BinaryTreeBase):
     def _subtree_inorder(self, p):
 
         if self.left(p) is not None:
-            for pos in self._subtree_inorder(self.left(p)):
-                yield pos
+            yield from self._subtree_inorder(self.left(p))
         yield p
         if self.right(p) is not None:
-            for pos in self._subtree_inorder(self.right(p)):
-                yield pos
+            yield from self._subtree_inorder(self.right(p))
 
     def inorder(self):
         if not self.is_empty():
