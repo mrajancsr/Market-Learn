@@ -301,4 +301,4 @@ class BinaryTree(tb._BinaryTreeBase):
             iteration of tree's positions
         """
 
-        yield from getattr(self, traversal)()
+        return getattr(self, traversal)()
