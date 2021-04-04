@@ -5,7 +5,7 @@ Date: -
 """
 from __future__ import annotations
 from marketlearn.algorithms.trees import tree_base as tb
-from typing import Any, Iterator, Union
+from typing import Any, Iterator, List, Union
 
 
 class GeneralTree(tb._GeneralTreeBase):
@@ -19,6 +19,17 @@ class GeneralTree(tb._GeneralTreeBase):
             self._element = element
             self._parent = parent
             self._children = children
+            self._total_children = len(children) if children is not None else 0
+
+        def __len__(self):
+            """returns total numbner of children in the node
+
+            Returns
+            -------
+            int
+                count of number of children in this node
+            """
+            return self._total_children
 
     class Position(tb.Position):
         """Abstraction representing location of single element"""
@@ -113,7 +124,43 @@ class GeneralTree(tb._GeneralTreeBase):
         int
             count of total children of p
         """
-        pass
+        node = self._validate(p)
+        return len(node)
+
+    def children(self, p: Position) -> Iterator[Position]:
+        """generates iteration of p's children
+
+        Parameters
+        ----------
+        p : Position
+            [description]
+
+        Yields
+        -------
+        Iterator[Position]
+            [description]
+        """
+        node = self._validate(p)
+        if node._children:
+            yield from iter(node._children)
+
+    def _add_root(self, data: Any):
+        """place data at root of empty tree and return new position
+        raise ValueError if tree nonempty
+        takes O(1) time
+        """
+        if self._root:
+            raise ValueError("Root Exists")
+        self._size = 1
+        self._root = self._Node(data)
+        return self._make_position(self._root)
+
+    def _add_children(self, p: Position, children: List[Any]):
+        """place children data into p's children"""
+        node = self._validate(p)
+        for c in children:
+            child = self._Node(c, parent=node)
+            yield self._make_position(child)
 
 
 gt = GeneralTree()
