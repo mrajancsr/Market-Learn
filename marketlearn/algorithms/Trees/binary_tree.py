@@ -287,34 +287,6 @@ class BinaryTree(tb._BinaryTreeBase):
             tree2._root = None
             tree2.size = 0
 
-    def preorder(self) -> Iterator[Position]:
-        """generate a preorder iteration of positions in a tree
-
-        Yields
-        -------
-        Iterator[Position]
-            [preorder iteration of positions in a tree
-        """
-        if not self.is_empty():
-            yield from self._subtree_preorder(self.root())
-
-    def _subtree_preorder(self, p: Position) -> Iterator[Position]:
-        """generate a preorder iteration of positions in a subtree rooted at position p
-
-        Parameters
-        ----------
-        p : Position
-            iteration starts from this position
-
-        Yields
-        -------
-        Iterator[Position]
-            preorder iteration of positions in a subtree rooted at position p
-        """
-        yield p  # visit p first before visiting its subtrees
-        for c in self.children(p):
-            yield from self._subtree_preorder(c)
-
     def positions(self, traversal="inorder") -> Iterator[Position]:
         """generates iterations of tree's positions
 
@@ -330,26 +302,3 @@ class BinaryTree(tb._BinaryTreeBase):
         """
 
         yield from getattr(self, traversal)()
-
-    def _subtree_postorder(self, p):
-        """generate postorder iteration of positions in a subtree rooted at p"""
-        for c in self.children(p):
-            yield from self._subtree_postorder(c)
-        yield p
-
-    def postorder(self):
-        """generate a postorder iteration of postions in a tree"""
-        if not self.is_empty():
-            yield from self._subtree_postorder(self.root())
-
-    def _subtree_inorder(self, p):
-
-        if self.left(p) is not None:
-            yield from self._subtree_inorder(self.left(p))
-        yield p
-        if self.right(p) is not None:
-            yield from self._subtree_inorder(self.right(p))
-
-    def inorder(self):
-        if not self.is_empty():
-            yield from self._subtree_inorder(self.root())

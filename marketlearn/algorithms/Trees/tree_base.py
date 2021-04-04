@@ -81,6 +81,7 @@ class Tree(metaclass=ABCMeta):
         int
             [description]
         """
+        pass
 
     @abstractmethod
     def children(self, p: Position):
@@ -91,6 +92,7 @@ class Tree(metaclass=ABCMeta):
         p : Position
             [description]
         """
+        pass
 
     @abstractmethod
     def __len__(self) -> int:
@@ -101,6 +103,7 @@ class Tree(metaclass=ABCMeta):
         int
             number of elements in a tree
         """
+        pass
 
     def is_root(self, p: Position) -> bool:
         """return true if position p represents root of tree
@@ -168,10 +171,7 @@ class Tree(metaclass=ABCMeta):
         int
             the depth of tree from root to position p
         """
-        if self.is_root(p):
-            return 0
-        else:
-            return 1 + self.depth(self.parent(p))
+        return 0 if self.is_root(p) else 1 + self.depth(self.parent(p))
 
     def _height1(self, p: Position):
         """Returns height of subtree rooted at position p
@@ -237,6 +237,45 @@ class Tree(metaclass=ABCMeta):
                 yield p
                 for c in self.children(p):
                     lq.enqueue(c)
+
+    def preorder(self) -> Iterator[Position]:
+        """generate a preorder iteration of positions in a tree
+
+        Yields
+        -------
+        Iterator[Position]
+            [preorder iteration of positions in a tree
+        """
+        if not self.is_empty():
+            yield from self._subtree_preorder(self.root())
+
+    def _subtree_preorder(self, p: Position) -> Iterator[Position]:
+        """generate a preorder iteration of positions in a subtree rooted at position p
+
+        Parameters
+        ----------
+        p : Position
+            iteration starts from this position
+
+        Yields
+        -------
+        Iterator[Position]
+            preorder iteration of positions in a subtree rooted at position p
+        """
+        yield p  # visit p first before visiting its subtrees
+        for c in self.children(p):
+            yield from self._subtree_preorder(c)
+
+    def _subtree_postorder(self, p):
+        """generate postorder iteration of positions in a subtree rooted at p"""
+        for c in self.children(p):
+            yield from self._subtree_postorder(c)
+        yield p
+
+    def postorder(self):
+        """generate a postorder iteration of postions in a tree"""
+        if not self.is_empty():
+            yield from self._subtree_postorder(self.root())
 
 
 class _BinaryTreeBase(Tree):
@@ -316,6 +355,18 @@ class _BinaryTreeBase(Tree):
             yield self.left(p)
         if self.right(p) is not None:
             yield self.right(p)
+
+    def _subtree_inorder(self, p):
+
+        if self.left(p) is not None:
+            yield from self._subtree_inorder(self.left(p))
+        yield p
+        if self.right(p) is not None:
+            yield from self._subtree_inorder(self.right(p))
+
+    def inorder(self):
+        if not self.is_empty():
+            yield from self._subtree_inorder(self.root())
 
 
 class _GeneralTreeBase(Tree):
