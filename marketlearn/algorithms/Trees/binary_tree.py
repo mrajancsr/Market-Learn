@@ -161,7 +161,7 @@ class BinaryTree(tb._BinaryTreeBase):
         self._root = self._Node(data)
         return self._make_position(self._root)
 
-    def _add_left(self, p, data: Any):
+    def _add_left(self, p: Position, data: Any):
         """place data at left child of position p
         raise valueError if left child already exists
         takes O(1) time
@@ -172,7 +172,7 @@ class BinaryTree(tb._BinaryTreeBase):
         node._left = self._Node(data, parent=node)
         return self._make_position(node._left)
 
-    def _add_right(self, p, data: Any):
+    def _add_right(self, p: Position, data: Any):
         """place data at right child of position p
         raise valueError if right child already exists
         takes O(1) time
@@ -183,7 +183,7 @@ class BinaryTree(tb._BinaryTreeBase):
         node._right = self._Node(data, parent=node)
         return self._make_position(node._right)
 
-    def _replace(self, p, data: Any):
+    def _replace(self, p: Position, data: Any):
         """replace data at position p with data and returns old data
         takes O(1) time
         """
@@ -238,9 +238,25 @@ class BinaryTree(tb._BinaryTreeBase):
         node._parent = node
         return node._element
 
-    def _attach(self, p, tree1=None, tree2=None):
+    def _attach(self, p: Position, tree1: BinaryTree, tree2: BinaryTree) -> None:
         """Attach trees tree1 and tree2 as left and right subtrees fo external p
         takes O(1) time
+
+        Parameters
+        ----------
+        p : Position
+            leaf position where tree1 and tree2 are attached to
+        tree1 : BinaryTree
+            left subtree of position p
+        tree2 : BinaryTree
+            right subtree of position p
+
+        Raises
+        ------
+        ValueError
+            position is not a leaf
+        TypeError
+            tree1 and tree2 is not BinaryTree
         """
         node = self._validate(p)
         if not self.is_leaf(p):
@@ -248,17 +264,27 @@ class BinaryTree(tb._BinaryTreeBase):
 
         # all trees must be of same type
         if not type(self) is type(tree1) is type(tree2):
-            raise ValueError("Trees must match")
+            raise TypeError("Trees must match")
+
+        # size of new tree is sum of positions of two trees
         self._size += len(tree1) + len(tree2)
+
+        # attach the first subtree
         if not tree1.is_empty():
             tree1._root._parent = node
             node._left = tree1._root
-            tree1._root = None  # set tree1 root instance to empty
+
+            # convention for deprecated nodes
+            tree1._root = None
             tree1._size = 0
+
+        # attach the right subtree
         if not tree2.is_empty():
             tree2._root._parent = node
             node._right = tree2._root
-            tree2._root = None  # set tree2 root instance to empty
+
+            # convention for deprecated nodes
+            tree2._root = None
             tree2.size = 0
 
     def preorder(self) -> Iterator[Position]:
@@ -330,5 +356,4 @@ class BinaryTree(tb._BinaryTreeBase):
 
     def inorder(self):
         if not self.is_empty():
-            for p in self._subtree_inorder(self.root()):
-                yield p
+            yield from self._subtree_inorder(self.root())
