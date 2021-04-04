@@ -45,18 +45,23 @@ class ZeroRateCurve:
         self.disc_factors = self.discount_factor(maturities, zero_rates)
         self.zcb_prices = self.disc_factors * 100.0
 
-    def discount_factor(self, t: float, rcont: float) -> float:
+    def discount_factor(self, t: float, rcont: float):
         """computes the discount factor corresponding to continuous rates
 
         This is the maximum amount you give up today to receive
         $1 in t years
 
-        :param t: maturity of each zcb
-        :type t: float
-        :param rcont: the continuous rate
-        :type rcont: float
-        :return: discount factor corresponding to continuous rate
-        :rtype: float
+        Parameters
+        ----------
+        t : float
+            maturity of zcb
+        rcont : float
+            the continuous rate
+
+        Returns
+        -------
+        float
+            discount factor corresponding to continuous rate
         """
         return np.exp(-rcont * t)
 
@@ -112,11 +117,11 @@ class ZeroRateCurve:
         """
         pass
 
-    def cubic_spline(self, t: float) -> float:
+    def cubic_interp(self, t: float) -> float:
         """performs cubic spline interpolation of spot rates"""
         pass
 
-    def build_curve(self, fit_type: str = "linear_spot") -> pd.Series:
+    def build_curve(self, fit_type: str = "linear") -> pd.Series:
         """builds a zero rate curve based on type of interpolation
 
         Parameters
@@ -137,8 +142,7 @@ class ZeroRateCurve:
         """
         tmax = self.maturities[-1]
         knot_points = np.arange(0, tmax, 0.01)
-        if fit_type == "linear_spot":
-            zero_rates = map(self.linear_interp, knot_points)
-        elif fit_type == "constant_fwd":
-            raise NotImplementedError("Not yet Implemented")
+        fit_type += "_interp"
+        zero_rates = map(getattr(self, fit_type), knot_points)
+
         return pd.Series(zero_rates, index=knot_points)
