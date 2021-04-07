@@ -134,11 +134,6 @@ class ZeroRateCurve:
         -------
         pd.Series
             zero rate curve for all maturities
-
-        Raises
-        ------
-        NotImplementedError
-            [description]
         """
         tmax = self.maturities[-1]
         knot_points = np.arange(0, tmax, 0.01)
