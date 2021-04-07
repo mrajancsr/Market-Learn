@@ -4,9 +4,9 @@ Author: Rajan Subramanian
 Date: 11/16/2020
 """
 
-import pandas as pd
-from marketlearn.dbhelper.dbreader import DbReader
-from typing import Dict, List
+
+from marketlearn.dbhelper import DbReader
+from typing import List
 
 
 class EquitySchema:
