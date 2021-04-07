@@ -33,13 +33,6 @@ class LinearBase(metaclass=ABCMeta):
         )
         return dict(zip(["X", "y", "coef"], [features, output, coef]))
 
-    def make_constant(self, X: np.ndarray) -> np.ndarray:
-        raise DeprecationWarning("function deprecated -- use make_polynomial instead")
-        if self.fit_intercept:
-            ones = np.ones(shape=(X.shape[0], 1))
-            return np.concatenate((ones, X), axis=1)
-        return X
-
     def make_polynomial(self, X: np.ndarray) -> np.ndarray:
         degree, bias = self.degree, self.fit_intercept
         pf = PolynomialFeatures(degree=degree, include_bias=bias)
@@ -55,3 +48,39 @@ class LinearBase(metaclass=ABCMeta):
         X, pred = zip(*sorted_values)
         plt.plot(X, pred, "m-")
         plt.title("Regression Plot")
+
+
+class LogisticBase(LinearBase):
+    """Abstract Base class representing a Logistic Regression Model"""
+
+    def sigmoid(self, z: np.ndarray) -> np.ndarray:
+        """Computes the sigmoid function
+
+        Parameters
+        ----------
+        z : np.ndarray
+            input value from linear transformation
+
+        Returns
+        -------
+        np.ndarray
+            sigmoid function value
+        """
+        return 1.0 / (1 + np.exp(-z))
+
+    def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
+        """Computes the Linear transformation X@theta
+
+        Parameters
+        ----------
+        X : np.ndarray, shape={n_samples, p_features}
+            design matrix
+        thetas : np.ndarray, shape={p_features + intercept}
+            weights of logistic regression
+
+        Returns
+        -------
+        np.ndarray
+            linear transformation
+        """
+        return X @ thetas

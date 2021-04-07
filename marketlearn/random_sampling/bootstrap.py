@@ -25,9 +25,7 @@ class Boot:
     - Sequential Bootstrap-todo
     """
 
-    def __init__(self):
-        pass
-
+    @staticmethod
     def empirical_bootstrap(self, pop: np.ndarray, n=None, B=1000, func=None):
         """Returns the sample statistic from empirical bootstrap method
 
@@ -64,6 +62,7 @@ class Boot:
 
         return result
 
+    @staticmethod
     def residual_bootstrap(
         self, X: np.ndarray, y: np.ndarray, n=None, B=1000, model=None
     ) -> dict:

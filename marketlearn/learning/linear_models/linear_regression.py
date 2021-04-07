@@ -2,11 +2,12 @@
 Author: Rajan Subramanian
 Created: May 23, 2020
 """
+from __future__ import annotations
 import numpy as np
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
 from typing import Dict, Union
-from marketlearn.learning.base import LinearBase
+from marketlearn.learning.linear_models.base import LinearBase
 
 
 class LinearRegression(LinearBase):
@@ -71,7 +72,7 @@ class LinearRegression(LinearBase):
 
     def fit(
         self, X: np.ndarray, y: np.ndarray, method: str = "ols"
-    ) -> "LinearRegression":
+    ) -> LinearRegression:
         """fits training data via ordinary least Squares (ols)
         Args:
         X:
@@ -222,7 +223,7 @@ class LinearRegressionMLE(LinearBase):
 
     def fit(
         self, X: np.ndarray, y: np.ndarray, method: str = "mle_bfgs"
-    ) -> "LinearRegressionMLE":
+    ) -> LinearRegressionMLE:
         """fits training data via maximum likelihood Estimate
 
         Args:
@@ -333,7 +334,7 @@ class LinearRegressionGD(LinearBase):
         self.degree = degree
         self.run = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "LinearRegressionGD":
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LinearRegressionGD:
         """fits training data
         Args:
         X: shape = {n_samples, p_features}
@@ -365,4 +366,3 @@ class LinearRegressionGD(LinearBase):
         if thetas is None:
             return X @ self.theta
         return X @ thetas
-
