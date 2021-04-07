@@ -3,16 +3,17 @@ Author: Rajan Subramanian
 Created: May 25, 2020
 """
 
+from __future__ import annotations
 import numpy as np
 from scipy.optimize import minimize
-from marketlearn.learning.base import LinearBase
+from marketlearn.learning.base import LogisticBase
 from typing import Union, Dict
 from numpy.linalg import norm
 
 
-class LogisticRegression(LinearBase):
+class LogisticRegressionMLE(LogisticBase):
     """
-    Implements Logistic Regression via nls
+    Implements Logistic Regression via MLE
     Args:
     fit_intercept: indicates if intercept is needed or not
 
@@ -27,21 +28,11 @@ class LogisticRegression(LinearBase):
     - A implemention using Newton's Method is given
     - A implemention using Stochastic Gradient Descent is given
     """
+
     def __init__(self, fit_intercept: bool = True, degree: int = 1):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
-
-    def sigm(self, z: np.ndarray) -> np.ndarray:
-        """Computes the sigmoid function
-
-        Args:
-            z (np.ndarray): input value from linear transformation
-
-        Returns:
-            np.ndarray: sigmoid function value
-        """
-        return 1.0 / (1 + np.exp(-z))
 
     def sigm_prime(self, z: np.ndarray) -> np.ndarray:
         """computes the first derivative of sigmoid function
@@ -52,13 +43,9 @@ class LogisticRegression(LinearBase):
         Returns:
             np.ndarray: the first derivative of sigmoid function
         """
-        return self.sigm(z) * (1 - self.sigm(z))
+        return self.sigmoid(z) * (1 - self.sigmoid(z))
 
-    def _jacobian(self,
-                  guess: np.ndarray,
-                  X: np.ndarray,
-                  y: np.ndarray
-                  ):
+    def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """Computes the jacobian of likelihood function
 
         Args:
@@ -72,13 +59,9 @@ class LogisticRegression(LinearBase):
             [np.ndarray]: first partial derivatives wrt weights
         """
         predictions = self.predict(X, guess)
-        return -1*(X.T @ (y - predictions))
+        return -1 * (X.T @ (y - predictions))
 
-    def _hessian(self,
-                 guess: np.ndarray,
-                 X: np.ndarray,
-                 y: np.ndarray
-                 ):
+    def _hessian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """computes the hessian wrt weights
 
         Args:
@@ -129,10 +112,11 @@ class LogisticRegression(LinearBase):
         f = self._loglikelihood(y, z)
         return -f
 
-    def fit(self,
-            X: np.ndarray,
-            y: np.ndarray,
-            ) -> 'LogisticRegression':
+    def fit(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+    ) -> LogisticRegressionMLE:
         """fits model to training data and returns regression coefficients
         Args:
         X:
@@ -149,73 +133,21 @@ class LogisticRegression(LinearBase):
         X = self.make_polynomial(X)
         # generate random guess
         guess_params = np.mean(X, axis=0)
-        self.theta = minimize(self._objective_func,
-                              guess_params,
-                              jac=self._jacobian,
-                              hess=self._hessian,
-                              method='BFGS',
-                              options={'disp': True},
-                              args=(X, y))['x']
+        self.theta = minimize(
+            self._objective_func,
+            guess_params,
+            jac=self._jacobian,
+            method="BFGS",
+            options={"disp": True},
+            args=(X, y),
+        )["x"]
         return self
 
-    def newton_system(self,
-                      X,
-                      y,
-                      func,
-                      jac,
-                      x,
-                      tol_approx=10E-9,
-                      tol_consec=10E-6
-                      ):
-        """Solves N-dimensional newton's problem for F(x) = 0
-
-        Args:
-            func (function): given function evaluated at x
-            jac (function): jacobian of func as a function of x
-            x (np.ndarray): initial guess
-            tol_approx (float, optional): largest admissible value of ||F(x)||
-                                          when solution is found
-                                          Defaults to 10E-9.
-            tol_consec (float, optional): largest admissible distance between
-                                          two consecutive approximations when
-                                          solution is found
-                                          Defaults to 10E-6.
-        """
-        xnew, xold = x, x - 1
-        count = 0
-        while norm(xnew - xold, ord=2) > tol_consec or count > self.niter:
-            xold = xnew
-            z = self.net_input(X, thetas=xold)
-            predictions = self.predict(X, xold)
-            prob = self.sigm_prime(z)
-            n = prob.shape[0]
-            W = np.zeros((n, n))
-            Winv = np.zeros((n, n))
-            np.fill_diagonal(W, prob)
-            np.fill_diagonal(Winv, 1/prob)
-            zbar = X @ xold - Winv @ (y-predictions)
-            xnew = np.linalg.inv(X.T @ W @ X) @ X @ W @ zbar
-            count += 1
-        return xnew
-
-    def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
-        """Computes linear transformation X*theta
-
-        Args:
-            X (np.ndarray): design matrix,
-            shape = {n_samples, p_features}
-            thetas (np.ndarray): weights of logistic function
-            shape = {p_features + intercept}
-
-        Returns:
-            np.ndarray: linear transformation
-        """
-        return X @ thetas
-
-    def predict(self,
-                X: np.ndarray,
-                thetas: np.ndarray = None,
-                ) -> Union[np.ndarray, Dict]:
+    def predict(
+        self,
+        X: np.ndarray,
+        thetas: np.ndarray = None,
+    ) -> Union[np.ndarray, Dict]:
         """Makes predictions of probabilities
 
         Args:
@@ -233,29 +165,32 @@ class LogisticRegression(LinearBase):
             if isinstance(self.theta, np.ndarray):
                 return self.sigm(self.net_input(X, self.theta))
             else:
-                return self.sigm(self.net_input(X, self.theta['x']))
+                return self.sigm(self.net_input(X, self.theta["x"]))
         return self.sigm(self.net_input(X, thetas))
 
 
-class LogisticRegressionGD(LinearBase):
+class LogisticRegressionGD(LogisticBase):
     """Implements Logistic Regression via Gradient Descent
 
-       Args:
-       eta:             Learning rate (between 0.0 and 1.0)
-       n_iter:          passees over the training set
-       random_state:    Random Number Generator seed
-                        for random weight initilization
+    Args:
+    eta:             Learning rate (between 0.0 and 1.0)
+    n_iter:          passees over the training set
+    random_state:    Random Number Generator seed
+                     for random weight initilization
 
-       Attributes:
-       theta:           Weights after fitting
-       residuals:       Number of incorrect predictions
+    Attributes:
+    theta:           Weights after fitting
+    residuals:       Number of incorrect predictions
     """
-    def __init__(self,
-                 eta: float = 0.001,
-                 n_iter: int = 20,
-                 random_state: int = 1,
-                 fit_intercept: bool = True,
-                 degree: int = 1):
+
+    def __init__(
+        self,
+        eta: float = 0.001,
+        n_iter: int = 20,
+        random_state: int = 1,
+        fit_intercept: bool = True,
+        degree: int = 1,
+    ):
         self.eta = eta
         self.n_iter = n_iter
         self.random_state = random_state
@@ -263,7 +198,7 @@ class LogisticRegressionGD(LinearBase):
         self.degree = degree
         self.run = False
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> 'LogisticRegressionGD':
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LogisticRegressionGD:
         """fits training data
         Args:
         X: shape = {n_samples, p_features}
@@ -287,11 +222,7 @@ class LogisticRegressionGD(LinearBase):
         self.run = True
         return self
 
-    def _jacobian(self,
-                  guess: np.ndarray,
-                  X: np.ndarray,
-                  y: np.ndarray
-                  ):
+    def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """Computes the jacobian of likelihood function
 
         Args:
@@ -305,7 +236,7 @@ class LogisticRegressionGD(LinearBase):
             [np.ndarray]: first partial derivatives wrt weights
         """
         predictions = self.predict(X, guess)
-        return (X.T @ (y - predictions))
+        return X.T @ (y - predictions)
 
     def _cost(self, y, z):
         """computes cost of likelihood function
@@ -322,35 +253,11 @@ class LogisticRegressionGD(LinearBase):
         # direction is reversed since we are minimizng cost
         return -1 * (y @ z - np.log(1 + np.exp(z)).sum())
 
-    def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
-        """Computes linear transformation X*theta
-
-        Args:
-            X (np.ndarray): design matrix,
-            shape = {n_samples, p_features}
-            thetas (np.ndarray): weights of logistic function
-            shape = {p_features + intercept}
-
-        Returns:
-            np.ndarray: linear transformation
-        """
-        return X @ thetas
-
-    def sigm(self, z: np.ndarray) -> np.ndarray:
-        """Computes the sigmoid function
-
-        Args:
-            z (np.ndarray): input value from linear transformation
-
-        Returns:
-            np.ndarray: sigmoid function value
-        """
-        return 1.0 / (1 + np.exp(-z))
-
-    def predict(self,
-                X: np.ndarray,
-                thetas: np.ndarray = None,
-                ) -> Union[np.ndarray, Dict]:
+    def predict(
+        self,
+        X: np.ndarray,
+        thetas: np.ndarray = None,
+    ) -> Union[np.ndarray, Dict]:
         """Makes predictions of probabilities
 
         Args:
@@ -365,5 +272,12 @@ class LogisticRegressionGD(LinearBase):
             shape = {n_samples,}
         """
         if thetas is None and isinstance(self.theta, np.ndarray):
-            return self.sigm(self.net_input(X, self.theta))
-        return self.sigm(self.net_input(X, thetas))
+            return self.sigmoid(self.net_input(X, self.theta))
+        return self.sigmoid(self.net_input(X, thetas))
+
+
+class LogisticRegressionIRLS(LogisticBase):
+    def __init__(self, fit_intercept: bool = True, degree: int = 1):
+        self.fit_intercept = fit_intercept
+        self.degree = degree
+        self.run = False
