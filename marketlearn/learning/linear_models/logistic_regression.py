@@ -27,7 +27,16 @@ class LogisticRegressionMLE(LogisticBase):
     Notes:
     Class uses two estimation methods to estimate the parameters
     of logistic regression
-    - A implemention using Newton's Method is given
+    - A implemention using BFGS using scipy's optimizer is given
+    - A implementation using Iterative Reweighted Least Squares (IRLS) is
+      given see rf Bishop - Machine Learning - A probabilistic perspective
+      Note that for IRLS algorithm, I have chosen to store the
+      diagonal matrix of probabilities and its inverse in the
+      same matrix.  This avoids an extra O(n^2) storage for storing
+      the inverse at slight increase in expense of refilling the original
+      matrix in O(n) time through the iterative method
+      Also, i have chosen to use numpy's broadcasting feature vs
+      computing the calculations per sample.
     - A implemention using Stochastic Gradient Descent is given
     """
 
@@ -52,9 +61,7 @@ class LogisticRegressionMLE(LogisticBase):
         predictions = self.predict(X, guess)
         return -1 * X.T @ (y - predictions)
 
-    def _hessian(
-        self, guess: np.ndarray, X: np.ndarray, y: np.ndarray, full_list=False
-    ):
+    def _hessian(self, X: np.ndarray, W: np.ndarray):
         """computes the hessian wrt weights
 
         Args:
@@ -67,9 +74,8 @@ class LogisticRegressionMLE(LogisticBase):
         Returns:
             np.ndarray: second partial derivatives wrt weights
         """
-        prob = self.predict(X, guess)
-        W = np.diagflat(prob * (1 - prob))
-        return X.T @ W @ X, W, prob if full_list else X.T @ W @ X
+
+        return X.T @ W @ X
 
     def _loglikelihood(self, y: np.ndarray, z: np.ndarray):
         """Returns loglikelihood function of logistic regression
@@ -88,7 +94,6 @@ class LogisticRegressionMLE(LogisticBase):
         """
         return y @ z - np.log(1 + np.exp(z)).sum()
 
-    @timethis
     def _irls(self, X: np.ndarray, y: np.ndarray, niter=20) -> np.ndarray:
         """performs iteratively reweighted least squares
 
@@ -106,14 +111,18 @@ class LogisticRegressionMLE(LogisticBase):
         """
         n = X.shape[0]
         guess = np.zeros(X.shape[1])
+        # will be used to store the predictions and its inverse
         W = np.zeros((n, n))
         Winv = np.zeros((n, n))
 
         for _ in range(niter):
-            H, W, prob = self._hessian(guess, X, y, full_list=True)
+            prob = self.predict(X, guess)
+            fill_diagonal(W, prob * (1 - prob))
+            H = self._hessian(X, W)
             fill_diagonal(Winv, 1 / (prob * (1 - prob)))
             zbar = X @ guess + Winv @ (y - prob)
-            guess = np.linalg.inv(H).dot(X.T).dot(W).dot(zbar)
+            # fill_diagonal(W, prob * (1 - prob))
+            guess = np.linalg.solve(H, X.T @ W @ zbar)
         return guess
 
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
@@ -133,10 +142,9 @@ class LogisticRegressionMLE(LogisticBase):
         f = self._loglikelihood(y, z)
         return -f
 
+    @timethis
     def fit(
-        self,
-        X: np.ndarray,
-        y: np.ndarray,
+        self, X: np.ndarray, y: np.ndarray, fit_type="BFGS", niter=20
     ) -> LogisticRegressionMLE:
         """fits model to training data and returns regression coefficients
         Args:
@@ -154,11 +162,15 @@ class LogisticRegressionMLE(LogisticBase):
         X = self.make_polynomial(X)
         # generate random guess
         guess_params = np.zeros(X.shape[1])
+        if fit_type == "IRLS":
+            self.theta = self._irls(X, y, niter=niter)
+            return self
+
         self.theta = minimize(
             self._objective_func,
             guess_params,
             jac=self._jacobian,
-            method="BFGS",
+            method=fit_type,
             options={"disp": True},
             args=(X, y),
         )["x"]
