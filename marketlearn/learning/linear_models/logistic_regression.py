@@ -4,11 +4,12 @@ Created: May 25, 2020
 """
 
 from __future__ import annotations
-import numpy as np
 from scipy.optimize import minimize
-from marketlearn.learning.base import LogisticBase
-from typing import Union, Dict
-from numpy.linalg import norm
+from marketlearn.learning.linear_models.base import LogisticBase
+from typing import Union, Dict, Callable
+from numpy.linalg import norm, solve
+from numpy import diagonal, diagflat, copyto
+import numpy as np
 
 
 class LogisticRegressionMLE(LogisticBase):
@@ -59,9 +60,11 @@ class LogisticRegressionMLE(LogisticBase):
             [np.ndarray]: first partial derivatives wrt weights
         """
         predictions = self.predict(X, guess)
-        return -1 * (X.T @ (y - predictions))
+        return -1 * X.T @ (y - predictions)
 
-    def _hessian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
+    def _hessian(
+        self, guess: np.ndarray, X: np.ndarray, y: np.ndarray, full_list=False
+    ):
         """computes the hessian wrt weights
 
         Args:
@@ -74,26 +77,52 @@ class LogisticRegressionMLE(LogisticBase):
         Returns:
             np.ndarray: second partial derivatives wrt weights
         """
-        z = self.net_input(X, thetas=guess)
-        prob = self.sigm_prime(z)
-        n = prob.shape[0]
-        W = np.zeros((n, n))
-        np.fill_diagonal(W, prob)
-        return X.T @ W @ X
+        prob = self.predict(X, guess)
+        W = np.diagflat(prob * (1 - prob))
+        return X.T @ W @ X, W, prob if full_list else X.T @ W @ X
 
-    def _loglikelihood(self, y, z):
-        """returns the loglikelihood function of logistic regression
+    def _loglikelihood(self, y: np.ndarray, z: np.ndarray):
+        """Returns loglikelihood function of logistic regression
 
-        Args:
-            y (np.ndarray): response variable
-                            shape = (n_samples,)
-            z (np.ndarray): result of net input function
-                            shape = (n_samples,)
+        Parameters
+        ----------
+        y : np.ndarray
+            response variable
+        z : np.ndarray
+            result of net input function
 
-        Returns:
-            np.ndarray: loglikelihood function
+        Returns
+        -------
+        float
+            loglikelihood function
         """
         return y @ z - np.log(1 + np.exp(z)).sum()
+
+    def _irls(self, X: np.ndarray, y: np.ndarray, niter=20) -> np.ndarray:
+        """performs iteratively reweighted least squares
+
+        Parameters
+        ----------
+        X : np.ndarray
+            design matrix
+        y : np.ndarray
+            response
+
+        Returns
+        -------
+        np.ndarray
+            weights from performing the reweighted algorithm
+        """
+        guess = np.zeros(X.shape[1])
+
+        for _ in range(niter):
+            H, W, prob = self._hessian(guess, X, y, full_list=True)
+            zbar = X @ guess + np.linalg.inv(W) @ (y - prob)
+            guess = np.linalg.inv(H).dot(X.T).dot(W).dot(zbar)
+        return guess
+
+    def net_input2(self, X, thetas):
+        return X @ thetas[1:] + thetas[0]
 
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """the objective function to be minimized
@@ -163,121 +192,7 @@ class LogisticRegressionMLE(LogisticBase):
         """
         if thetas is None:
             if isinstance(self.theta, np.ndarray):
-                return self.sigm(self.net_input(X, self.theta))
+                return self.sigmoid(self.net_input(X, self.theta))
             else:
-                return self.sigm(self.net_input(X, self.theta["x"]))
-        return self.sigm(self.net_input(X, thetas))
-
-
-class LogisticRegressionGD(LogisticBase):
-    """Implements Logistic Regression via Gradient Descent
-
-    Args:
-    eta:             Learning rate (between 0.0 and 1.0)
-    n_iter:          passees over the training set
-    random_state:    Random Number Generator seed
-                     for random weight initilization
-
-    Attributes:
-    theta:           Weights after fitting
-    residuals:       Number of incorrect predictions
-    """
-
-    def __init__(
-        self,
-        eta: float = 0.001,
-        n_iter: int = 20,
-        random_state: int = 1,
-        fit_intercept: bool = True,
-        degree: int = 1,
-    ):
-        self.eta = eta
-        self.n_iter = n_iter
-        self.random_state = random_state
-        self.fit_intercept = fit_intercept
-        self.degree = degree
-        self.run = False
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> LogisticRegressionGD:
-        """fits training data
-        Args:
-        X: shape = {n_samples, p_features}
-                    n_samples is number of instances i.e rows
-                    p_features is number of features (the dimension of dataset)
-
-        y: shape = {n_samples,}
-                    Target values
-        Returns:
-        object
-        """
-        n_samples, p_features = X.shape[0], X.shape[1]
-        self.theta = np.zeros(shape=1 + p_features)
-        self.cost = []
-        X = self.make_polynomial(X)
-
-        for _ in range(self.n_iter):
-            z = self.net_input(X, self.theta)
-            self.theta += self.eta * self._jacobian(self.theta, X, y)
-            self.cost.append(self._cost(y, z) / n_samples)
-        self.run = True
-        return self
-
-    def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
-        """Computes the jacobian of likelihood function
-
-        Args:
-            guess (np.ndarray): the initial guess for optimizer
-            X (np.ndarray): design matrix
-                            shape = (n_samples, n_features)
-            y (np.ndarray): response variable
-                            shape = (n_samples,)
-
-        Returns:
-            [np.ndarray]: first partial derivatives wrt weights
-        """
-        predictions = self.predict(X, guess)
-        return X.T @ (y - predictions)
-
-    def _cost(self, y, z):
-        """computes cost of likelihood function
-
-        Args:
-            y (np.ndarray): response variable
-                            shape = (n_samples,)
-            z (np.ndarray): result of net input function
-                            shape = (n_samples,)
-
-        Returns:
-            np.ndarray: loglikelihood function
-        """
-        # direction is reversed since we are minimizng cost
-        return -1 * (y @ z - np.log(1 + np.exp(z)).sum())
-
-    def predict(
-        self,
-        X: np.ndarray,
-        thetas: np.ndarray = None,
-    ) -> Union[np.ndarray, Dict]:
-        """Makes predictions of probabilities
-
-        Args:
-            X (np.ndarray): design matrix
-            shape = {n_samples, p_features}
-            thetas (np.ndarray, optional): estimated weights from fitting
-            Defaults to None.
-            shape = {p_features + intercept,}
-
-        Returns:
-            Union[np.ndarray, Dict]: predicted probabilities
-            shape = {n_samples,}
-        """
-        if thetas is None and isinstance(self.theta, np.ndarray):
-            return self.sigmoid(self.net_input(X, self.theta))
+                return self.sigmoid(self.net_input(X, self.theta["x"]))
         return self.sigmoid(self.net_input(X, thetas))
-
-
-class LogisticRegressionIRLS(LogisticBase):
-    def __init__(self, fit_intercept: bool = True, degree: int = 1):
-        self.fit_intercept = fit_intercept
-        self.degree = degree
-        self.run = False
