@@ -6,9 +6,9 @@ Created: May 25, 2020
 from __future__ import annotations
 from scipy.optimize import minimize
 from marketlearn.learning.linear_models.base import LogisticBase
-from typing import Union, Dict, Callable
-from numpy.linalg import norm, solve
-from numpy import diagonal, diagflat, copyto, fill_diagonal
+from typing import Union, Dict
+from numpy.linalg import solve
+from numpy import fill_diagonal
 import numpy as np
 from marketlearn.toolz import timethis
 
@@ -27,9 +27,10 @@ class LogisticRegressionMLE(LogisticBase):
     Notes:
     Class uses two estimation methods to estimate the parameters
     of logistic regression
-    - A implemention using BFGS using scipy's optimizer is given
-    - A implementation using Iterative Reweighted Least Squares (IRLS) is
-      given see rf Bishop - Machine Learning - A probabilistic perspective
+    - A implemention using BFGS using scipy's optimizer to solve the MLE is given
+    - A implementation using Iterative Reweighted Least Squares (IRLS) to
+      estimate the parameters of MLE is given
+      see rf. Bishop - Machine Learning - A probabilistic perspective
       Note that for IRLS algorithm, I have chosen to store the
       diagonal matrix of probabilities and its inverse in the
       same matrix.  This avoids an extra O(n^2) storage for storing
@@ -46,17 +47,21 @@ class LogisticRegressionMLE(LogisticBase):
         self.run = False
 
     def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
-        """Computes the jacobian of likelihood function
+        """Computes the Jacobian of likelihood function
 
-        Args:
-            guess (np.ndarray): the initial guess for optimizer
-            X (np.ndarray): design matrix
-                            shape = (n_samples, n_features)
-            y (np.ndarray): response variable
-                            shape = (n_samples,)
+        Parameters
+        ----------
+        guess : np.ndarray
+            initial guess for optimizer
+        X : np.ndarray, shape=(n_samples, p_features)
+            design matrix
+        y : np.ndarray, shape=(n_samples)
+            response variable
 
-        Returns:
-            [np.ndarray]: first partial derivatives wrt weights
+        Returns
+        -------
+        np.ndarray, shape=(intercept + p_features,)
+            first partial derivatives wrt weights
         """
         predictions = self.predict(X, guess)
         return -1 * X.T @ (y - predictions)
@@ -122,21 +127,25 @@ class LogisticRegressionMLE(LogisticBase):
             fill_diagonal(Winv, 1 / (prob * (1 - prob)))
             zbar = X @ guess + Winv @ (y - prob)
             # fill_diagonal(W, prob * (1 - prob))
-            guess = np.linalg.solve(H, X.T @ W @ zbar)
+            guess = solve(H, X.T @ W @ zbar)
         return guess
 
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """the objective function to be minimized
 
-        Args:
-            guess (np.ndarray): initial guess for optimization
-            X (np.ndarray): design matrix
-                            shape = {n_samples, p_features}
-            y (np.ndarray): the response variable
-                            shape = {n_samples,}
+        Parameters
+        ----------
+        guess : np.ndarray
+            initial guess for optimizer
+        X : np.ndarray
+            design matrix
+        y : np.ndarray
+            response variable
 
-        Returns:
-            float: value from loglikelihood function
+        Returns
+        -------
+        float
+            minimum of negative likelihood function
         """
         z = self.net_input(X, thetas=guess)
         f = self._loglikelihood(y, z)
@@ -160,12 +169,11 @@ class LogisticRegressionMLE(LogisticBase):
         object
         """
         X = self.make_polynomial(X)
-        # generate random guess
-        guess_params = np.zeros(X.shape[1])
         if fit_type == "IRLS":
             self.theta = self._irls(X, y, niter=niter)
             return self
 
+        guess_params = np.zeros(X.shape[1])
         self.theta = minimize(
             self._objective_func,
             guess_params,
