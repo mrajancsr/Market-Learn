@@ -8,8 +8,9 @@ from scipy.optimize import minimize
 from marketlearn.learning.linear_models.base import LogisticBase
 from typing import Union, Dict, Callable
 from numpy.linalg import norm, solve
-from numpy import diagonal, diagflat, copyto
+from numpy import diagonal, diagflat, copyto, fill_diagonal
 import numpy as np
+from marketlearn.toolz import timethis
 
 
 class LogisticRegressionMLE(LogisticBase):
@@ -34,17 +35,6 @@ class LogisticRegressionMLE(LogisticBase):
         self.fit_intercept = fit_intercept
         self.degree = degree
         self.run = False
-
-    def sigm_prime(self, z: np.ndarray) -> np.ndarray:
-        """computes the first derivative of sigmoid function
-
-        Args:
-            z (np.ndarray): input value from linear transformation
-
-        Returns:
-            np.ndarray: the first derivative of sigmoid function
-        """
-        return self.sigmoid(z) * (1 - self.sigmoid(z))
 
     def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """Computes the jacobian of likelihood function
@@ -98,6 +88,7 @@ class LogisticRegressionMLE(LogisticBase):
         """
         return y @ z - np.log(1 + np.exp(z)).sum()
 
+    @timethis
     def _irls(self, X: np.ndarray, y: np.ndarray, niter=20) -> np.ndarray:
         """performs iteratively reweighted least squares
 
@@ -113,16 +104,17 @@ class LogisticRegressionMLE(LogisticBase):
         np.ndarray
             weights from performing the reweighted algorithm
         """
+        n = X.shape[0]
         guess = np.zeros(X.shape[1])
+        W = np.zeros((n, n))
+        Winv = np.zeros((n, n))
 
         for _ in range(niter):
             H, W, prob = self._hessian(guess, X, y, full_list=True)
-            zbar = X @ guess + np.linalg.inv(W) @ (y - prob)
+            fill_diagonal(Winv, 1 / (prob * (1 - prob)))
+            zbar = X @ guess + Winv @ (y - prob)
             guess = np.linalg.inv(H).dot(X.T).dot(W).dot(zbar)
         return guess
-
-    def net_input2(self, X, thetas):
-        return X @ thetas[1:] + thetas[0]
 
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """the objective function to be minimized
@@ -161,7 +153,7 @@ class LogisticRegressionMLE(LogisticBase):
         """
         X = self.make_polynomial(X)
         # generate random guess
-        guess_params = np.mean(X, axis=0)
+        guess_params = np.zeros(X.shape[1])
         self.theta = minimize(
             self._objective_func,
             guess_params,
