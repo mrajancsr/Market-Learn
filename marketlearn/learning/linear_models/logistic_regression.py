@@ -29,8 +29,8 @@ class LogisticRegression(LogisticBase):
     - A implemention using BFGS using scipy's optimizer to solve the MLE
     - A implementation using Iterative Reweighted Least Squares (IRLS) to
       estimate the parameters of MLE
-      see rf. Bishop - Machine Learning - A probabilistic perspective
-      Note that for IRLS algorithm, I have chosen to store the
+      see rf. Bishop - "Machine Learning - A probabilistic perspective"
+      For IRLS algorithm, I have chosen to store the
       diagonal matrix of probabilities and its inverse in the
       same matrix.  This avoids an extra O(n^2) storage for storing
       the inverse at slight increase in expense of refilling the original
