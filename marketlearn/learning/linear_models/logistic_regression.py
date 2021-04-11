@@ -1,6 +1,5 @@
 """Linear Classification Models
 Author: Rajan Subramanian
-Created: May 25, 2020
 """
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ import numpy as np
 from marketlearn.toolz import timethis
 
 
-class LogisticRegressionMLE(LogisticBase):
+class LogisticRegression(LogisticBase):
     """
     Implements Logistic Regression via MLE
     Args:
@@ -27,9 +26,9 @@ class LogisticRegressionMLE(LogisticBase):
     Notes:
     Class uses two estimation methods to estimate the parameters
     of logistic regression
-    - A implemention using BFGS using scipy's optimizer to solve the MLE is given
+    - A implemention using BFGS using scipy's optimizer to solve the MLE
     - A implementation using Iterative Reweighted Least Squares (IRLS) to
-      estimate the parameters of MLE is given
+      estimate the parameters of MLE
       see rf. Bishop - Machine Learning - A probabilistic perspective
       Note that for IRLS algorithm, I have chosen to store the
       diagonal matrix of probabilities and its inverse in the
@@ -67,17 +66,20 @@ class LogisticRegressionMLE(LogisticBase):
         return -1 * X.T @ (y - predictions)
 
     def _hessian(self, X: np.ndarray, W: np.ndarray):
-        """computes the hessian wrt weights
+        """Computes the Hessian wrt to weights
 
-        Args:
-            guess (np.ndarray): initial guess for optimizer
-            X (np.ndarray): design matrix
-                            shape = (n_samples, n_features)
-            y (np.ndarray): response variable
-                            shape = (n_samples,)
+        Parameters
+        ----------
+        X : np.ndarray, shape=(n_samples, p_features)
+            design matrix
+        W : np.ndarray, shape=(n_samples, n_samples)
+            diagonal matrix whose elements
+            are given by P(Yi=1) * (1 - P(Yi = 1))
 
-        Returns:
-            np.ndarray: second partial derivatives wrt weights
+        Returns
+        -------
+        np.ndarray, shape=(p_features, p_features)
+            Hessian matrix
         """
 
         return X.T @ W @ X
@@ -130,6 +132,20 @@ class LogisticRegressionMLE(LogisticBase):
             guess = solve(H, X.T @ W @ zbar)
         return guess
 
+    def _sgd(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
+        """performs stochastic gradient descent to estimate weights
+
+        Parameters
+        ----------
+        guess : np.ndarray
+            [description]
+        X : np.ndarray
+            [description]
+        y : np.ndarray
+            [description]
+        """
+        pass
+
     def _objective_func(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
         """the objective function to be minimized
 
@@ -154,19 +170,26 @@ class LogisticRegressionMLE(LogisticBase):
     @timethis
     def fit(
         self, X: np.ndarray, y: np.ndarray, fit_type="BFGS", niter=20
-    ) -> LogisticRegressionMLE:
+    ) -> LogisticRegression:
         """fits model to training data and returns regression coefficients
-        Args:
-        X:
-            shape = (n_samples, p_features)
-            n_samples is number of instances i.e rows
-            p_features is number of features i.e columns
-        y:
-            shape = (n_samples,)
-            Target values
 
-        Returns:
-        object
+        Parameters
+        ----------
+        X : np.ndarray, shape=(n_samples, p_features)
+            Design matrix
+            n_samples is number of instances i.e rows
+            p_features is number of features
+        y : np.ndarray, shape=(n_samples)
+            Target values
+        fit_type : str, optional, default='BFGS'
+            supports 'BFGS' and 'IRLS' algorithm
+        niter : int, optional, default=20
+            number of iterations to perform if 'IRLS' is chosen
+
+        Returns
+        -------
+        LogisticRegression
+            fitted object
         """
         X = self.make_polynomial(X)
         if fit_type == "IRLS":
