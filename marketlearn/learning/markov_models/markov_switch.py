@@ -30,12 +30,13 @@ Notes:
     3) add auto-regressive markov switching model
 """
 
-import numpy as np
-import pandas as pd
+from __future__ import annotations
 from itertools import chain
 from marketlearn.toolz import timethis
 from scipy.optimize import minimize
 from scipy.stats import norm
+import numpy as np
+import pandas as pd
 
 
 class MarkovSwitchModel:
@@ -290,7 +291,7 @@ class MarkovSwitchModel:
         self,
         obs: np.ndarray,
         n_iter: int = 10,
-    ) -> "MarkovSwitchModel":
+    ) -> MarkovSwitchModel:
         """fits a two state regime switching model
 
         Parameters

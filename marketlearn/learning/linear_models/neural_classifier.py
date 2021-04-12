@@ -17,7 +17,7 @@ class Perceptron(NeuralBase):
         self.cost = None
 
     @timethis
-    def fit(self, X: np.ndarray, y: np.ndarray) -> Perception:
+    def fit(self, X: np.ndarray, y: np.ndarray) -> Perceptron:
         """fits training data
 
         Parameters

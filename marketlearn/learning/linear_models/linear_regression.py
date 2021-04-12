@@ -46,7 +46,7 @@ class LinearRegression(LinearBase):
         self.degree = degree
         self.run = False
 
-    def estimate_params(
+    def _linear_solve(
         self, A: np.ndarray, b: np.ndarray, method: str = "ols-qr"
     ) -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
@@ -57,7 +57,7 @@ class LinearRegression(LinearBase):
         b:
             target values (n_samples, 1)
         """
-        if method == "ols-naive":
+        if method == "normal":
             # based on (A'A)^-1 A'b = x
             return np.linalg.inv(A.T @ A) @ A.T @ b
         elif method == "ols-qr":
@@ -96,17 +96,7 @@ class LinearRegression(LinearBase):
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         X = self.make_polynomial(X)
-        if method == "ols-naive":
-            self.theta = np.linalg.inv(X.T @ X) @ X.T @ y
-        elif method == "ols":
-            l = np.linalg.cholesky(X.T @ X)
-            v = solve_triangular(l, X.T @ y, lower=True)
-            self.theta = solve_triangular(l.T, v)
-        elif method == "ols-qr":
-            # min||(Rx - Q'b)||
-            q, r = np.linalg.qr(X)
-            # solves by forward substitution
-            self.theta = solve_triangular(r, q.T @ y)
+        self.theta = self._linear_solve(A=X, b=y)
         # Make the predictions using estimated coefficients
         self.predictions = self.predict(X)
         self.residuals = y - self.predictions
@@ -219,7 +209,7 @@ class LinearRegressionMLE(LinearBase):
         return A.T @ (A @ guess[:, np.newaxis] - b) @ A
 
     def _levenberg_marqdt(self):
-        raise NotImplementedError("Not yet Implemented")
+        raise NotImplementedError()
 
     def fit(
         self, X: np.ndarray, y: np.ndarray, method: str = "mle_bfgs"
