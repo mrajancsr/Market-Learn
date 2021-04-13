@@ -4,7 +4,10 @@ Author: Rajan Subramanian
 Created Feb 10 2021
 """
 
+from __future__ import annotations
+from marketlearn.optimization import Asset
 import numpy as np
+import pandas as pd
 
 
 class Harry:
@@ -28,45 +31,31 @@ class Harry:
         total number of securities in portfolio
     """
 
-    def __init__(self, means, sigmas, cov):
-        self.means = means
-        self.sigmas = sigmas
-        self.cov = cov
-        self.weights = np.zeros_like(means)
-        self.size = len(means)
+    def __init__(self, historical_prices: pd.DataFrame):
+        self.assets = tuple(
+            Asset(name=name, price_history=historical_prices[name])
+            for name in historical_prices.columns
+        )
+        self.covariance_matrix = Asset.covariance_matrix(self.assets)
+        self.asset_expected_returns = np.fromiter(
+            self.get_asset_expected_returns(), dtype=float
+        )
+        self.asset_expected_vol = np.fromiter(
+            self.get_asset_expected_volatility(), dtype=float
+        )
 
-    def get_portfolio_mean(self) -> float:
-        """Computes the portfolio mean
+    def get_assets(self):
+        yield from self.assets
 
-        Returns
-        -------
-        float
-            portfolio mean
-        """
-        return self.weights.T @ self.means
+    def get_asset_expected_returns(self):
+        for asset in self.get_assets():
+            yield asset.expected_returns
 
-    def get_portfolio_variance(self) -> float:
-        """Computes the portfolio variance
+    def get_asset_expected_volatility(self):
+        vols = np.sqrt(
+            np.diag(self.covariance_matrix) * Asset.get_annualization_factor()
+        )
+        yield from vols
 
-        Returns
-        -------
-        float
-            [description]
-        """
-        return self.weights.T @ self.cov @ self.weights
-
-    def global_minimum_variance(self, mean_constraint=False, target=None) -> np.ndarray:
-        """Computes the weights corresponding to global minimum variance
-
-        Parameters
-        ----------
-        mean_constraint : bool, optional
-            if true, add the constraint w'mu=target
-        target : float, optional, default=None
-            if mean_constraint is True, add target
-
-        Returns
-        -------
-        np.ndarray
-            weights corresponding to minimum variance
-        """
+    def portfolio_mean(self):
+        pass
