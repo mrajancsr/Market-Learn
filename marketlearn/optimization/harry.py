@@ -6,6 +6,7 @@ Created Feb 10 2021
 
 from __future__ import annotations
 from marketlearn.optimization import Asset
+from numpy import fromiter
 import numpy as np
 import pandas as pd
 
@@ -32,24 +33,29 @@ class Harry:
     """
 
     def __init__(self, historical_prices: pd.DataFrame):
-        self.assets = tuple(
-            Asset(name=name, price_history=historical_prices[name])
+        self.assets = {
+            name: Asset(name=name, price_history=historical_prices)
             for name in historical_prices.columns
-        )
-        self.covariance_matrix = Asset.covariance_matrix(self.assets)
-        self.asset_expected_returns = np.fromiter(
+        }
+        self.covariance_matrix = Asset.covariance_matrix(self.assets.values())
+        self.asset_expected_returns = fromiter(
             self.get_asset_expected_returns(), dtype=float
         )
-        self.asset_expected_vol = np.fromiter(
+        self.asset_expected_vol = fromiter(
             self.get_asset_expected_volatility(), dtype=float
         )
 
+    def __iter__(self):
+        yield from self.assets.values()
+
+    def get_asset(self, name: str) -> Asset:
+        return self.assets[name]
+
     def get_assets(self):
-        yield from self.assets
+        yield from self
 
     def get_asset_expected_returns(self):
-        for asset in self.get_assets():
-            yield asset.expected_returns
+        yield from (asset.expected_returns for asset in self)
 
     def get_asset_expected_volatility(self):
         vols = np.sqrt(

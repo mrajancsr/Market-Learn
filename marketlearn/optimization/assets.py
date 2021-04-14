@@ -3,11 +3,9 @@
 from __future__ import annotations
 from functools import lru_cache
 from numpy import array
-from marketlearn.toolz import timethis
 from typing import Tuple
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 
 class Asset:
@@ -20,7 +18,7 @@ class Asset:
     def __init__(self, name: str, price_history: pd.Series):
         """default constructor used to initialize Asset Class"""
         self.name = name
-        self.price_history = price_history
+        self.price_history = price_history[name]
         self.size = price_history.shape[0]
         self.returns_history = np.log(1 + self.price_history.pct_change())
         self.annualized_returns = self.returns_history.sum()
