@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 from functools import lru_cache
-from numpy import array
+from numpy import array, cov, isnan, log
 from typing import Tuple
-import numpy as np
 import pandas as pd
 
 
@@ -18,9 +17,9 @@ class Asset:
     def __init__(self, name: str, price_history: pd.Series):
         """default constructor used to initialize Asset Class"""
         self.name = name
-        self.price_history = price_history[name]
+        self.price_history = price_history
         self.size = price_history.shape[0]
-        self.returns_history = np.log(1 + self.price_history.pct_change())
+        self.returns_history = log(1 + self.price_history.pct_change())
         self.annualized_returns = self.returns_history.sum()
         self.expected_returns = self._get_expected_returns()
         self.__class__.all_assets.append(self)
@@ -37,8 +36,15 @@ class Asset:
         \nexpected returns: {self.expected_returns:.5f}, \
         \nannualized_returns: {self.annualized_returns:.5f}"
 
-    @classmethod
+    @staticmethod
     @lru_cache
-    def covariance_matrix(cls, assets: Tuple[Asset]):
-        zt = array([c.returns_history - c.expected_returns for c in cls.all_assets])
-        return np.cov(zt.T[~np.isnan(zt.T).any(axis=1)], rowvar=False)
+    def covariance_matrix(names: Tuple[str]):
+        print("testing this bitch")
+        zt = array(
+            [
+                a.returns_history - a.expected_returns
+                for a in Asset.all_assets
+                if a.name in names
+            ]
+        )
+        return cov(zt.T[~isnan(zt.T).any(axis=1)], rowvar=False)

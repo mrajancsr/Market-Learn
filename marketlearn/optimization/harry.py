@@ -37,16 +37,31 @@ class Harry:
     def __init__(self, historical_prices: pd.DataFrame):
         """Default constructor used to initialize portfolio"""
         self._assets = {
-            name: Asset(name=name, price_history=historical_prices)
+            name: Asset(name=name, price_history=historical_prices[name])
             for name in historical_prices.columns
         }
-        self.covariance_matrix = Asset.covariance_matrix(self._assets.values())
+
+        self.covariance_matrix = Asset.covariance_matrix(tuple(self.assets()))
         self.asset_expected_returns = fromiter(
             self.get_asset_expected_returns(), dtype=float
         )
         self.asset_expected_vol = fromiter(
             self.get_asset_expected_volatility(), dtype=float
         )
+
+        self.security_count = len(self._assets)
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.assets() == other.assets()
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def assets(self):
+        return self._assets.keys()
+
+    def __repr__(self):
+        return f"Portfolio size: {self.security_count} Assets"
 
     def __iter__(self):
         yield from self._assets.values()
