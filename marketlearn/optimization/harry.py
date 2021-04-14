@@ -8,7 +8,6 @@ from __future__ import annotations
 from marketlearn.optimization import Asset
 from numpy import fromiter
 from numpy.random import random
-from typing import Iterator
 import numpy as np
 import pandas as pd
 
@@ -50,10 +49,10 @@ class Harry:
 
         self.security_count = len(self._assets)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Harry):
         return type(self) is type(other) and self.assets() == other.assets()
 
-    def __ne__(self, other):
+    def __ne__(self, other: Harry):
         return not (self == other)
 
     def __repr__(self):
