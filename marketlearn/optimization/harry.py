@@ -36,11 +36,10 @@ class Harry:
 
     def __init__(self, historical_prices: pd.DataFrame):
         """Default constructor used to initialize portfolio"""
-        self._assets = {
+        self.__assets = {
             name: Asset(name=name, price_history=historical_prices[name])
             for name in historical_prices.columns
         }
-
         self.covariance_matrix = Asset.covariance_matrix(tuple(self))
         self.asset_expected_returns = fromiter(
             self.get_asset_expected_returns(), dtype=float
@@ -57,14 +56,14 @@ class Harry:
     def __ne__(self, other):
         return not (self == other)
 
-    def assets(self):
-        return self._assets.keys()
-
     def __repr__(self):
         return f"Portfolio size: {self.security_count} Assets"
 
     def __iter__(self):
-        yield from self._assets.values()
+        yield from self.__assets.values()
+
+    def assets(self):
+        yield from self
 
     def get_asset(self, name: str) -> Asset:
         """return the Asset in portfolio given name
@@ -79,17 +78,7 @@ class Harry:
         Asset
             contains information about the asset
         """
-        return self._assets[name]
-
-    def get_assets(self) -> Iterator[Asset]:
-        """return iteration of assets in a portfolio
-
-        Yields
-        -------
-        Iterator[Asset]
-           returns all assets in the portfolio
-        """
-        yield from self
+        return self.__assets[name]
 
     def get_asset_expected_returns(self):
         """gets expected return of each asset in portfolio
