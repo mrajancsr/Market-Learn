@@ -31,6 +31,15 @@ class Asset:
     def get_annualization_factor():
         return Asset.__TRADING_DAYS_PER_YEAR
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.name == other.name
+
+    def __ne__(self, other):
+        return not (self == other)
+
     def __repr__(self):
         return f"Asset name: {self.name}, \
         \nexpected returns: {self.expected_returns:.5f}, \
@@ -38,13 +47,7 @@ class Asset:
 
     @staticmethod
     @lru_cache
-    def covariance_matrix(names: Tuple[str]):
+    def covariance_matrix(assets: Tuple[Asset]):
         print("testing this bitch")
-        zt = array(
-            [
-                a.returns_history - a.expected_returns
-                for a in Asset.all_assets
-                if a.name in names
-            ]
-        )
+        zt = array([a.returns_history - a.expected_returns for a in assets])
         return cov(zt.T[~isnan(zt.T).any(axis=1)], rowvar=False)

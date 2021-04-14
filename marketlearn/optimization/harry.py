@@ -41,7 +41,7 @@ class Harry:
             for name in historical_prices.columns
         }
 
-        self.covariance_matrix = Asset.covariance_matrix(tuple(self.assets()))
+        self.covariance_matrix = Asset.covariance_matrix(tuple(self))
         self.asset_expected_returns = fromiter(
             self.get_asset_expected_returns(), dtype=float
         )
