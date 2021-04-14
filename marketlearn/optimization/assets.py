@@ -33,7 +33,9 @@ class Asset:
         return Asset.__TRADING_DAYS_PER_YEAR
 
     def __repr__(self):
-        return f"Asset name: {self.name}, expected returns: {self.expected_returns}"
+        return f"Asset name: {self.name}, \
+        \nexpected returns: {self.expected_returns:.5f}, \
+        \nannualized_returns: {self.annualized_returns:.5f}"
 
     @classmethod
     @lru_cache

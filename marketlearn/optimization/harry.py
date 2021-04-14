@@ -7,6 +7,7 @@ Created Feb 10 2021
 from __future__ import annotations
 from marketlearn.optimization import Asset
 from numpy import fromiter
+from numpy.random import random
 from typing import Iterator
 import numpy as np
 import pandas as pd
@@ -35,11 +36,11 @@ class Harry:
 
     def __init__(self, historical_prices: pd.DataFrame):
         """Default constructor used to initialize portfolio"""
-        self.assets = {
+        self._assets = {
             name: Asset(name=name, price_history=historical_prices)
             for name in historical_prices.columns
         }
-        self.covariance_matrix = Asset.covariance_matrix(self.assets.values())
+        self.covariance_matrix = Asset.covariance_matrix(self._assets.values())
         self.asset_expected_returns = fromiter(
             self.get_asset_expected_returns(), dtype=float
         )
@@ -48,7 +49,7 @@ class Harry:
         )
 
     def __iter__(self):
-        yield from self.assets.values()
+        yield from self._assets.values()
 
     def get_asset(self, name: str) -> Asset:
         """return the Asset in portfolio given name
@@ -63,7 +64,7 @@ class Harry:
         Asset
             contains information about the asset
         """
-        return self.assets[name]
+        return self._assets[name]
 
     def get_assets(self) -> Iterator[Asset]:
         """return iteration of assets in a portfolio
@@ -97,5 +98,21 @@ class Harry:
             np.diag(self.covariance_matrix) * Asset.get_annualization_factor()
         )
 
-    def portfolio_mean(self):
-        pass
+    @staticmethod
+    def random_weights(nsec: int, nsim: int = 1):
+        """creates a portfolio with random weights
+
+        Parameters
+        ----------
+        nsec : int
+            number of securities in porfolio
+        nsim : int, optional, default=1
+            number of simulations to perform
+
+        Returns
+        -------
+        np.ndarray, shape=(nsim, nsec)
+            random weight matrix
+        """
+        weights = random((nsim, nsec)) if nsim != 1 else random(nsec)
+        return weights / weights.sum(axis=0)
