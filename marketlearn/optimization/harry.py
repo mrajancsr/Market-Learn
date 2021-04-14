@@ -145,10 +145,11 @@ class Harry:
         """
         nsec = self.security_count
         weights = Harry.random_weights(nsim=nportfolios, nsec=nsec)
+        annual_factor = Asset.get_annualization_factor()
 
         return (
             (
-                np.sqrt(self.portfolio_variance(weights[p]) * 252),
+                np.sqrt(self.portfolio_variance(weights[p]) * annual_factor),
                 self.portfolio_expected_returns(weights[p]),
             )
             for p in range(nportfolios)
