@@ -32,6 +32,13 @@ class Asset:
         return Asset.__TRADING_DAYS_PER_YEAR
 
     def __hash__(self):
+        """allows hashing for lru_cache
+
+        Returns
+        -------
+        hashid
+            hashid based on asset name
+        """
         return hash(self.name)
 
     def __eq__(self, other):

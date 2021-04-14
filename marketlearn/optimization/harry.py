@@ -8,6 +8,7 @@ from __future__ import annotations
 from marketlearn.optimization import Asset
 from numpy import fromiter
 from numpy.random import random
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -47,7 +48,7 @@ class Harry:
             self.get_asset_expected_volatility(), dtype=float
         )
 
-        self.security_count = len(self._assets)
+        self.security_count = len(self.__assets)
 
     def __eq__(self, other: Harry):
         return type(self) is type(other) and self.assets() == other.assets()
@@ -101,8 +102,8 @@ class Harry:
             np.diag(self.covariance_matrix) * Asset.get_annualization_factor()
         )
 
-    @staticmethod
-    def random_weights(nsec: int, nsim: int = 1):
+    @classmethod
+    def random_weights(cls, nsim: int, nsec: int):
         """creates a portfolio with random weights
 
         Parameters
@@ -117,5 +118,51 @@ class Harry:
         np.ndarray, shape=(nsim, nsec)
             random weight matrix
         """
-        weights = random((nsim, nsec)) if nsim != 1 else random(nsec)
-        return weights / weights.sum(axis=0)
+        if nsim == 1:
+            weights = random(nsec)
+            weights /= weights.sum()
+        else:
+            weights = random((nsim, nsec))
+            weights = (weights.T / weights.sum(axis=1)).T
+
+        return weights
+
+    def portfolio_variance(self, weights: np.ndarray):
+        return weights.T @ self.covariance_matrix @ weights.T
+
+    def portfolio_expected_returns(self, weights: np.ndarray):
+        return weights.T @ self.asset_expected_returns
+
+    def simulate_random_portfolios(self, nportfolios: int):
+        """runs a monte-carlo simulation by generating random portfolios
+
+        Parameters
+        ----------
+        nsec : int
+            [description]
+        nportfolios : int, optional
+            [description], by default 1
+        """
+        nsec = self.security_count
+        weights = Harry.random_weights(nsim=nportfolios, nsec=nsec)
+
+        return (
+            (
+                np.sqrt(self.portfolio_variance(weights[p]) * 252),
+                self.portfolio_expected_returns(weights[p]),
+            )
+            for p in range(nportfolios)
+        )
+
+    def plot_simulated_portfolios(self, nportfolios: int):
+        """plots the simulated portfolio
+
+        Parameters
+        ----------
+        nportfolios : int
+            [description]
+        """
+        simulations = self.simulate_random_portfolios(nportfolios)
+        xval, yval = zip(*simulations)
+        plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
+        plt.grid()
