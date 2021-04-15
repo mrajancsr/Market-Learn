@@ -8,6 +8,7 @@ from __future__ import annotations
 from marketlearn.optimization import Asset
 from numpy import fromiter
 from numpy.random import random
+from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -167,3 +168,29 @@ class Harry:
         xval, yval = zip(*simulations)
         plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
         plt.grid()
+
+    def optimize_risk(self):
+        """Returns the weights corresponding to mininimum variance portfolio"""
+        total_assets = self.security_count
+        # make random guess
+        guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
+        weights = minimize(
+            fun=lambda x: self.portfolio_variance(x),
+            x0=guess_weights,
+            constraints=[{"type": "eq", "fun": lambda w: sum(w) - 1}],
+            bounds=[(0, 1) for _ in range(total_assets)],
+        )["x"]
+
+        return weights
+
+    def optimize_sharpe(self):
+        """Return the weights corresponding to maximizing sharpe ratio
+
+        The sharpe ratio is given by SRp = mu_p - mu_f / sigma_p
+        subject to w'mu = mu_p
+                   w'cov(R)w = var_p
+                   s.t sum(weights) = 1
+        """
+        total_assets = self.security_count
+        # make random guess for weights
+        guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)

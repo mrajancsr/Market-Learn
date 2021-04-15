@@ -55,6 +55,17 @@ class Asset:
     @staticmethod
     @lru_cache
     def covariance_matrix(assets: Tuple[Asset]):
-        print("testing this bitch")
+        """computes the covariance matrix given tuple of assets
+
+        Parameters
+        ----------
+        assets : Tuple[Asset]
+            Assets whose covariance we want to compute
+
+        Returns
+        -------
+        np.ndarray
+            covariance matrix of assets
+        """
         zt = array([a.returns_history - a.expected_returns for a in assets])
         return cov(zt.T[~isnan(zt.T).any(axis=1)], rowvar=False)
