@@ -187,7 +187,7 @@ class Harry:
         else:
             consts = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
 
-        # minimize the portolio variance subject to constraints
+        # minimize the portolio variance, assume no short selling
         weights = minimize(
             fun=lambda x: self.portfolio_variance(x),
             x0=guess_weights,
