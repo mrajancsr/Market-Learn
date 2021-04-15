@@ -169,18 +169,31 @@ class Harry:
         plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
         plt.grid()
 
-    def optimize_risk(self):
+    def optimize_risk(self, constraints=None, target=None):
         """Returns the weights corresponding to mininimum variance portfolio"""
         total_assets = self.security_count
         # make random guess
         guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
+
+        # minimize risk subject to target level of return constraint
+        if constraints:
+            consts = [
+                {
+                    "type": "eq",
+                    "fun": lambda w: self.portfolio_expected_returns(w) - target,
+                }
+            ]
+        # minimize risk with only contraint sum of weights = 1
+        else:
+            consts = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
+
+        # minimize the portolio variance subject to constraints
         weights = minimize(
             fun=lambda x: self.portfolio_variance(x),
             x0=guess_weights,
-            constraints=[{"type": "eq", "fun": lambda w: sum(w) - 1}],
+            constraints=consts,
             bounds=[(0, 1) for _ in range(total_assets)],
         )["x"]
-
         return weights
 
     def optimize_sharpe(self):
@@ -194,3 +207,4 @@ class Harry:
         total_assets = self.security_count
         # make random guess for weights
         guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
+        pass
