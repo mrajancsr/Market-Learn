@@ -12,6 +12,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 
 
 class Harry:
@@ -166,8 +167,24 @@ class Harry:
         """
         simulations = self.simulate_random_portfolios(nportfolios)
         xval, yval = zip(*simulations)
-        plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
-        plt.grid()
+        # plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
+        # plt.grid()
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=xval,
+                y=yval,
+                mode="markers",
+                line=dict(color="rgb(55, 83, 109)", dash="dash"),
+            )
+        )
+        fig.update_layout(
+            title_text="Simulated Portfolio Frontier",
+            template="plotly_white",
+            xaxis=dict(title="Annualized portfolio expected volatility"),
+            yaxis=dict(title="Annualized portfolio expected returns"),
+        )
+        fig.show()
 
     def optimize_risk(self, constraints=None, target=None):
         """Returns the weights corresponding to mininimum variance portfolio"""
