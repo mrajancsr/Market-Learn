@@ -35,7 +35,7 @@ class Harry:
         forecasted sample volatility of each Asset
     """
 
-    def __init__(self, historical_prices: pd.DataFrame):
+    def __init__(self, historical_prices: pd.DataFrame, risk_free_rate=None):
         """Default constructor used to initialize portfolio"""
         self.__assets = {
             name: Asset(name=name, price_history=historical_prices[name])
@@ -50,7 +50,7 @@ class Harry:
         )
 
         self.security_count = len(self.__assets)
-        self.rf = 0.02
+        self.risk_free_rate = risk_free_rate
 
     def __eq__(self, other: Harry):
         return type(self) is type(other) and self.assets() == other.assets()
@@ -164,7 +164,7 @@ class Harry:
         return (
             (
                 np.sqrt(self.portfolio_variance(weights[p])),
-                self.portfolio_expected_returns(weights[p]),
+                self.portfolio_expected_return(weights[p]),
             )
             for p in range(nportfolios)
         )
@@ -198,10 +198,22 @@ class Harry:
         )
         fig.show()
 
-    def sharpe_ratio(self, weights: np.ndarray):
-        return (self.portfolio_expected_return(weights) - self.rf) / np.sqrt(
-            self.portfolio_variance(weights)
-        )
+    def sharpe_ratio(self, weights: np.ndarray) -> float:
+        """Comoputes the sharpe ratio of portfolio given weights
+
+        Parameters
+        ----------
+        weights : np.ndarray
+            percentage of each asset held in portfolio
+
+        Returns
+        -------
+        sharpe ratio
+            float
+        """
+        return (
+            self.portfolio_expected_return(weights) - self.risk_free_rate
+        ) / np.sqrt(self.portfolio_variance(weights))
 
     def optimize_risk(self, constraints: bool = False, target: float = None):
         """Computes the weights corresponding to minimum variance
