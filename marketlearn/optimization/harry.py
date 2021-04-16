@@ -100,9 +100,7 @@ class Harry:
         Iterator[float]
             iteration of expected volatility of each asset scaled by trading days
         """
-        yield from np.sqrt(
-            np.diag(self.covariance_matrix) * Asset.get_annualization_factor()
-        )
+        yield from np.sqrt(np.diag(self.covariance_matrix))
 
     @classmethod
     def random_weights(cls, nsim: int, nsec: int):
@@ -147,11 +145,10 @@ class Harry:
         """
         nsec = self.security_count
         weights = Harry.random_weights(nsim=nportfolios, nsec=nsec)
-        annual_factor = Asset.get_annualization_factor()
 
         return (
             (
-                np.sqrt(self.portfolio_variance(weights[p]) * annual_factor),
+                np.sqrt(self.portfolio_variance(weights[p])),
                 self.portfolio_expected_returns(weights[p]),
             )
             for p in range(nportfolios)
@@ -188,7 +185,9 @@ class Harry:
 
     def optimize_risk(self, constraints=None, target=None):
         """Returns the weights corresponding to mininimum variance portfolio"""
+        # get count of assets in portfolio
         total_assets = self.security_count
+
         # make random guess
         guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
 

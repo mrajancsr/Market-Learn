@@ -25,7 +25,7 @@ class Asset:
         self.__class__.all_assets.append(self)
 
     def _get_expected_returns(self):
-        return Asset.__TRADING_DAYS_PER_YEAR * self.returns_history.mean()
+        return Asset.get_annualization_factor() * self.returns_history.mean()
 
     @staticmethod
     def get_annualization_factor():
@@ -63,9 +63,12 @@ class Asset:
             Assets whose covariance we want to compute
 
         Returns
-        -------
+        -------ß
         np.ndarray
             covariance matrix of assets
         """
-        zt = array([a.returns_history - a.expected_returns for a in assets])
-        return cov(zt.T[~isnan(zt.T).any(axis=1)], rowvar=False)
+        zt = array([a.returns_history for a in assets]).T
+        return (
+            cov(zt[~isnan(zt).any(axis=1)], rowvar=False)
+            * Asset.get_annualization_factor()
+        )
