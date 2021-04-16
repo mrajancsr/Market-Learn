@@ -9,7 +9,6 @@ from marketlearn.optimization import Asset
 from numpy import fromiter
 from numpy.random import random
 from scipy.optimize import minimize
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -208,6 +207,7 @@ class Harry:
             fun=lambda x: self.portfolio_variance(x),
             x0=guess_weights,
             constraints=consts,
+            method="SLSQP",
             bounds=[(0, 1) for _ in range(total_assets)],
         )["x"]
         return weights
