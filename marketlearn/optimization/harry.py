@@ -43,13 +43,14 @@ class Harry:
         }
         self.covariance_matrix = Asset.covariance_matrix(tuple(self))
         self.asset_expected_returns = fromiter(
-            self.get_asset_expected_returns(), dtype=float
+            self.asset_expected_returns(), dtype=float
         )
         self.asset_expected_vol = fromiter(
-            self.get_asset_expected_volatility(), dtype=float
+            self.asset_expected_volatility(), dtype=float
         )
 
         self.security_count = len(self.__assets)
+        self.rf = 0.02
 
     def __eq__(self, other: Harry):
         return type(self) is type(other) and self.assets() == other.assets()
@@ -81,7 +82,7 @@ class Harry:
         """
         return self.__assets[name]
 
-    def get_asset_expected_returns(self):
+    def asset_expected_returns(self):
         """gets expected return of each asset in portfolio
 
         Yields
@@ -91,7 +92,7 @@ class Harry:
         """
         yield from (asset.expected_returns for asset in self)
 
-    def get_asset_expected_volatility(self):
+    def asset_expected_volatility(self):
         """gets expected volatility of each asset in portfolio
 
         Yields
@@ -127,9 +128,23 @@ class Harry:
         return weights
 
     def portfolio_variance(self, weights: np.ndarray):
+        """computes the portfolio variance
+
+        portfolio variance is given by var_p = w'cov(R)w
+
+        Parameters
+        ----------
+        weights : np.ndarray
+            weight of each asset in portfolio
+
+        Returns
+        -------
+        float
+            portfolio variance
+        """
         return weights.T @ self.covariance_matrix @ weights
 
-    def portfolio_expected_returns(self, weights: np.ndarray):
+    def portfolio_expected_return(self, weights: np.ndarray):
         return weights.T @ self.asset_expected_returns
 
     def simulate_random_portfolios(self, nportfolios: int):
@@ -183,8 +198,26 @@ class Harry:
         )
         fig.show()
 
-    def optimize_risk(self, constraints=None, target=None):
-        """Returns the weights corresponding to mininimum variance portfolio"""
+    def sharpe_ratio(self, weights: np.ndarray):
+        return (self.portfolio_expected_return(weights) - self.rf) / np.sqrt(
+            self.portfolio_variance(weights)
+        )
+
+    def optimize_risk(self, constraints: bool = False, target: float = None):
+        """Computes the weights corresponding to minimum variance
+
+        Parameters
+        ----------
+        constraints : bool, optional, default=False
+            mean constraint
+        target : float, optional, default=None
+            target portfolio return if constraints is True
+
+        Returns
+        -------
+        np.ndarray
+            weights corresponding to minimum variance
+        """
         # get count of assets in portfolio
         total_assets = self.security_count
 
@@ -214,7 +247,7 @@ class Harry:
         )["x"]
         return weights
 
-    def optimize_sharpe(self):
+    def optimize_sharpe(self, target_return, target_vol):
         """Return the weights corresponding to maximizing sharpe ratio
 
         The sharpe ratio is given by SRp = mu_p - mu_f / sigma_p
@@ -222,7 +255,34 @@ class Harry:
                    w'cov(R)w = var_p
                    s.t sum(weights) = 1
         """
+        # get count of assets in portfolio
         total_assets = self.security_count
-        # make random guess for weights
+
+        # make random guess
         guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
-        pass
+
+        target_variance = target_vol ** 2
+
+        # set target return & target variance and sum of weights constraint
+        consts = [
+            {
+                "type": "eq",
+                "fun": lambda w: self.portfolio_expected_return(w) - target_return,
+            },
+            {
+                "type": "eq",
+                "fun": lambda w: self.portfolio_variance(w) - target_variance,
+            },
+            {"type": "eq", "fun": lambda w: sum(w) - 1},
+        ]
+
+        # maximize sharpe subject to above constraints
+        weights = minimize(
+            fun=lambda w: -1 * self.sharpe_ratio(w),
+            x0=guess_weights,
+            constraints=consts,
+            method="SLSQP",
+            bounds=[(0, 1) for _ in range(total_assets)],
+        )["x"]
+
+        return weights
