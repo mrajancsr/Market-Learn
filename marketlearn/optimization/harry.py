@@ -127,7 +127,7 @@ class Harry:
         return weights
 
     def portfolio_variance(self, weights: np.ndarray):
-        return weights.T @ self.covariance_matrix @ weights.T
+        return weights.T @ self.covariance_matrix @ weights
 
     def portfolio_expected_returns(self, weights: np.ndarray):
         return weights.T @ self.asset_expected_returns
@@ -145,6 +145,7 @@ class Harry:
         nsec = self.security_count
         weights = Harry.random_weights(nsim=nportfolios, nsec=nsec)
 
+        # return volatility and mean of each simulation as a tuple
         return (
             (
                 np.sqrt(self.portfolio_variance(weights[p])),
@@ -196,7 +197,8 @@ class Harry:
                 {
                     "type": "eq",
                     "fun": lambda w: self.portfolio_expected_returns(w) - target,
-                }
+                },
+                {"type": "eq", "fun": lambda w: sum(w) - 1},
             ]
         # minimize risk with only contraint sum of weights = 1
         else:
@@ -204,7 +206,7 @@ class Harry:
 
         # minimize the portolio variance, assume no short selling
         weights = minimize(
-            fun=lambda x: self.portfolio_variance(x),
+            fun=lambda w: self.portfolio_variance(w),
             x0=guess_weights,
             constraints=consts,
             method="SLSQP",
