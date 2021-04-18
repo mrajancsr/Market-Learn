@@ -304,7 +304,7 @@ class Harry:
         # covmx = m.T @ self.covariance_matrix @ x
 
         # compute grid of values and construct efficinet portfolio z
-        theta = np.linspace(-3, 3, 1000)
+        theta = np.linspace(-1, 1, 1000)
         z = theta[:, np.newaxis] * m + (1 - theta[:, np.newaxis]) * x
 
         # compute portfolio mean and variance with above weights
@@ -314,8 +314,10 @@ class Harry:
         mu_p = efficient_portfolio_mean[
             efficient_portfolio_mean >= minimum_var_portfolio_mean
         ]
-        sig_p = efficient_portfolio_var[
-            efficient_portfolio_mean >= minimum_var_portfolio_mean
-        ]
+        sig_p = sqrt(
+            efficient_portfolio_var[
+                efficient_portfolio_mean >= minimum_var_portfolio_mean
+            ]
+        )
 
         return mu_p, sig_p
