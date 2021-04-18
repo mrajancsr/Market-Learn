@@ -9,6 +9,7 @@ from marketlearn.optimization import Asset
 from numpy import diag, fromiter, sqrt
 from numpy.random import random
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -173,8 +174,6 @@ class Harry:
         )
 
     def plot_simulated_portfolios(self, nportfolios: int):
-        import matplotlib.pyplot as plt
-
         """plots the simulated portfolio
         Parameters
         ----------
@@ -252,7 +251,6 @@ class Harry:
         # minimize risk with only contraint sum of weights = 1
         else:
             consts = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
-            print("testing")
 
         # minimize the portolio variance, assume no short selling
         weights = minimize(
@@ -313,7 +311,10 @@ class Harry:
         efficient_portfolio_mean = self.portfolio_expected_return(z)
         efficient_portfolio_var = self.portfolio_variance(z)
 
-        # return pair of mean returns and volatility for new efficient portfolio
+        # get the max volatility of assets in universe
+        vol = self.asset_expected_vol.max()
+
+        # return pair of mean returns and vol for new efficient portfolio
         mu_p = efficient_portfolio_mean[
             efficient_portfolio_mean >= minimum_var_portfolio_mean
         ]
@@ -323,7 +324,42 @@ class Harry:
             ]
         )
 
-        # get the max volatility of assets in university
-        vol = self.asset_expected_vol.max()
+        return sig_p[sig_p <= vol], mu_p[sig_p <= vol]
 
-        return mu_p[sig_p <= vol], sig_p[sig_p <= vol]
+    def graph_frontier(self, nportfolios: int, bounds=None):
+        """graphs the efficient frontier set
+
+        Parameters
+        ----------
+        nportfolios : int
+            [description]
+        bounds : [type], optional
+            [description], by default None
+        """
+        plt.figure(figsize=(8, 5))
+        self.plot_simulated_portfolios(nportfolios)
+
+        # construct the frontier
+        xval, yval = self.construct_efficient_frontier(bounds=bounds)
+        plt.plot(xval, yval, color="orange", linewidth=4)
+        plt.grid()
+
+    def __global_minimum_variance(self, mean_constraint=False, target=None):
+        """computes weights associated with global minimum variance
+
+        This function uses the formula for global minimum variance
+        # subject to constraint w'1 = 1
+        # if mean constraint is true, then another constraint is added
+        # w'mu = target
+        """
+        n = self.size + 1 if mean_constraint is False else self.size + 2
+        A = np.zeros((n, n))
+        ones = np.ones(self.size)
+        b = np.zeros(n)
+        A[: self.size, : self.size] = self.covmat * 2
+        A[-1, : self.size], A[: self.size, -1] = ones, ones
+        if mean_constraint is True:
+            A[-2, : self.size], A[: self.size, -2] = self.mu_vec.T, self.mu_vec
+            b[-2] = target
+        b[-1] = 1
+        return np.linalg.solve(A, b)[: self.size]
