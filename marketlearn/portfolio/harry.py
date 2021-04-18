@@ -5,14 +5,15 @@ Created Feb 10 2021
 """
 
 from __future__ import annotations
-from marketlearn.optimization import Asset
+from marketlearn.portfolio import Asset
 from numpy import diag, fromiter, sqrt
 from numpy.random import random
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
+
+# import plotly.graph_objects as go
 
 
 class Harry:
@@ -32,6 +33,18 @@ class Harry:
         forecasted sample means of each Asset
     asset_expected_vol: np.ndarray
         forecasted sample volatility of each Asset
+
+    Note:
+        For efficient Portfolio construction Algorithm:
+            - get the minimum variance portfolio, m
+            - get the minimum variance portfolio expected returns and variance
+            - get the optimal sharpe for the max of securities in portfolio, x
+            - create a grid of values from {-1, -0.9, ..., 0.9, 1}
+            - create portfolio z that is linear combination of m & x using grid
+            - Compute z's expected return and variance
+            - Filter z's portfolio  where
+                expected return of z > minimum variance portfolio's return
+                volatility of z < maximum of volatility of assets in portfolio
     """
 
     def __init__(self, historical_prices: pd.DataFrame, risk_free_rate=None):
@@ -125,8 +138,13 @@ class Harry:
         portfolio variance is given by var_p = w'cov(R)w
         Parameters
         ----------
-        weights : np.ndarray
+        weights : np.ndarray, shape=(n_assets,), (n_grid, n_assets)
             weight of each asset in portfolio
+            n_assets is number of assets in portfolio
+            for efficient portfolio, assumes each row
+            is a linear combination of grid of two weights
+            where one asset is the minimum variance portfolio
+            and the other is the markovitz portfolio
         Returns
         -------
         float
@@ -290,7 +308,20 @@ class Harry:
         return weights
 
     def construct_efficient_frontier(self, bounds=None):
-        """computes the efficient frontier graph"""
+        """Constructs the efficient frontier
+
+        Parameters
+        ----------
+        bounds : [type], optional, default=None
+            bound for each asset weight
+            for long position, bound is (0, 1)
+            for short position, bound is (-1, 0)
+
+        Returns
+        -------
+        tuple
+            efficient portfolio's volatility and expected returns
+        """
         # get minimum variance portfolio
         m = self.optimize_risk(bounds=bounds)
 
