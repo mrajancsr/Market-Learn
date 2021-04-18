@@ -173,6 +173,8 @@ class Harry:
         )
 
     def plot_simulated_portfolios(self, nportfolios: int):
+        import matplotlib.pyplot as plt
+
         """plots the simulated portfolio
         Parameters
         ----------
@@ -182,8 +184,9 @@ class Harry:
         simulations = self.simulate_random_portfolios(nportfolios)
         xval, yval = zip(*simulations)
 
-        # plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
-        # plt.grid()
+        plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
+
+        """
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -199,7 +202,7 @@ class Harry:
             xaxis=dict(title="Annualized portfolio expected volatility"),
             yaxis=dict(title="Annualized portfolio expected returns"),
         )
-        fig.show()
+        fig.show()"""
 
     def sharpe_ratio(self, weights: np.ndarray) -> float:
         """Comoputes the sharpe ratio of portfolio given weights
@@ -288,29 +291,29 @@ class Harry:
 
         return weights
 
-    def construct_efficient_frontier(self):
+    def construct_efficient_frontier(self, bounds=None):
         """computes the efficient frontier graph"""
-        # compute global minimum variance portfolio
-        m = self.optimize_risk()
+        # get minimum variance portfolio
+        m = self.optimize_risk(bounds=bounds)
 
-        # compute portfolio mean and variance with above weights
+        # compute mean of global minimum variance portfolio
         minimum_var_portfolio_mean = self.portfolio_expected_return(m)
 
-        # compute efficient portfolio x whose target return is max of security returns
+        # get efficient portfolio x whose target return is max security returns
         target = self.asset_expected_returns.max()
-        x = self.optimize_risk(constraints=True, target=target)
+        x = self.optimize_risk(constraints=True, target=target, bounds=bounds)
 
-        # calculate covariance beteen minimum variance portfolio and efficient portoflio
-        # covmx = m.T @ self.covariance_matrix @ x
-
-        # compute grid of values and construct efficinet portfolio z
+        # compute grid of values
         theta = np.linspace(-1, 1, 1000)
+
+        # portfolio z is linear combination of above two portfolios
         z = theta[:, np.newaxis] * m + (1 - theta[:, np.newaxis]) * x
 
         # compute portfolio mean and variance with above weights
         efficient_portfolio_mean = self.portfolio_expected_return(z)
         efficient_portfolio_var = self.portfolio_variance(z)
 
+        # return pair of mean returns and volatility for new efficient portfolio
         mu_p = efficient_portfolio_mean[
             efficient_portfolio_mean >= minimum_var_portfolio_mean
         ]
@@ -320,4 +323,7 @@ class Harry:
             ]
         )
 
-        return mu_p, sig_p
+        # get the max volatility of assets in university
+        vol = self.asset_expected_vol.max()
+
+        return mu_p[sig_p <= vol], sig_p[sig_p <= vol]
