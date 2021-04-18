@@ -304,7 +304,7 @@ class Harry:
         # covmx = m.T @ self.covariance_matrix @ x
 
         # compute grid of values and construct efficinet portfolio z
-        theta = np.linspace(-1, 1, 100)
+        theta = np.linspace(-3, 3, 1000)
         z = theta[:, np.newaxis] * m + (1 - theta[:, np.newaxis]) * x
 
         # compute portfolio mean and variance with above weights
