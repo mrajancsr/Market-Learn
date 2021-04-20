@@ -4,7 +4,9 @@ Implementation of Graph Datastructure
 from itertools import permutations
 from scipy import sparse
 import numpy as np
+
 # pylint: disable=invalid-name
+
 
 class GraphAdMap:
     """
@@ -19,14 +21,14 @@ class GraphAdMap:
         Vertex structure for graph
         """
 
-        __slots__ = ['_value', '_index']
+        __slots__ = ["_value", "_index"]
 
         def __init__(self, val):
             self._value = val
             self._index = 0
 
         def __repr__(self):
-            """"
+            """ "
             Allows outputting vertex representation
             """
             return """Vertex({!r})""".format(self._value)
@@ -50,7 +52,7 @@ class GraphAdMap:
         """
 
         # Lightweight edge structure
-        __slots__ = 'start', 'end', 'value'
+        __slots__ = "start", "end", "value"
 
         def __init__(self, u, v, val):
             self.start = u
@@ -58,7 +60,7 @@ class GraphAdMap:
             self.value = val
 
         def __repr__(self):
-            """"
+            """ "
             Allows outputting edge representation
             """
             insert = (self.start, self.end, self.value)
@@ -206,7 +208,7 @@ class GraphAdMap:
         self._in[v][u] = edge
 
         return edge
-    
+
     def get_adjacency_pairs(self):
         for e in self.get_edges():
             u, v = e.endpoint()
@@ -226,4 +228,3 @@ class GraphAdMap:
             i, j = p
             arr[i, j] = pairs.get((i, j), 0)
         return sparse.csc_matrix(arr)
-

@@ -6,7 +6,7 @@ from scipy.linalg import solve_triangular
 from scipy.stats import f as ftest
 from numpy.linalg import det
 from arch.unitroot import PhillipsPerron
-from marketlearn.network_causality.vector_ar.varbase import Base
+from marketlearn.causality_network.vector_ar.varbase import Base
 from marketlearn.learning.linear_models.linear_regression import LinearRegression
 
 
