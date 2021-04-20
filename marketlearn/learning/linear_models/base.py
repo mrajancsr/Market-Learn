@@ -1,4 +1,4 @@
-"""Abstract base class for various models"""
+"""Abstract base class for regression models"""
 
 from abc import ABCMeta, abstractmethod
 from typing import Dict
@@ -77,6 +77,29 @@ class LogisticBase(LinearBase):
             design matrix
         thetas : np.ndarray, shape={p_features + intercept}
             weights of logistic regression
+
+        Returns
+        -------
+        np.ndarray
+            linear transformation
+        """
+        return X @ thetas
+
+
+class NeuralBase(LinearBase):
+    """Abstract Base class representing a Neural Network"""
+
+    def net_input(self, X: np.ndarray, thetas: np.ndarray) -> np.ndarray:
+        """Computes the net input vector
+        z = w1x1 + w2x2 + ... + wpxp := w'x
+
+        Parameters
+        ----------
+        X : np.ndarray, shape={n_samples, p_features}
+            design matrix
+        thetas : np.ndarray, shape={p_features + intercept}
+            weights of neural classifier, w vector above
+            assumes first element is the bias unit i.e intercept
 
         Returns
         -------

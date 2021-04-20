@@ -24,7 +24,7 @@ class LogisticRegression(LogisticBase):
     residuals:      Number of incorrect Predictions
 
     Notes:
-    Class uses two estimation methods to estimate the parameters
+    Class uses multiple methods to estimate the parameters
     of logistic regression
     - A implemention using BFGS using scipy's optimizer to solve the MLE
     - A implementation using Iterative Reweighted Least Squares (IRLS) to
@@ -37,7 +37,7 @@ class LogisticRegression(LogisticBase):
       matrix in O(n) time through the iterative method
       Also, i have chosen to use numpy's broadcasting feature vs
       computing the calculations per sample.
-    - A implemention using Stochastic Gradient Descent is given
+    - todo: A implemention using Stochastic Gradient Descent
     """
 
     def __init__(self, fit_intercept: bool = True, degree: int = 1):
