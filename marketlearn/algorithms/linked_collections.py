@@ -2,6 +2,8 @@
 Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
 """
+from __future__ import annotations
+from marketlearn.algorithms.linked_lists import _DoublyLinkedBase
 
 
 class LinkedStack:
@@ -308,3 +310,57 @@ class LinkedDeque:
             while n is not None:
                 print(n.element, " ")
                 n = n.nref
+
+
+class PositionalList(_DoublyLinkedBase):
+    """Container of elements allowing positional access"""
+
+    class Position:
+        """Class represents position of single element"""
+
+        def __init__(self, container, node):
+            self._container = container
+            self._node = node
+
+        def element(self):
+            """Returns element stored at this position
+
+            Returns
+            -------
+            [type]
+                [description]
+            """
+            return self._node._element
+
+        def __eq__(self, other: Position):
+            """Return true if other posotion represents same location
+
+            Parameters
+            ----------
+            other : Position
+                [description]
+            """
+
+        def __ne__(self, other: Position):
+            return not (self == other)
+
+    def _validate(self, p: Position):
+        """Return position's node, or raise error if invalid
+
+        Parameters
+        ----------
+        p : Position
+            [description]
+        """
+        if not isinstance(p, self.Position):
+            raise TypeError("p must be proper Position type")
+        if p._container is not self:
+            raise ValueError("p does not belong to this container")
+        if p._node._nref is None:
+            raise ValueError("p is no longer valid")
+
+    def _make_position(self, node):
+        """Return position instance for given node or None if sentinel"""
+        if node is self._start_node or node is self._end_node:
+            return None
+        return self.Position(self, node)
