@@ -5,13 +5,12 @@ Created May 10 2020
 Todo - add a copy from
 """
 
-
-import pandas as pd
-import psycopg2
 from configparser import ConfigParser
 from marketlearn.toolz import timethis
 from psycopg2.extras import execute_values, DictCursor
 from typing import Any, Dict, Iterator, List, Tuple, Union
+import pandas as pd
+import psycopg2, os
 
 
 class DbReader:
@@ -27,11 +26,12 @@ class DbReader:
         connection objevct for psycopg2
     """
 
-    def __init__(self):
+    def __init__(self, section="dev"):
         """default constructor used to establish constructor"""
         self.conn = None
+        self.section = section
 
-    def _read_db_config(self, section: str = "postgresql-dev") -> Dict:
+    def _read_db_config(self) -> Dict:
         """reads database configuration from config.ini file
 
         Parameters
@@ -51,21 +51,27 @@ class DbReader:
         """
         # create the parser
         file_name = "config.ini"
+        file_path = os.path.join(os.getenv("SQLCONFIGPATH"), file_name)
+        file_path = file_path.replace(":", "")
 
         parser = ConfigParser()
-        parser.read(file_name)
+        parser.read(file_path)
 
         # get the section, default to postgressql
+        section = "postgresql-" + self.section
         config = {}
         if parser.has_section(section):
             params = parser.items(section)
             for param in params:
                 config[param[0]] = param[1]
         else:
-            raise Exception(f"{section} not found in the {file_name}")
+            raise Exception(
+                f"{section} not found in the {file_name} \
+                \nfilepath: {file_path}"
+            )
         return config
 
-    def connect(self, section: str = "dev"):
+    def connect(self):
         """Connects to PostGresSql Database
 
         Parameters
@@ -78,11 +84,10 @@ class DbReader:
         connection object
             connection to the PostGresSQL DB
         """
-        if self.conn is None or self.conn.closed is True:
+        if self.conn is None or self.conn.closed:
             try:
                 # read connection parameters
-                section = "postgresql-" + section
-                params = self._read_db_config(section=section)
+                params = self._read_db_config()
                 # connect to the PostgresSql Server
                 self.conn = psycopg2.connect(**params)
             except psycopg2.DatabaseError as error:
@@ -94,7 +99,7 @@ class DbReader:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    def fetch(self, query: str, section: str = "dev"):
+    def fetch(self, query: str):
         """Returns the data associated with table
         Args:
         query:  database query parameter
@@ -105,7 +110,7 @@ class DbReader:
         """
 
         try:
-            self.connect(section)
+            self.connect()
             with self.conn.cursor(cursor_factory=DictCursor) as curr:
                 curr.execute(query)
                 # get column names
@@ -115,13 +120,14 @@ class DbReader:
             self.conn.close()
         except psycopg2.DatabaseError as e:
             print(e)
+            self.conn.close()
         else:
             return rows
 
     @timethis
-    def fetchdf(self, query: str, section: str = "dev"):
+    def fetchdf(self, query: str):
         """Returns a pandas dataframe of the db query"""
-        return pd.DataFrame(self.fetch(query, section), columns=self.col_names)
+        return pd.DataFrame(self.fetch(query), columns=self.col_names)
 
     def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator:
         """Convenience function to transform pandas dataframe to
@@ -134,7 +140,6 @@ class DbReader:
         data: Iterator[Dict[str, Any]],
         table_name: str,
         columns: List[str],
-        section: str = "dev",
     ) -> None:
         """Pushes data given as an Iterator to PostGresDB
 
@@ -149,7 +154,7 @@ class DbReader:
         :type section: str, optional
         """
         try:
-            self.connect(section)
+            self.connect()
             with self.conn.cursor() as curr:
                 # get the column names
                 col_names = ",".join(columns)
@@ -164,15 +169,12 @@ class DbReader:
             self.conn.close()
         except psycopg2.DatabaseError as e:
             print(e)
-        else:
-            return
 
     @timethis
     def pushdf(
         self,
         datadf: pd.DataFrame,
         table_name: str,
-        section: str = "dev",
     ) -> None:
         """Pushes pandas dataframe to database
 
@@ -191,7 +193,7 @@ class DbReader:
         data = self.iterator_from_df(datadf)
 
         # push the data to table given by table_name
-        self.push(data, table_name=table_name, columns=cols, section=section)
+        self.push(data, table_name=table_name, columns=cols)
 
     def copy_from(
         self,
@@ -208,14 +210,14 @@ class DbReader:
         query = f"drop table {table_name};"
         self.execute(query, conn)
 
-    def delete(self, table_name, section="dev"):
+    def delete(self, table_name):
         """deletes all rows given by table_name from dev deb
         table schema is retained
         """
         query = f"delete from {table_name};"
-        self.execute(query, section)
+        self.execute(query)
 
-    def execute(self, query: Union[str, List[str]], section: str = "dev"):
+    def execute(self, query: Union[str, List[str]]):
         """executes a sql query statement
 
         Parameters
@@ -226,7 +228,7 @@ class DbReader:
             supposed one of dev or practice
         """
         try:
-            self.connect(section)
+            self.connect()
             with self.conn.cursor() as curr:
                 if isinstance(query, str):
                     curr.execute(query)
