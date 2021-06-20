@@ -2,7 +2,7 @@
 Author: Rajan Subramanian
 """
 
-# from __future__ import annotations
+from __future__ import annotations
 from typing import Any
 
 
@@ -37,7 +37,7 @@ class SinglyLinkedList:
             next reference of the Node
         """
 
-        def __init__(self, data: Any, reference: "Node" = None):
+        def __init__(self, data: Any, reference: Node = None):
             self.element = data
             self.nref = reference
 
@@ -274,79 +274,3 @@ class SinglyLinkedList:
             print("item not found in index")
         else:
             n.nref = n.nref.nref
-
-
-from abc import ABCMeta
-
-
-class DoublyLinkedBase(metaclass=ABCMeta):
-    """Abstract Base class for a doubly linked list
-
-    Attributes:
-    start_node:  (Node) represents head of the dlinked list
-                        default set to None since its empty at time of creation
-    end_node:    (Node) represents tail of the linked list
-                        default set to None since its empty at time of creation"""
-
-    class _Node:
-        """
-        Nested Node Class.
-            Create a node to store value and 2 references for DoublyLinkedList
-            Takes O(1) time
-
-            params:
-            element: represents element of the node
-            pref:    previous reference of the node
-            nref:    next reference of the node
-
-        """
-
-        def __init__(self, data, prev_ref=None, next_ref=None):
-            self._element = data
-            self._nref = next_ref
-            self._pref = prev_ref
-
-    def __init__(self):
-        self._start_node = self._Node(None)
-        self._end_node = self._Node(None)
-        self._start_node._nref = self._end_node  # creating circular reference
-        self._end_node._pref = self._start_node
-        self._size = 0
-
-    def __len__(self):
-        return self._size
-
-    def is_empty(self):
-        """Returns True if dlinklist is empty"""
-        return self._size == 0
-
-    def _insert_between(self, data, node1, node2):
-        """Adds data between two nodes"""
-        new_node = self._Node(data, node1, node2)
-        node1._nref = new_node
-        node2._pref = new_node
-        self._size += 1
-        return new_node
-
-    def _delete_node(self, node):
-        """delete node from list and return the element"""
-        before = node._pref
-        after = node._nref
-        before._nref = after
-        after._pref = before
-        self._size -= 1
-        element = node._element
-        node._nref = node._pref = node._element = None  # deprecate Node
-        return element
-
-    def _traverse(self):
-        """Traverses a Linked List
-        Takes O(n) time
-        """
-        if self._start_node is None:
-            print("list has no elements")
-        else:
-            n = self._start_node
-            while n is not None:
-                print(n._element, " ")
-                n = n._nref
