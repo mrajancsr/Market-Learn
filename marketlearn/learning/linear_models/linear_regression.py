@@ -113,7 +113,9 @@ class LinearRegression(LinearBase):
         self.tss = (y - ybar) @ (y - ybar)
         self.ess = self.tss - self.rss
         self.r2 = self.ess / self.tss
-        self.bic = n_samples * np.log(self.rss / n_samples) + k * np.log(n_samples)
+        self.bic = n_samples * np.log(self.rss / n_samples) + k * np.log(
+            n_samples
+        )
         self.run = True
 
         return self
@@ -159,8 +161,9 @@ class LinearRegressionMLE(LinearBase):
     Notes:
     Class uses multiple estimation methods to estimate the oridiinary
     lease squares problem min ||Ax - b||, where x = px1, A=nxp, b = nx1
-    - A implementation of MLE based on BFGS algorithm is given.  Specifically, we are
-        maximizing log(L(theta)):= L = -n/2 log(2pi * residual_std_error**2) - 0.5 ||Ax-b||
+    - A implementation of MLE based on BFGS algorithm is given.  We are
+        maximizing log(L(theta)):= L = -n/2 log(2pi *
+        residual_std_error**2) - 0.5 ||Ax-b||
         This is same as minimizing 0.5||Ax-b||, the cost function J.
         The jacobian for regression is given by A'(Ax - b) -> (px1) vector
     - A implementation of MLE based on Newton-CG is provided.  The Hessian is:

@@ -9,8 +9,9 @@ from configparser import ConfigParser
 from marketlearn.toolz import timethis
 from psycopg2.extras import execute_values, DictCursor
 from typing import Any, Dict, Iterator, List, Tuple, Union
+import os
 import pandas as pd
-import psycopg2, os
+import psycopg2
 
 
 class DbReader:
