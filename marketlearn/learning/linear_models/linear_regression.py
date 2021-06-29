@@ -47,15 +47,25 @@ class LinearRegression(LinearBase):
         self.run = False
 
     def _linear_solve(
-        self, A: np.ndarray, b: np.ndarray, method: str = "ols-qr"
+        self, A: np.ndarray, b: np.ndarray, method: str = "ols-cholesky"
     ) -> np.ndarray:
         """numerically solves Ax = b where x is the parameters to be determined
         based on ||Ax - b||
-        Args:
-        A:
-            coefficient matrix, (n_samples, n_features)
-        b:
-            target values (n_samples, 1)
+
+        Parameters
+        ----------
+        A : np.ndarray, shape=(n_samples, p_features)
+            Coefficient Matrix
+        b : np.ndarray, shape=(n_samples)
+            Response variable
+        method : str, optional, default='ols-cholesky'
+            fitting method, supports one of
+            'normal, ols-qr, ols-cholesky'
+
+        Returns
+        -------
+        np.ndarray
+            [description]
         """
         if method == "normal":
             # based on (A'A)^-1 A'b = x
@@ -73,30 +83,26 @@ class LinearRegression(LinearBase):
     def fit(
         self, X: np.ndarray, y: np.ndarray, method: str = "ols"
     ) -> LinearRegression:
-        """fits training data via ordinary least Squares (ols)
-        Args:
-        X:
-            coefficient matrix, (n_samples, p_features)
-            n_samples is number of instances i.e rows
-            p_features is number of features i.e columns
-        y:
-            shape = (n_samples)
-            Target values
-        covar:
-            covariance matrix of fitted parameters i.e theta hat
-            set to True if desired
+        """Fits data via ordinary least squares
 
-        method:
-            the fitting procedure default to cholesky decomposition
-            Also supports 'ols-qr' for QR decomposition &
-            'ols-naive'
+        Parameters
+        ----------
+        X : np.ndarray
+            design matrix
+        y : np.ndarray
+            response variable
+        method : str, optional
+            [description], by default "ols"
 
-        Returns:
-        object
+        Returns
+        -------
+        LinearRegression
+            [description]
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         X = self.make_polynomial(X)
-        self.theta = self._linear_solve(A=X, b=y)
+        self.theta = self._linear_solve(A=X, b=y, method=method)
+
         # Make the predictions using estimated coefficients
         self.predictions = self.predict(X)
         self.residuals = y - self.predictions
