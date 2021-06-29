@@ -19,7 +19,7 @@ class GeneralTree(tb._GeneralTreeBase):
             self._element = element
             self._parent = parent
             self._children = children
-            self._total_children = len(children) if children is not None else 0
+            self._total_children = len(children) if children else 0
 
         def __len__(self):
             """returns total numbner of children in the node
@@ -144,7 +144,7 @@ class GeneralTree(tb._GeneralTreeBase):
         if node._children:
             yield from iter(node._children)
 
-    def _add_root(self, data: Any):
+    def _add_root(self, data: Any) -> Position:
         """place data at root of empty tree and return new position
         raise ValueError if tree nonempty
         takes O(1) time
