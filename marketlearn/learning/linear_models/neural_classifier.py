@@ -114,13 +114,16 @@ class Perceptron(NeuralBase):
 class Adaline(NeuralBase):
     """Implements the Adaptive Linear Neuron by Bernard Widrow
     via Batch Gradient Descent
+
+    Notes:
+        - The cost function J(w) = 1/2 ||(yi - yhat)||
     """
 
     def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
         """Default Constructor used to initialize the Adaline model"""
         self.eta = eta
         self.niter = niter
-        self.errors = None
+        self.cost = []
         self.bias = bias
         self.thetas = None
         self.degree = 1
@@ -142,15 +145,17 @@ class Adaline(NeuralBase):
         Perception
             object with fitted parameters
         """
+        # add bias + weights for each neuron
+        self.thetas = np.zeros(shape=1 + X.shape[1])
+
         # Add bias unit to design matrix
         X = self.make_polynomial(X)
 
-        # Generate small random weights
-        self.thetas = np.random.rand(X.shape[1])
-        self.errors = np.zeros(self.niter)
-
-        for index in range(self.niter):
-            pass
+        for _ in range(self.niter):
+            error = y - self.activation(self.net_input(X, self.thetas))
+            self.thetas += self.eta * X.T @ error
+            self.cost.append((error.T @ error) / 2.0)
+        return self
 
     def activation(self, X: np.ndarray) -> np.ndarray:
         """Computes the linear activation function
@@ -168,7 +173,9 @@ class Adaline(NeuralBase):
         """
         return X
 
-    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None):
+    def predict(
+        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
+    ) -> float:
         """Computes the class label after activation
 
         Parameters
@@ -178,4 +185,15 @@ class Adaline(NeuralBase):
         thetas : Union[np.ndarray, None], optional
             [description], by default None
         """
-        pass
+        if thetas is None and self.thetas is None:
+            raise ValueError(
+                "Empty weights provided, either call fit() first or provide \
+                    weights"
+            )
+        elif thetas is None:
+            return (
+                1
+                if self.activation(self.net_input(X, self.thetas)) >= 0.0
+                else -1
+            )
+        return 1 if self.activation(self.net_input(X, thetas)) >= 0.0 else -1
