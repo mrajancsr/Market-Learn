@@ -34,11 +34,11 @@ class LinearBase(metaclass=ABCMeta):
         return dict(zip(["X", "y", "coef"], [features, output, coef]))
 
     def make_polynomial(self, X: np.ndarray) -> np.ndarray:
-        degree, bias = self.degree, self.fit_intercept
+        degree, bias = self.degree, self.bias
         pf = PolynomialFeatures(degree=degree, include_bias=bias)
         return pf.fit_transform(X)
 
-    def reg_plot(self, X, y):
+    def reg_plot(self, X: np.ndarray, y: np.ndarray):
         plt.figure(figsize=(10, 6))
         plt.scatter(X, y)
         # sort by design matrix -- needed for matplotlib
