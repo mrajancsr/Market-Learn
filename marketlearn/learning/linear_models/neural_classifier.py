@@ -116,7 +116,7 @@ class Adaline(NeuralBase):
     via Batch Gradient Descent
 
     Notes:
-        - The cost function J(w) = 1/2 ||(yi - yhat)||
+        - The cost function is given by J(w) = 1/2 ||(yi - yhat)||
     """
 
     def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
