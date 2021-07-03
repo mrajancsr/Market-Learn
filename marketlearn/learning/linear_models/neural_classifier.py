@@ -113,7 +113,7 @@ class Perceptron(NeuralBase):
 
 class Adaline(NeuralBase):
     """Implements the Adaptive Linear Neuron by Bernard Widrow
-    c.f Python Machine Learning by Sebastian Rashka
+    via Batch Gradient Descent
     """
 
     def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
@@ -127,7 +127,7 @@ class Adaline(NeuralBase):
 
     @timethis
     def fit(self, X: np.ndarray, y: np.ndarray) -> Adaline:
-        """fits training data
+        """fits training data via batch gradient descent
 
         Parameters
         ----------
@@ -141,5 +141,41 @@ class Adaline(NeuralBase):
         -------
         Perception
             object with fitted parameters
+        """
+        # Add bias unit to design matrix
+        X = self.make_polynomial(X)
+
+        # Generate small random weights
+        self.thetas = np.random.rand(X.shape[1])
+        self.errors = np.zeros(self.niter)
+
+        for index in range(self.niter):
+            pass
+
+    def activation(self, X: np.ndarray) -> np.ndarray:
+        """Computes the linear activation function
+        given by f(w'x) = w'x
+
+        Parameters
+        ----------
+        X : np.ndarray
+            output from the netinput function
+
+        Returns
+        -------
+        np.ndarray
+            activation function
+        """
+        return X
+
+    def predict(self, X: np.ndarray, thetas: Union[np.ndarray, None] = None):
+        """Computes the class label after activation
+
+        Parameters
+        ----------
+        X : np.ndarray
+            [description]
+        thetas : Union[np.ndarray, None], optional
+            [description], by default None
         """
         pass
