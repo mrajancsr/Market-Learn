@@ -142,3 +142,4 @@ class Adaline(NeuralBase):
         Perception
             object with fitted parameters
         """
+        pass

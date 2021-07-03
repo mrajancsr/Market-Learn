@@ -94,7 +94,7 @@ class Harry:
         Yields
         -------
         Iterator[float]
-            iteration of expected volatility of each asset scaled by trading days
+            iteration of expected vol of each asset scaled by trading days
         """
         yield from sqrt(diag(self.covariance_matrix))
 
@@ -191,6 +191,8 @@ class Harry:
 
         plt.scatter(xval, yval, marker="o", s=10, cmap="winter", alpha=0.35)
 
+        # Uncomment the area below for plotly graph objects
+
         """
         fig = go.Figure()
         fig.add_trace(
@@ -250,7 +252,8 @@ class Harry:
             consts = [
                 {
                     "type": "eq",
-                    "fun": lambda w: self.portfolio_expected_return(w) - target,
+                    "fun": lambda w: self.portfolio_expected_return(w)
+                    - target,
                 },
                 {"type": "eq", "fun": lambda w: sum(w) - 1},
             ]
@@ -368,7 +371,9 @@ class Harry:
         target_returns = np.linspace(0, 1, 1000)
         # todo: this can be made faster
         weights = map(
-            lambda x: self.optimize_risk(constraints=True, target=x, bounds=bounds),
+            lambda x: self.optimize_risk(
+                constraints=True, target=x, bounds=bounds
+            ),
             target_returns,
         )
         weights = np.vstack(tuple(weights))
