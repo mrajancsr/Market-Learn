@@ -14,7 +14,7 @@ class LinearRegression(LinearBase):
     """
     Implements the classic Linear Regression via ols
     Args:
-    fit_intercept: indicates if intercept is added or not
+    bias: indicates if intercept is added or not
 
     Attributes:
     theta:          Coefficient Weights after fitting
@@ -41,8 +41,8 @@ class LinearRegression(LinearBase):
         solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
     """
 
-    def __init__(self, fit_intercept: bool = True, degree: int = 1):
-        self.fit_intercept = fit_intercept
+    def __init__(self, bias: bool = True, degree: int = 1):
+        self.bias = bias
         self.degree = degree
         self.run = False
 
@@ -109,7 +109,7 @@ class LinearRegression(LinearBase):
         self.rss = self.residuals @ self.residuals
 
         # Total parameters fitted
-        k = p_features + self.fit_intercept
+        k = p_features + self.bias
         self.k_params = k
 
         # Remaining degrees of freedom
@@ -135,7 +135,7 @@ class LinearRegression(LinearBase):
             shape = (n_samples, p_features)
             n_samples is number of instances
             p_features is number of features
-            - if fit_intercept is true, a ones column is needed
+            - if bias is true, a ones column is needed
         thetas:
             if initialized to None:
                 uses estimated theta from fitting process
@@ -158,7 +158,7 @@ class LinearRegressionMLE(LinearBase):
     """
     Implements linear regression via Maximum Likelihood Estimate
     Args:
-    fit_intercept: indicates if intercept is added or not
+    bias: indicates if intercept is added or not
 
     Attributes:
     theta:           Coefficient Weights after fitting
@@ -179,8 +179,8 @@ class LinearRegressionMLE(LinearBase):
 
     """
 
-    def __init__(self, fit_intercept: bool = True, degree: int = 1):
-        self.fit_intercept = fit_intercept
+    def __init__(self, bias: bool = True, degree: int = 1):
+        self.bias = bias
         self.degree = degree
         self.run = False
 
@@ -279,7 +279,7 @@ class LinearRegressionMLE(LinearBase):
             shape = (n_samples, p_features)
             n_samples is number of instances
             p_features is number of features
-            - if fit_intercept is true, a ones column is needed
+            - if bias is true, a ones column is needed
         thetas:
             if initialized to None:
                 uses estimated theta from fitting process
@@ -296,12 +296,6 @@ class LinearRegressionMLE(LinearBase):
             else:
                 return X @ self.theta["x"]
         return X @ thetas
-
-    def get_residual_diagnostics(self) -> "LinearRegressionMLE":
-        """returns the residual diagnostics from fitting process"""
-
-        self.rss = (self.resid ** 2).sum()
-        self.s2 = self.rss / (n - p)
 
 
 class LinearRegressionGD(LinearBase):
@@ -323,28 +317,30 @@ class LinearRegressionGD(LinearBase):
         eta: float = 0.001,
         n_iter: int = 20,
         random_state: int = 1,
-        fit_intercept: bool = True,
+        bias: bool = True,
         degree: int = 1,
     ):
         self.eta = eta
         self.n_iter = n_iter
         self.random_state = random_state
-        self.fit_intercept = fit_intercept
+        self.bias = bias
         self.degree = degree
         self.run = False
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> LinearRegressionGD:
-        """fits training data
-        Args:
-        X: shape = {n_samples, p_features}
-                    n_samples is number of instances i.e rows
-                    p_features is number of features (the dimension of dataset)
+        """Fits model to training data via Gradient Descent
 
-        y: shape = {n_samples,}
-                    Target values
+        Parameters
+        ----------
+        X : np.ndarray
+            [description]
+        y : np.ndarray
+            [description]
 
-        Returns:
-        object
+        Returns
+        -------
+        LinearRegressionGD
+            [description]
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         self.theta = np.zeros(shape=1 + p_features)
