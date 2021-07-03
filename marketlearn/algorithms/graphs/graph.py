@@ -2,77 +2,47 @@
 Author: Raj Subramanian
 Date: July 20, 2020
 """
-from graphs.base import GraphBase
-from linked_lists.linked_collections import PositionalList
+from __future__ import annotations
+from marketlearn.algorithms.graphs.base import GraphBase
+from typing import Any
 
-class GraphEdgeList(GraphBase):
-    """implementation of Graph via EdgeList
-    Args: 
-    None
-    Returns: 
-    Graph in a list format
-    """
-    class _Vertex(GraphBase.VertexBase): 
-        def __init__(self, x, pos=None):
-            self._value = x 
-            self._pos = pos 
-    
-    class _Edge(GraphBase.EdgeBase): 
-        def __init__(self, u, v, x=None, pos=None):
-            self._start = u 
-            self._end = v 
-            self._value = x 
-            self._pos = pos
+
+class GraphAdjacencyMap(GraphBase):
+    """Implementation of Graph via adjacency map"""
+
+    class _Vertex(GraphBase.VertexBase):
+        __slots__ = "_value"
+
+        def __init__(self, value):
+            self._value = value
+
+        def __hash__(self):
+            return hash(id(self))
+
+    class _Edge(GraphBase.EdgeBase):
+        __slots__ = "_start", "_end", "_value"
+
+        def __init__(self, u: _Vertex, v: _Vertex, value: Any = None):
+            self._start = u
+            self._end = v
+            self._value = value
 
         def __hash__(self):
             return hash((self._start, self._end))
 
         def __eq__(self, other):
-            if not type(other) is type(self): raise("object must be of type Edge")
+            if not type(other) is type(self):
+                raise ("object must be of type Edge")
             return self.endpoint() == other.endpoint()
 
     # beginning of graph definition
     def __init__(self, directed=False):
-        self._V = PositionalList()
-        self._E = PositionalList()
-        self._in = PositionalList() if directed else self._V
-    
-    def is_directed(self):
-        return self._in is not self._V
-    
-    def count_vertices(self):
-        return len(self._V)
-    
-    def add_vertex(self, x):
-        u = self._Vertex(x)
-        p = self._V.add_first(u)
-        u._pos = p 
-        return u
-    
-    def add_edge(self, u, v, x):
-        e = self._Edge(u, v, x)
-        p = self._E.add_first(e)
-        e._pos = p
-        return e
-    
-    def get_vertices(self):
-        """returns the vertices of the graph"""
-        return set(self._V)
+        """Create an empty undirected graph by default"""
+        self._out = {}
+        self._in if directed else self._out
 
-    def get_edges(self):
-        """return iteration of all unique edges in a graph"""
-        return set(self._E)
+    def is_directed(self) -> bool:
+        return self._in is not self._out
 
 
-
-
-
-
-
-g = GraphEdgeList()
-u = g.add_vertex("raju")
-v = g.add_vertex("prema")
-print(u), print(v)
-e = g.add_edge(u, v, 22)
-e2 = g.add_edge(u, v, 22)
-print(g.get_vertices())
+g = GraphAdjacencyMap()
