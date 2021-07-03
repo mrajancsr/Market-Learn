@@ -109,3 +109,36 @@ class Perceptron(NeuralBase):
         plt.xlabel("Iterations")
         plt.ylabel("# of misclassifications")
         plt.grid()
+
+
+class Adaline(NeuralBase):
+    """Implements the Adaptive Linear Neuron by Bernard Widrow
+    c.f Python Machine Learning by Sebastian Rashka
+    """
+
+    def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
+        """Default Constructor used to initialize the Adaline model"""
+        self.eta = eta
+        self.niter = niter
+        self.errors = None
+        self.bias = bias
+        self.thetas = None
+        self.degree = 1
+
+    @timethis
+    def fit(self, X: np.ndarray, y: np.ndarray) -> Adaline:
+        """fits training data
+
+        Parameters
+        ----------
+        X : np.ndarray, shape=(n_samples, p_features)
+            n_samples is number of instances i.e rows
+            p_features is number of features (dimension of data)
+        y : np.ndarray
+            response variable
+
+        Returns
+        -------
+        Perception
+            object with fitted parameters
+        """
