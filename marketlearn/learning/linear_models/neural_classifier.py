@@ -16,7 +16,7 @@ class Perceptron(NeuralBase):
     def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
         self.eta = eta
         self.niter = niter
-        self.error = None
+        self.errors = None
         self.bias = bias
         self.thetas = None
         self.degree = 1
@@ -38,13 +38,12 @@ class Perceptron(NeuralBase):
         Perception
             object with fitted parameters
         """
+        # Add bias unit to design matrix
+        X = self.make_polynomial(X)
 
         # Generate small random weights
         self.thetas = np.random.rand(X.shape[1])
-        self.error = np.zeros(self.niter)
-
-        # Add bias unit to design matrix
-        X = self.make_polynomial(X)
+        self.errors = np.zeros(self.niter)
 
         for index in range(self.niter):
             # Count total misclassifications in each iteration
@@ -62,7 +61,7 @@ class Perceptron(NeuralBase):
                     count += 1
 
             # store count of errors in each iteration
-            self.error[index] = count
+            self.errors[index] = count
         return self
 
     def predict(
@@ -100,11 +99,13 @@ class Perceptron(NeuralBase):
         AttributeError
             if fit() has not been called
         """
-        if not self.error:
+        if self.errors is None:
             raise AttributeError(
                 "Must call fit() first before plotting \
                     misclassifications"
             )
-            plt.plot(range(1, self.n_iter + 1), self.errors, marker="o")
-            plt.xlabel("epoch")
-            plt.ylabel("# of misclassifications")
+        # plot the errors
+        plt.plot(range(1, self.niter + 1), self.errors, marker="o")
+        plt.xlabel("Iterations")
+        plt.ylabel("# of misclassifications")
+        plt.grid()
