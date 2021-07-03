@@ -6,6 +6,7 @@ from __future__ import annotations
 from marketlearn.learning.linear_models.base import NeuralBase
 from marketlearn.toolz import timethis
 from typing import Union
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -89,3 +90,21 @@ class Perceptron(NeuralBase):
         elif thetas is None:
             return 1 if self.net_input(X, self.thetas) >= 0 else -1
         return 1 if self.net_input(X, thetas) >= 0 else -1
+
+    def plot_misclassifications(self) -> None:
+        """Plots the misclassifications given number of iterations
+        Requires call to fit() first, otherwise raise appropriate error
+
+        Raises
+        ------
+        AttributeError
+            if fit() has not been called
+        """
+        if not self.error:
+            raise AttributeError(
+                "Must call fit() first before plotting \
+                    misclassifications"
+            )
+            plt.plot(range(1, self.n_iter + 1), self.errors, marker="o")
+            plt.xlabel("epoch")
+            plt.ylabel("# of misclassifications")
