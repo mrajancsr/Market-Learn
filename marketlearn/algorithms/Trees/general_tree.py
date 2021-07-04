@@ -13,9 +13,9 @@ class GeneralTree(tb._GeneralTreeBase):
 
     class _Node:
 
-        __slots__ = "_element", "_parent", "_left", "_right"
+        __slots__ = "_element", "_parent", "_children", "_total_children"
 
-        def __init__(self, element: Any, parent: None, children: list = None):
+        def __init__(self, element: Any, parent=None, children=None):
             self._element = element
             self._parent = parent
             self._children = children
@@ -158,9 +158,13 @@ class GeneralTree(tb._GeneralTreeBase):
     def _add_children(self, p: Position, children: List[Any]):
         """place children data into p's children"""
         node = self._validate(p)
-        for c in children:
-            child = self._Node(c, parent=node)
-            yield self._make_position(child)
+        for idx, child_data in enumerate(children):
+            node._children[idx] = self._Node(child_data, parent=node)
+        return [
+            self._make_position(
+                node._children[idx] for idx in range(len(children))
+            )
+        ]
 
-
-gt = GeneralTree()
+    def positions(self):
+        pass
