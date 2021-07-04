@@ -39,7 +39,7 @@ class GeneralTree(tb._GeneralTreeBase):
             self._node = node
 
         def element(self):
-            """return element stored at position """
+            """return element stored at position"""
             return self._node._element
 
         def __eq__(self, other):

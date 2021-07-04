@@ -2,12 +2,43 @@
 
 from __future__ import annotations
 from typing import Any
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
+
+
+class Position(metaclass=ABCMeta):
+    """Abstract Base Class representing position of an element"""
+
+    @abstractmethod
+    def element(self):
+        """returns element stored in this position"""
+        pass
+
+    @abstractmethod
+    def __eq__(self, other):
+        """returns True if other position represents same location"""
+        pass
+
+    def __ne__(self, other):
+        """returns True if other does not represent the same location
+
+        Parameters
+        ----------
+        other : Position
+            position of single element
+
+        Returns
+        -------
+        bool
+            True if other does not represent same location
+        """
+        return not (self == other)
 
 
 class _DoublyLinkedBase(metaclass=ABCMeta):
     class _Node:
-        def __init__(self, data, previous_ref: _Node = None, next_ref: _Node = None):
+        def __init__(
+            self, data, previous_ref: _Node = None, next_ref: _Node = None
+        ):
             self._element = data
             self._pref = previous_ref
             self._nref = next_ref

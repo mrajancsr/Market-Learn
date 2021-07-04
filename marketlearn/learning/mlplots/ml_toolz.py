@@ -4,7 +4,13 @@ to help with machine learning plots
 
 from matplotlib.colors import ListedColormap
 from pydotplus import graph_from_dot_data
+from scipy import interp
 from sklearn.tree import export_graphviz
+from sklearn.model_selection import validation_curve
+from sklearn.model_selection import learning_curve
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import LabelBinarizer
 from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
@@ -105,9 +111,6 @@ def plot_decision_regions(X, y, classifier, test_idx=None, resolution=0.02):
 def plot_learning_curve(
     estimator=None, X=None, y=None, cv=5, train_sizes=None, scoring=None
 ):
-    from sklearn.model_selection import learning_curve
-    import matplotlib.pyplot as plt
-
     train_sizes, train_scores, test_scores = learning_curve(
         estimator=estimator,
         X=X,
@@ -172,8 +175,6 @@ def plot_validation_curve(
     cv=5,
     scoring=None,
 ):
-    from sklearn.model_selection import validation_curve
-    import matplotlib.pyplot as plt
 
     train_scores, test_scores = validation_curve(
         estimator=estimator,
@@ -233,20 +234,11 @@ def plot_validation_curve(
 
 
 def class_report(y_true, y_pred, y_score=None, average="micro"):
-    import pandas as pd
-    import numpy as np
-    from scipy import interp
-    from sklearn.metrics import precision_recall_fscore_support
-    from sklearn.metrics import roc_curve, auc
-    from sklearn.preprocessing import LabelBinarizer
-
     if y_true.shape != y_pred.shape:
-        print(
-            "Error! y_true %s is not the same shape as y_pred %s"
+        raise ValueError(
+            f"Error! y_true shape %s is not the same shape as y_pred %s"
             % (y_true.shape, y_pred.shape)
         )
-        return
-
     lb = LabelBinarizer()
 
     if len(y_true.shape) == 1:
