@@ -22,7 +22,7 @@ class GraphBase(metaclass=ABCMeta):
         """Abstration represent Edge of a graph"""
 
         def __repr__(self):
-            return """Edge(({!r}, {!r}): {:.2f}""".format(
+            return """Edge(({!r}, {!r}): {!r}""".format(
                 self._start, self._end, self._value
             )
 
@@ -76,12 +76,12 @@ class GraphBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add_vertex(self, u, val):
+    def insert_vertex(self, u, val):
         """insert and return a new vertex with value val"""
         pass
 
     @abstractmethod
-    def add_edge(self, u, v, val):
+    def insert_edge(self, u, v, val):
         """insert and return a new edge from vertex u to v with value val
         (identifies the edge)"""
         pass

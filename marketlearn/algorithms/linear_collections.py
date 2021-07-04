@@ -185,7 +185,7 @@ class CircularQueue:
 
     def __init__(self):
         """Default Constructor, needs no parameters"""
-        self._data = [None] * self._DEFAULT_CAPACITY
+        self._data = [None] * CircularQueue._DEFAULT_CAPACITY
         self._size = 0
         self._front = 0
 

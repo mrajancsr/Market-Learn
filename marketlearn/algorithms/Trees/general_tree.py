@@ -15,7 +15,7 @@ class GeneralTree(tb._GeneralTreeBase):
 
         __slots__ = "_element", "_parent", "_left", "_right"
 
-        def __init__(self, element, parent=None, children=None):
+        def __init__(self, element: Any, parent: None, children: list = None):
             self._element = element
             self._parent = parent
             self._children = children
@@ -141,8 +141,8 @@ class GeneralTree(tb._GeneralTreeBase):
             [description]
         """
         node = self._validate(p)
-        if node._children:
-            yield from iter(node._children)
+        for child in node._children:
+            yield self._make_position(child)
 
     def _add_root(self, data: Any) -> Position:
         """place data at root of empty tree and return new position
