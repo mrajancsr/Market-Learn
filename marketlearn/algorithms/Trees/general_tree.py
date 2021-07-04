@@ -4,7 +4,6 @@ Author: Rajan Subramanian
 Date: -
 """
 from __future__ import annotations
-from copy import deepcopy
 from marketlearn.algorithms.trees import tree_base as tb
 from typing import Any, Iterator, List, Union
 
@@ -172,9 +171,31 @@ class GeneralTree(tb._GeneralTreeBase):
         self._root = self._Node(data)
         return self._make_position(self._root)
 
-    def _add_children(self, p: Position, children: List[Any]):
-        """place children data into p's children"""
+    def _add_children(
+        self, p: Position, children: List[Any]
+    ) -> List[Position]:
+        """Add children data into p's position
+
+        Parameters
+        ----------
+        p : Position
+            [description]
+        children : List[Any]
+            [description]
+
+        Returns
+        -------
+        List[Position]
+            list of positions representing p's children
+
+        Raises
+        ------
+        ValueError
+            if children data already exists
+        """
         node = self._validate(p)
+        if node._children is not None:
+            raise ValueError("children already exist")
         node_children = [None] * len(children)
         for idx, child in enumerate(children):
             child_node = self._Node(child, parent=node)
