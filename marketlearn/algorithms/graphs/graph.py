@@ -1,12 +1,12 @@
-"""Implementation of Graphs using adjacency list, edge list, adjacency map and adjacency matrix
+"""Implementation of Graphs using adjacency map adjacency matrix
 Author: Raj Subramanian
-Date: July 20, 2020
 """
 from __future__ import annotations
 from itertools import permutations
 from marketlearn.algorithms.graphs.base import GraphBase
 from scipy import sparse
 from typing import Any, Iterator
+import numpy as np
 
 
 class GraphAdjacencyMap(GraphBase):
@@ -66,7 +66,7 @@ class GraphAdjacencyMap(GraphBase):
         """
         return self._out.keys()
 
-    def count_edges(self):
+    def count_edges(self) -> int:
         """
         Returns count of total edges in a graph
         """
@@ -74,22 +74,25 @@ class GraphAdjacencyMap(GraphBase):
 
         return total_edges if self.is_directed() else total_edges // 2
 
-    def get_edge(self, u, v):
+    def get_edge(self, u, v) -> _Edge:
         """
         Returns the edge between u and v, None if its non existent
         """
         return self._out[u].get(v)
 
-    def get_edges(self):
-        """
-        Returns iteration of all unique edges in a graph
+    def get_edges(self) -> Iterator[_Edge]:
+        """Returns Iteration of all unique edges in a graph
+
+        Yields
+        -------
+        Iterator[_Edge]
+            iterator of all unique edges in a graph
         """
         seen = set()
 
-        for inner_map in self._out.values():
-            seen.update(inner_map.values())
-
-        return seen
+        for adjacent_vertex in self._out.values():
+            seen.update(adjacent_vertex.values())
+        yield from seen
 
     def degree(self, u, outgoing=True):
         """
@@ -100,10 +103,22 @@ class GraphAdjacencyMap(GraphBase):
 
         return len(temp[u])
 
-    def iter_incident_edges(self, u, outgoing=True):
-        """
-        Returns iteration of all outgoing edges incident to vertex u in this graph
+    def incident_edges(self, u: _Vertex, outgoing=True):
+        """Returns iteration of all outgoing edges incident to vertex u
+        in this graph
         for directed graph, optional paramter will receive incoming edges
+
+        Parameters
+        ----------
+        u : _Vertex
+            [description]
+        outgoing : bool, optional, default=True
+            [description]
+
+        Yields
+        -------
+        [type]
+            [description]
         """
         temp = self._out if outgoing else self._in
 
@@ -112,7 +127,7 @@ class GraphAdjacencyMap(GraphBase):
 
     def iter_edges(self, nodelist: list, outgoing=True):
         """
-        Similar to iter_incident_edges, except
+        Similar to incident_edges, except
         takes a nodelist and returns all outgoing edges
         incident to vertices in nodelist
         """
@@ -122,12 +137,21 @@ class GraphAdjacencyMap(GraphBase):
             for edge in temp[node].values():
                 yield edge.endpoint() + (edge,)
 
-    def insert_vertex(self, val=None):
-        """
-        Inserts and returns a new vertex with value val
+    def insert_vertex(self, value: Any = None) -> _Vertex:
+        """Inserts vertex with value into graph
+
+        Parameters
+        ----------
+        value : Any, optional
+            [description], by default None
+
+        Returns
+        -------
+        [type]
+            [description]
         """
         count = self.count_vertices()
-        u = self._Vertex(val)
+        u = self._Vertex(value)
         u._index = count if count != 0 else u._index
         self._out[u] = {}
 
@@ -136,12 +160,25 @@ class GraphAdjacencyMap(GraphBase):
 
         return u
 
-    def insert_edge(self, u, v, val=None):
-        """
-        Inserts and returns a new edge from u to v
+    def insert_edge(self, u: _Vertex, v: _Vertex, value: Any = None) -> _Edge:
+        """Inserts and returns a new edge from u to v
         with value val (identifies the edge)
+
+        Parameters
+        ----------
+        u : _Vertex
+            [description]
+        v : _Vertex
+            [description]
+        value : Any, optional
+            [description], by default None
+
+        Returns
+        -------
+        _Edge
+            [description]
         """
-        edge = self._Edge(u, v, val)
+        edge = self._Edge(u, v, value)
 
         self._out[u][v] = edge
         self._in[v][u] = edge

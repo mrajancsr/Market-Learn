@@ -52,7 +52,7 @@ class GraphBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_vertices(self):
+    def vertices(self):
         pass
 
     @abstractmethod
@@ -64,7 +64,7 @@ class GraphBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_edges(self):
+    def edges(self):
         pass
 
     @abstractmethod
