@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from marketlearn.algorithms.linked_collections import LinkedQueue
-from typing import Iterator, Union
+from typing import Any, Iterator, List, Union
 
 
 class Position(metaclass=ABCMeta):
@@ -30,6 +30,9 @@ class Position(metaclass=ABCMeta):
             True if other does not represent same location
         """
         return not (self == other)
+
+    def __repr__(self):
+        return "Position({!r})".format(self.element())
 
 
 class Tree(metaclass=ABCMeta):
@@ -422,6 +425,6 @@ class _GeneralTreeBase(Tree):
         pass
 
     @abstractmethod
-    def add_children(self, p: Position):
+    def _add_children(self, p: Position, children: List[Any]):
         """adds children to p's position"""
         pass

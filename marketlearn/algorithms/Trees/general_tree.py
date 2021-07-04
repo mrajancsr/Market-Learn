@@ -4,6 +4,7 @@ Author: Rajan Subramanian
 Date: -
 """
 from __future__ import annotations
+from copy import deepcopy
 from marketlearn.algorithms.trees import tree_base as tb
 from typing import Any, Iterator, List, Union
 
@@ -15,7 +16,7 @@ class GeneralTree(tb._GeneralTreeBase):
 
         __slots__ = "_element", "_parent", "_children", "_total_children"
 
-        def __init__(self, element: Any, parent=None, children=None):
+        def __init__(self, element: Any, parent=None, children=[]):
             self._element = element
             self._parent = parent
             self._children = children
@@ -30,6 +31,9 @@ class GeneralTree(tb._GeneralTreeBase):
                 count of number of children in this node
             """
             return self._total_children
+
+        def __repr__(self):
+            return "Node({!r})".format(self._element)
 
     class Position(tb.Position):
         """Abstraction representing location of single element"""
@@ -145,9 +149,22 @@ class GeneralTree(tb._GeneralTreeBase):
             yield self._make_position(child)
 
     def _add_root(self, data: Any) -> Position:
-        """place data at root of empty tree and return new position
-        raise ValueError if tree nonempty
-        takes O(1) time
+        """Adds root position to a tree
+
+        Parameters
+        ----------
+        data : Any
+            [description]
+
+        Returns
+        -------
+        Position
+            [description]
+
+        Raises
+        ------
+        ValueError
+            [description]
         """
         if self._root:
             raise ValueError("Root Exists")
@@ -158,13 +175,27 @@ class GeneralTree(tb._GeneralTreeBase):
     def _add_children(self, p: Position, children: List[Any]):
         """place children data into p's children"""
         node = self._validate(p)
-        for idx, child_data in enumerate(children):
-            node._children[idx] = self._Node(child_data, parent=node)
-        return [
-            self._make_position(
-                node._children[idx] for idx in range(len(children))
-            )
-        ]
+        node_children = [None] * len(children)
+        for idx, child in enumerate(children):
+            child_node = self._Node(child, parent=node)
+            node_children[idx] = child_node
+            self._size += 1
 
-    def positions(self):
-        pass
+        # assign children to this node
+        node._children = node_children
+        return [self._make_position(n) for n in node._children]
+
+    def positions(self, traversal: str = "preorder") -> Iterator[Position]:
+        """Generates iterations of tree's positions
+
+        Parameters
+        ----------
+        traversal : str, optional, default='inorder'
+            one of preorder, postorder, breadthfirst
+
+        Yields
+        -------
+        Iterator[Position]
+            [description]
+        """
+        return getattr(self, traversal)()
