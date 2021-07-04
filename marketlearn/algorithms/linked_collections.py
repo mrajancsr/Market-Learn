@@ -3,7 +3,8 @@ Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
 """
 from __future__ import annotations
-from marketlearn.algorithms.linked_lists import _DoublyLinkedBase
+from typing import Union
+from marketlearn.algorithms.linked_lists import linked_base as lb
 
 
 class LinkedStack:
@@ -66,7 +67,9 @@ class LinkedStack:
         Takes O(1) time
         """
         new_node = self.Node(data)  # create a node
-        new_node.nref = self.start_node  # new nodes next ref is old nodes start
+        new_node.nref = (
+            self.start_node
+        )  # new nodes next ref is old nodes start
         self.start_node = new_node  # new node is now the start_node
         self.size += 1
 
@@ -162,11 +165,15 @@ class LinkedQueue:
         if self.is_empty():
             raise ("Queue has no elements to delete")
         element = self.start_node.element
+
         # delete by assigning next reference of start node to start node
         self.start_node = self.start_node.nref
         self.size -= 1
-        if self.is_empty():  # special case for one element
-            self.end_node = None  # enforce tail node to None
+
+        # special case for one element
+        if self.is_empty():
+            # enforce tail node to None
+            self.end_node = None
         return element
 
     def traverse(self):
@@ -312,10 +319,10 @@ class LinkedDeque:
                 n = n.nref
 
 
-class PositionalList(_DoublyLinkedBase):
+class PositionalList(lb._DoublyLinkedBase):
     """Container of elements allowing positional access"""
 
-    class Position:
+    class Position(lb.Position):
         """Class represents position of single element"""
 
         def __init__(self, container, node):
@@ -332,7 +339,7 @@ class PositionalList(_DoublyLinkedBase):
             """
             return self._node._element
 
-        def __eq__(self, other: Position):
+        def __eq__(self, other):
             """Return true if other posotion represents same location
 
             Parameters
@@ -340,8 +347,9 @@ class PositionalList(_DoublyLinkedBase):
             other : Position
                 [description]
             """
+            return type(other) is type(self) and other._node is self._node
 
-        def __ne__(self, other: Position):
+        def __ne__(self, other):
             return not (self == other)
 
     def _validate(self, p: Position):
@@ -359,7 +367,7 @@ class PositionalList(_DoublyLinkedBase):
         if p._node._nref is None:
             raise ValueError("p is no longer valid")
 
-    def _make_position(self, node):
+    def _make_position(self, node) -> Union[None, Position]:
         """Return position instance for given node or None if sentinel"""
         if node is self._start_node or node is self._end_node:
             return None

@@ -250,7 +250,7 @@ class Tree(metaclass=ABCMeta):
             yield from self._subtree_preorder(self.root())
 
     def _subtree_preorder(self, p: Position) -> Iterator[Position]:
-        """generate a preorder iteration of positions in a subtree rooted at position p
+        """generate a preorder iteration of position in a subtree rooted at position p
 
         Parameters
         ----------
@@ -266,8 +266,19 @@ class Tree(metaclass=ABCMeta):
         for c in self.children(p):
             yield from self._subtree_preorder(c)
 
-    def _subtree_postorder(self, p):
-        """generate postorder iteration of positions in a subtree rooted at p"""
+    def _subtree_postorder(self, p: Position) -> Iterator[Position]:
+        """generate a postorder iteration of position in a subtree rooted as position p
+
+        Parameters
+        ----------
+        p : Position
+            iteration starts from this position
+
+        Yields
+        -------
+        Iterator[Position]
+            [description]
+        """
         for c in self.children(p):
             yield from self._subtree_postorder(c)
         yield p

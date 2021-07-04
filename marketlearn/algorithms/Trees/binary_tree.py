@@ -238,7 +238,9 @@ class BinaryTree(tb._BinaryTreeBase):
         node._parent = node
         return node._element
 
-    def _attach(self, p: Position, tree1: BinaryTree, tree2: BinaryTree) -> None:
+    def _attach(
+        self, p: Position, tree1: BinaryTree, tree2: BinaryTree
+    ) -> None:
         """Attach trees tree1 and tree2 as left and right subtrees fo external p
         takes O(1) time
 

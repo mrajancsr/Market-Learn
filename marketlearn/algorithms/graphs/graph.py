@@ -17,6 +17,7 @@ class GraphAdjacencyMap(GraphBase):
 
         def __init__(self, value: Any):
             self._value = value
+            self._index = 0
 
         def __hash__(self):
             return hash(id(self))
@@ -80,7 +81,7 @@ class GraphAdjacencyMap(GraphBase):
         """
         return self._out[u].get(v)
 
-    def get_edges(self) -> Iterator[_Edge]:
+    def edges(self) -> Iterator[_Edge]:
         """Returns Iteration of all unique edges in a graph
 
         Yields
@@ -152,7 +153,7 @@ class GraphAdjacencyMap(GraphBase):
         """
         count = self.count_vertices()
         u = self._Vertex(value)
-        u._index = count if count != 0 else u._index
+        u._index += count
         self._out[u] = {}
 
         if self.is_directed():
@@ -186,7 +187,7 @@ class GraphAdjacencyMap(GraphBase):
         return edge
 
     def get_adjacency_pairs(self):
-        for e in self.get_edges():
+        for e in self.edges():
             u, v = e.endpoint()
             yield (u._index, v._index)
 
