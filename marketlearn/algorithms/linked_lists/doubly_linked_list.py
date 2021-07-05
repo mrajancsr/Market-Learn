@@ -1,5 +1,5 @@
 """Implementation of a Doubly Linked List"""
-
+from __future__ import annotations
 from typing import Any
 
 
@@ -37,7 +37,7 @@ class DoublyLinkedList:
             previous reference of the node
         """
 
-        def __init__(self, data: Any, next_ref: "Node" = None, prev_ref: "Node" = None):
+        def __init__(self, data: Any, next_ref=None, prev_ref=None):
             self.element = data
             self.nref = next_ref
             self.pref = prev_ref
@@ -227,5 +227,7 @@ class DoublyLinkedList:
                 n.nref
             )  # next ref of current node is prev ref of curr node after flip
             n.nref = prev_node
-            n = n.pref  # since pref is the next reference.  we iterate backward
+            n = (
+                n.pref
+            )  # since pref is the next reference.  we iterate backward
         self.start_node = prev_node.pref

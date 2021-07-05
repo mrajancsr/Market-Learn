@@ -36,9 +36,7 @@ class Position(metaclass=ABCMeta):
 
 class _DoublyLinkedBase(metaclass=ABCMeta):
     class _Node:
-        def __init__(
-            self, data, previous_ref: _Node = None, next_ref: _Node = None
-        ):
+        def __init__(self, data, previous_ref=None, next_ref=None):
             self._element = data
             self._pref = previous_ref
             self._nref = next_ref

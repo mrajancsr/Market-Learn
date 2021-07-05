@@ -3,7 +3,7 @@ Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
 """
 from __future__ import annotations
-from typing import Union
+from typing import Any, Union
 from marketlearn.algorithms.linked_lists import linked_base as lb
 
 
@@ -329,7 +329,7 @@ class PositionalList(lb._DoublyLinkedBase):
             self._container = container
             self._node = node
 
-        def element(self):
+        def element(self) -> Any:
             """Returns element stored at this position
 
             Returns
@@ -352,6 +352,7 @@ class PositionalList(lb._DoublyLinkedBase):
         def __ne__(self, other):
             return not (self == other)
 
+    # - Utility methods
     def _validate(self, p: Position):
         """Return position's node, or raise error if invalid
 
@@ -366,9 +367,115 @@ class PositionalList(lb._DoublyLinkedBase):
             raise ValueError("p does not belong to this container")
         if p._node._nref is None:
             raise ValueError("p is no longer valid")
+        return p._node
 
     def _make_position(self, node) -> Union[None, Position]:
         """Return position instance for given node or None if sentinel"""
         if node is self._start_node or node is self._end_node:
             return None
         return self.Position(self, node)
+
+    # - Accessors
+    def first(self) -> Union[Position, None]:
+        """Return first position in list or None if empty
+
+        Returns
+        -------
+        Union[Position, None]
+            first position in list
+        """
+        return self._make_position(self._start_node._nref)
+
+    def last(self) -> Union[Position, None]:
+        """Return last position in list or None if empty
+
+        Returns
+        -------
+        Union[Position, None]
+            last position in list
+        """
+        return self._make_position(self._end_node._pref)
+
+    def before(self, p: Position) -> Union[Position, None]:
+        """Return position before p's position or None if p is first psotion
+
+        Parameters
+        ----------
+        p : Position
+            [description]
+
+        Returns
+        -------
+        Union[Position, None]
+            [description]
+        """
+        node = self._validate(p)
+        return self._make_position(node._nref)
+
+    def after(self, p: Position) -> Union[Position, None]:
+        """Return position after p's position or None if p is last position
+
+        Parameters
+        ----------
+        p : [type]
+            [description]
+
+        Returns
+        -------
+        Union[Position, None]
+            [description]
+        """
+        node = self._validate(p)
+        return self._make_position(node._nref)
+
+    def __iter__(self):
+        """Generate forward iteration of elements in list"""
+        cursor = self.first()
+        while cursor is not None:
+            yield cursor.element()
+            cursor = self.after(cursor)
+
+    # Mutators
+    def _insert_between(self, data, node1, node2) -> Position:
+        """Inserts data between two nodes and returns position object
+
+        Parameters
+        ----------
+        data : Any
+            [description]
+        node1 : Node
+            node after which data is inserted
+        node2 : Node
+            node before which data is inserted
+
+        Returns
+        -------
+        Position
+            of data between node1 and node2
+        """
+        node = super()._insert_between(data, node1, node2)
+        return self._make_position(node)
+
+    def add_first(self, data: Any) -> Position:
+        return self._make_position(
+            self._insert_between(
+                data, self._start_node, self._start_node._nref
+            )
+        )
+
+    def add_last(self, data: Any) -> Position:
+        return self._make_position(
+            self._insert_between(data, self._end_node._pref, self._end_node)
+        )
+
+    def add_before(self, data: Any, p: Position) -> Position:
+        node = self._validate(p)
+        return self._make_position(
+            self._insert_between(data, node._pref, node)
+        )
+
+    def add_after(self, data: Any, p: Position) -> Position:
+        node = self._validate(p)
+        return self._make_position(
+            self._insert_between(data, node, node._nref)
+        )
