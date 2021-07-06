@@ -134,7 +134,7 @@ class DoublyLinkedList:
             return
         n = self.start_node
         while n:
-            if n.element == x:
+            if n.element == data:
                 break
             n = n.nref
         if n is None:

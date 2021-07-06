@@ -37,7 +37,7 @@ class SinglyLinkedList:
             next reference of the Node
         """
 
-        def __init__(self, data: Any, reference: Node = None):
+        def __init__(self, data: Any, reference=None):
             self.element = data
             self.nref = reference
 

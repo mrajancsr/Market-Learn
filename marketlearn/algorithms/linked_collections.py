@@ -457,6 +457,18 @@ class PositionalList(lb._DoublyLinkedBase):
         return self._make_position(node)
 
     def add_first(self, data: Any) -> Position:
+        """Insert data into first position and return new position
+
+        Parameters
+        ----------
+        data : Any
+            [description]
+
+        Returns
+        -------
+        Position
+            of data inserted
+        """
         return self._make_position(
             self._insert_between(
                 data, self._start_node, self._start_node._nref
@@ -464,11 +476,37 @@ class PositionalList(lb._DoublyLinkedBase):
         )
 
     def add_last(self, data: Any) -> Position:
+        """Insert data into last position and return new position
+
+        Parameters
+        ----------
+        data : Any
+            [description]
+
+        Returns
+        -------
+        Position
+            of last time
+        """
         return self._make_position(
             self._insert_between(data, self._end_node._pref, self._end_node)
         )
 
     def add_before(self, data: Any, p: Position) -> Position:
+        """Insert data right before position p and return new position
+
+        Parameters
+        ----------
+        data : Any
+            data to be inserted in list
+        p : Position
+            data is inserted before this position
+
+        Returns
+        -------
+        Position
+            position of inserted object
+        """
         node = self._validate(p)
         return self._make_position(
             self._insert_between(data, node._pref, node)
@@ -479,3 +517,34 @@ class PositionalList(lb._DoublyLinkedBase):
         return self._make_position(
             self._insert_between(data, node, node._nref)
         )
+
+    def delete(self, p):
+        """Remove and return the element at postion p
+
+        Parameters
+        ----------
+        p : [type]
+            [description]
+        """
+        node = self._validate(p)
+        return self._delete_node(node)
+
+    def replace(self, p: Position, data: Any) -> Any:
+        """Replace
+
+        Parameters
+        ----------
+        p : Position
+            [description]
+        data : Any
+            [description]
+
+        Returns
+        -------
+        Any
+            [description]
+        """
+        original_node = self._validate(p)
+        old_value = original_node._element
+        original_node._element = data
+        return old_value
