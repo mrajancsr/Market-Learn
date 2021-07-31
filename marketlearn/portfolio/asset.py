@@ -1,8 +1,8 @@
+# pyre-strict
 """Implementation of Asset class"""
-
 from __future__ import annotations
 from functools import lru_cache
-from numpy import array, cov, isnan, log
+from numpy import array, cov, isnan, log, transpose
 from typing import Tuple
 import pandas as pd
 
@@ -14,7 +14,7 @@ class Asset:
 
     __TRADING_DAYS_PER_YEAR = 252
 
-    def __init__(self, name: str, price_history: pd.Series):
+    def __init__(self, name: str, price_history: pd.Series) -> None:
         """default constructor used to initialize Asset Class"""
         self.name = name
         self.price_history = price_history
@@ -67,8 +67,8 @@ class Asset:
         np.ndarray
             covariance matrix of assets
         """
-        zt = array([a.returns_history for a in assets]).T
-        return (
-            cov(zt[~isnan(zt).any(axis=1)], rowvar=False)
-            * Asset.get_annualization_factor()
+        returns = transpose(
+            array([aasset.returns_history for aasset in assets])
         )
+        returns = returns[~isnan(returns).any(axis=1)]
+        return cov(returns, rowvar=False) * Asset.get_annualization_factor()
