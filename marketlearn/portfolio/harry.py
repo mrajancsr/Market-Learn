@@ -102,8 +102,9 @@ class Harry:
         """
         yield from sqrt(diag(self.covariance_matrix))
 
-    @classmethod
-    def random_weights(cls, nsim: int, nsec: int) -> ndarray[float64]:
+    def random_weights(
+        self, nsim: int, nsec: int
+    ) -> Iterator[ndarray[float64]]:
         """creates a portfolio with random weights
         Parameters
         ----------
@@ -116,13 +117,11 @@ class Harry:
         np.ndarray, shape=(nsim, nsec)
             random weight matrix
         """
-        if nsim == 1:
-            weights = random(nsec)
-            weights /= weights.sum()
-        else:
-            weights = random((nsim, nsec))
-            weights = transpose((transpose(weights) / weights.sum(axis=1)))
+        return (self.create_weights(nsec) for _ in range(nsim))
 
+    def create_weights(self, nsec: int) -> ndarray[float64]:
+        weights = random(nsec)
+        weights /= weights.sum()
         return weights
 
     def portfolio_variance(
@@ -178,16 +177,17 @@ class Harry:
             [description], by default 1
         """
         nsec = self.security_count
-        weights = Harry.random_weights(nsim=nportfolios, nsec=nsec)
+        weights_per_simulation = self.random_weights(
+            nsim=nportfolios, nsec=nsec
+        )
 
         # return volatility and mean of each simulation as a tuple
-        return (
-            [
-                np.sqrt(self.portfolio_variance(weights[p])),
-                self.portfolio_expected_return(weights[p]),
+
+        for weights in weights_per_simulation:
+            yield [
+                np.sqrt(self.portfolio_variance(weights)),
+                self.portfolio_expected_return(weights),
             ]
-            for p in range(nportfolios)
-        )
 
     def graph_simulated_portfolios(self, nportfolios: int) -> None:
         """plots the simulated portfolio
@@ -238,31 +238,30 @@ class Harry:
 
     def optimize_risk(
         self,
-        constraints: bool = False,
-        target: float = 0.0,
-        bounds: Tuple[float, float] = (0.0, 0.0),
+        add_constraints: bool = False,
+        target: Optional[float] = None,
+        bounds: Tuple[float, float] = (0.0, 1.0),
     ) -> np.ndarray[float64]:
         """Computes the weights corresponding to minimum variance
+
         Parameters
         ----------
-        constraints : bool, optional, default=False
+        add_constraints : bool, optional, default=False
             mean constraint
         target : float, optional, default=None
             target portfolio return if constraints is True
+
         Returns
         -------
-        np.ndarray
+        np.ndarray[float64]
             weights corresponding to minimum variance
         """
-        # get count of assets in portfolio
         total_assets = self.security_count
-
-        # make random guess
-        guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
+        guess_weights = self.random_weights(nsim=1, nsec=total_assets)
 
         # minimize risk subject to target level of return constraint
-        if constraints:
-            consts = [
+        if add_constraints:
+            constraints = [
                 {
                     "type": "eq",
                     "fun": lambda w: self.portfolio_expected_return(w)
@@ -272,13 +271,13 @@ class Harry:
             ]
         # minimize risk with only contraint sum of weights = 1
         else:
-            consts = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
+            constraints = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
 
         # minimize the portolio variance, assume no short selling
         weights = minimize(
             fun=lambda w: self.portfolio_variance(w),
             x0=guess_weights,
-            constraints=consts,
+            constraints=constraints,
             method="SLSQP",
             bounds=bounds,
         )["x"]
