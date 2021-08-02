@@ -16,7 +16,7 @@ class Asset:
 
     all_assets: List[Asset] = []
 
-    __TRADING_DAYS_PER_YEAR = 252
+    __TRADING_DAYS_PER_YEAR: int = 252
 
     def __init__(self, name: str, price_history: pd.Series) -> None:
         """default constructor used to initialize Asset Class"""

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from marketlearn.portfolio import Asset
-from numpy import array, diag, float64, sqrt, transpose
+from numpy import array, diag, float64, sqrt
 from numpy.random import random
 from numpy.typing import NDArray
 from scipy.optimize import minimize
@@ -77,7 +77,7 @@ class Harry:
     def assets(self) -> Iterator[Asset]:
         yield from self.__assets.values()
 
-    def get_asset(self, name: str) -> Asset:
+    def get_asset(self, name: str) -> Optional[Asset]:
         """return the Asset in portfolio given name
         Parameters
         ----------
@@ -88,7 +88,7 @@ class Harry:
         Asset
             contains information about the asset
         """
-        return self.__assets[name]
+        return self.__assets.get(name)
 
     def get_asset_expected_returns(self) -> NDArray[float64]:
         """gets expected return of each asset in portfolio
@@ -148,19 +148,10 @@ class Harry:
         float
             portfolio variance
         """
-        ndim = weights.ndim
-        if ndim == 1:
-            return transpose(weights) @ self.covariance_matrix @ weights
-        else:
-            return diag(weights @ self.covariance_matrix @ transpose(weights))
+        return weights.transpose().dot(self.covariance_matrix).dot(weights)
 
     def portfolio_expected_return(self, weights: NDArray[float64]) -> float:
-        ndim = weights.ndim
-        if ndim == 1:
-            return transpose(weights) @ self.asset_expected_returns
-        # allows construction of efficient portfolios
-        else:
-            return weights @ self.asset_expected_returns
+        return weights.transpose().dot(self.asset_expected_returns)
 
     def simulate_investment_opportunity_set(
         self, nportfolios: int
@@ -181,7 +172,7 @@ class Harry:
         """
         total_securities = self.security_count
         weights_per_simulation = Harry.random_weights(
-            nsim=nportfolios, nsec=total_securities
+            nsim=nportfolios, nsecurities=total_securities
         )
 
         # return volatility and mean of each simulation as a tuple
@@ -245,7 +236,7 @@ class Harry:
             weights corresponding to minimum variance
         """
         total_assets = self.security_count
-        guess_weights = self.random_weights(nsim=1, nsec=total_assets)
+        guess_weights = Harry.random_weights(nsim=1, nsecurities=total_assets)
 
         # minimize risk subject to target level of return constraint
         if add_constraints:
@@ -282,7 +273,7 @@ class Harry:
         total_assets = self.security_count
 
         # make random guess
-        guess_weights = Harry.random_weights(nsim=1, nsec=total_assets)
+        guess_weights = Harry.random_weights(nsim=1, nsecurities=total_assets)
 
         # set target return & target variance and sum of weights constraint
         consts = [{"type": "eq", "fun": lambda w: sum(w) - 1}]
