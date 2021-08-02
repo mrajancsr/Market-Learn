@@ -31,14 +31,21 @@ Notes:
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass, field
 from itertools import chain
-from marketlearn.toolz import timethis
-from scipy.optimize import minimize
-from scipy.stats import norm
+from typing import List, Tuple, Union
+
 import numpy as np
 import pandas as pd
+from marketlearn.toolz import timethis
+from numpy import array, float64
+from numpy.typing import NDArray
+from scipy.optimize import minimize
+from scipy.stats import norm
 
 
+@dataclass
 class MarkovSwitchModel:
     """Implementation of Hamilton's Regime Switching Model
 
@@ -68,17 +75,22 @@ class MarkovSwitchModel:
         hamilton's smoothed probabilities
     """
 
-    def __init__(self, nregime: int = 2, variance_switch: bool = False):
-        """Default constructor used to initialize regime"""
-        self.nregime = nregime
-        self.variance_switch = variance_switch
-        self.theta = None
-        self.tr_matrix = np.zeros((2, 2))
-        self.filtered_prob = None
-        self.predict_prob = None
-        self.smoothed_prob = None
+    nregime: int = 2
+    variance_switch: bool = False
+    tr_matrix: NDArray[float64] = field(init=False)
+    filtered_prob: NDArray[float64] = field(init=False)
+    predict_prob: NDArray[float64] = field(init=False)
+    smoothed_prob: NDArray[float64] = field(init=False)
 
-    def _sigmoid(self, z: np.ndarray) -> np.ndarray:
+    def __post_init__(self) -> None:
+        self.tr_matrix = array((self.nregime, self.nregime))
+        self.filtered_prob = array([])
+        self.predict_prob = array([])
+        self.smoothed_prob = array([])
+
+    def _sigmoid(
+        self, z: Union[float64, NDArray[float64]]
+    ) -> Union[float64, NDArray[float64]]:
         """computes the sigmoid function
 
         Parameters
@@ -95,10 +107,10 @@ class MarkovSwitchModel:
 
     def _normpdf(
         self,
-        obs: np.ndarray,
-        mean: np.ndarray,
-        sigma: np.ndarray,
-    ) -> np.ndarray:
+        obs: NDArray[float64],
+        mean: NDArray[float64],
+        sigma: NDArray[float64],
+    ) -> NDArray[float64]:
         """Computes the normal density f(yt|st,Ft-1) of each observation
 
         Parameters
@@ -120,10 +132,10 @@ class MarkovSwitchModel:
 
     def _loglikelihood(
         self,
-        obs: np.ndarray,
-        theta: np.ndarray,
+        obs: NDArray[float64],
+        theta: NDArray[float64],
         store: bool = False,
-    ) -> np.ndarray:
+    ) -> float64:
         """Computes the loglikelihood of data observed
 
         Parameters
@@ -190,10 +202,10 @@ class MarkovSwitchModel:
 
     def hamilton_filter(
         self,
-        obs: np.ndarray,
-        theta: np.ndarray,
+        obs: NDArray[float64],
+        theta: NDArray[float64],
         predict: bool = False,
-    ) -> np.ndarray:
+    ) -> Union[List[np.ndarray], np.ndarray]:
         """computes the hamilton filter
 
         Parameters
@@ -242,12 +254,12 @@ class MarkovSwitchModel:
         exponent = eta[-1] * predict_prob[-1]
         hfilter[-1] = exponent / exponent.sum()
 
-        return hfilter if not predict else (hfilter, predict_prob)
+        return hfilter if not predict else [hfilter, predict_prob]
 
     def _objective_func(
         self,
-        guess: np.ndarray,
-        obs: np.ndarray,
+        guess: NDArray[float64],
+        obs: NDArray[float64],
         store: bool = False,
     ) -> float:
         """the objective function to be minimized
@@ -269,7 +281,7 @@ class MarkovSwitchModel:
         f = self._loglikelihood(obs, theta=guess, store=store)
         return -f
 
-    def _transition_matrix(self, pii: float, pjj: float):
+    def _transition_matrix(self, pii: float, pjj: float) -> None:
         """computes transition matrix from state transition probabilities
 
         Parameters
@@ -289,7 +301,7 @@ class MarkovSwitchModel:
     @timethis
     def fit(
         self,
-        obs: np.ndarray,
+        obs: NDArray[float64],
         n_iter: int = 10,
     ) -> MarkovSwitchModel:
         """fits a two state regime switching model
@@ -333,10 +345,10 @@ class MarkovSwitchModel:
 
     def kims_smoother(
         self,
-        filter_prob: np.ndarray,
-        predict_prob: np.ndarray,
-        P: np.ndarray,
-    ) -> np.ndarray:
+        filter_prob: NDArray[float64],
+        predict_prob: NDArray[float64],
+        P: NDArray[float64],
+    ) -> NDArray[float64]:
         """Computes the posterior using full information set
 
         The posterior p(St=i|FT) is computed via kim's algorithm
@@ -425,7 +437,7 @@ class MarkovSwitchModel:
         # return the full posterior probabilities
         return np.concatenate((smooth_prob, qprob), axis=1)
 
-    def inv_sigmoid(self, x: np.ndarray):
+    def inv_sigmoid(self, x: np.ndarray) -> np.ndarray[np.float32]:
         """computes inverse of sigmoid function
 
         :param x: the probability
@@ -461,7 +473,9 @@ class MarkovSwitchModel:
         )
 
     # - check to see if more efficient way of summing the means
-    def _mstep(self, obs: np.ndarray, qprob: np.ndarray) -> tuple:
+    def _mstep(
+        self, obs: np.ndarray[np.float32], qprob: np.ndarray[np.float32]
+    ) -> Tuple[np.ndarray[np.float64], np.ndarray[np.float64], List[float]]:
         """computes m-step in the EM Algorithm
 
         Parameters
@@ -491,7 +505,9 @@ class MarkovSwitchModel:
             var = qprob[1:, 0] * spread1 ** 2 + qprob[1:, 1] * spread2 ** 2
         return pkk, muk, [np.sqrt(var.mean())]
 
-    def fit_em(self, obs: np.ndarray, show: bool = False, n_iter: int = 10):
+    def fit_em(
+        self, obs: np.ndarray, show: bool = False, n_iter: int = 10
+    ) -> MarkovSwitchModel:
         """fits a markov switching model via EM Algorithm
 
         Parameters

@@ -1,1 +1,1 @@
-from marketlearn.learning.markov_models.hidden_markov import MarkovSwitchModel
+from marketlearn.learning.markov_models.markov_switch import MarkovSwitchModel
