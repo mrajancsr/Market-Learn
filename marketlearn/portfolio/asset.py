@@ -71,7 +71,7 @@ class Asset:
             Assets whose covariance we want to compute
 
         Returns
-        -------ß
+        -------
         np.ndarray
             covariance matrix of assets
         """
