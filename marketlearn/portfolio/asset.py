@@ -1,10 +1,14 @@
 # pyre-strict
 """Implementation of Asset class"""
 from __future__ import annotations
+
 from functools import lru_cache
-from numpy import array, cov, isnan, log, transpose, ndarray, float64
-from typing import Tuple, List
+from typing import List, Tuple
+
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
+from numpy import array, cov, isnan, log, transpose
 
 
 class Asset:
@@ -19,7 +23,9 @@ class Asset:
         self.name = name
         self.price_history = price_history
         self.size: int = price_history.shape[0]
-        self.returns_history: int = log(1 + self.price_history.pct_change())
+        self.returns_history: pd.Series = log(
+            1 + self.price_history.pct_change()
+        )
         self.annualized_returns: int = self.returns_history.sum()
         self.expected_returns: float = self._get_expected_returns()
         self.__class__.all_assets.append(self)
@@ -54,7 +60,9 @@ class Asset:
 
     @staticmethod
     @lru_cache
-    def covariance_matrix(assets: Tuple[Asset]) -> ndarray[float64]:
+    def covariance_matrix(
+        assets: Tuple[Asset],
+    ) -> npt.NDArray[np.float64]:
         """computes the covariance matrix given tuple of assets
 
         Parameters
@@ -67,8 +75,6 @@ class Asset:
         np.ndarray
             covariance matrix of assets
         """
-        returns = transpose(
-            array([aasset.returns_history for aasset in assets])
-        )
+        returns = transpose(array([asset.returns_history for asset in assets]))
         returns = returns[~isnan(returns).any(axis=1)]
         return cov(returns, rowvar=False) * Asset.get_annualization_factor()

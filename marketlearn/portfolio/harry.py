@@ -6,14 +6,17 @@ Created Feb 10 2021
 """
 
 from __future__ import annotations
-from marketlearn.portfolio import Asset
-from numpy import diag, fromiter, sqrt, transpose, ndarray, float64
-from numpy.random import random
-from scipy.optimize import minimize
+
+from typing import Dict, Generator, Iterator, List, Optional, Tuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from typing import Iterator, List, Generator, Tuple, Optional
+from marketlearn.portfolio import Asset
+from numpy import array, diag, float64, sqrt, transpose
+from numpy.random import random
+from numpy.typing import NDArray
+from scipy.optimize import minimize
 
 # import plotly.graph_objects as go
 
@@ -41,19 +44,21 @@ class Harry:
         self, historical_prices: pd.DataFrame, risk_free_rate: float = 0.01
     ) -> None:
         """Default constructor used to initialize portfolio"""
-        self.__assets = {
+        self.__assets: Dict[str, Asset] = {
             name: Asset(name=name, price_history=historical_prices[name])
             for name in historical_prices.columns
         }
-        self.covariance_matrix = Asset.covariance_matrix(tuple(self))
-        self.asset_expected_returns = fromiter(
-            self.asset_expected_returns(), dtype=float
+        self.covariance_matrix: NDArray[float64] = Asset.covariance_matrix(
+            tuple(self)
         )
-        self.asset_expected_vol = fromiter(
-            self.asset_expected_volatility(), dtype=float
-        )
+        self.asset_expected_returns: NDArray[
+            float64
+        ] = self.get_asset_expected_returns()
+        self.asset_expected_vol: NDArray[
+            float64
+        ] = self.get_asset_expected_volatility()
 
-        self.security_count = len(self.__assets)
+        self.security_count: int = len(self.__assets)
         self.risk_free_rate = risk_free_rate
 
     def __eq__(self, other: Harry) -> bool:
@@ -66,10 +71,10 @@ class Harry:
         return f"Portfolio size: {self.security_count} Assets"
 
     def __iter__(self) -> Iterator[Asset]:
-        yield from self.__assets.values()
+        yield from self.assets()
 
     def assets(self) -> Iterator[Asset]:
-        yield from self
+        yield from self.__assets.values()
 
     def get_asset(self, name: str) -> Asset:
         """return the Asset in portfolio given name
@@ -84,27 +89,27 @@ class Harry:
         """
         return self.__assets[name]
 
-    def asset_expected_returns(self) -> Iterator[float]:
+    def get_asset_expected_returns(self) -> NDArray[float64]:
         """gets expected return of each asset in portfolio
         Yields
         -------
         Iterator[float]
             an iteration of expected return of each asset in portfolio
         """
-        yield from (asset.expected_returns for asset in self)
+        return array([asset.expected_returns for asset in self.assets()])
 
-    def asset_expected_volatility(self) -> Iterator[float]:
+    def get_asset_expected_volatility(self) -> NDArray[float64]:
         """gets expected volatility of each asset in portfolio
         Yields
         -------
         Iterator[float]
             iteration of expected vol of each asset scaled by trading days
         """
-        yield from sqrt(diag(self.covariance_matrix))
+        return sqrt(diag(self.covariance_matrix))
 
     def random_weights(
         self, nsim: int, nsec: int
-    ) -> Iterator[ndarray[float64]]:
+    ) -> Iterator[NDArray[float64]]:
         """creates a portfolio with random weights
         Parameters
         ----------
@@ -119,14 +124,14 @@ class Harry:
         """
         return (self.create_weights(nsec) for _ in range(nsim))
 
-    def create_weights(self, nsec: int) -> ndarray[float64]:
+    def create_weights(self, nsec: int) -> NDArray[float64]:
         weights = random(nsec)
         weights /= weights.sum()
         return weights
 
     def portfolio_variance(
-        self, weights: ndarray[float64]
-    ) -> ndarray[float64]:
+        self, weights: NDArray[float64]
+    ) -> NDArray[float64]:
         """computes the portfolio variance
         portfolio variance is given by var_p = w'cov(R)w
         Parameters
@@ -150,8 +155,8 @@ class Harry:
             return diag(weights @ self.covariance_matrix @ transpose(weights))
 
     def portfolio_expected_return(
-        self, weights: ndarray[float64]
-    ) -> ndarray[float64]:
+        self, weights: NDArray[float64]
+    ) -> NDArray[float64]:
         ndim = weights.ndim
         if ndim == 1:
             return transpose(weights) @ self.asset_expected_returns
@@ -221,7 +226,7 @@ class Harry:
         )
         fig.show()"""
 
-    def sharpe_ratio(self, weights: np.ndarray[float64]) -> ndarray[float64]:
+    def sharpe_ratio(self, weights: NDArray[float64]) -> float:
         """Comoputes the sharpe ratio of portfolio given weights
         Parameters
         ----------
@@ -250,6 +255,11 @@ class Harry:
             mean constraint
         target : float, optional, default=None
             target portfolio return if constraints is True
+        bounds: Tuple[float, float], default = (0.0, 1.0)
+            sets the range for each weights in portfolio
+            (0.0, 1.0) is long only position
+            (-1.0, 0) is short only
+            (-1, 1) allows for both long and short positions
 
         Returns
         -------
@@ -310,7 +320,9 @@ class Harry:
 
         return weights
 
-    def construct_efficient_frontier(self, bounds=None):
+    def construct_efficient_frontier(
+        self, bounds=None
+    ) -> Tuple[ndarray[float64], ndarray[float64]]:
         """Constructs the efficient frontier
 
         Parameters
@@ -346,7 +358,7 @@ class Harry:
         efficient_portfolio_var = self.portfolio_variance(z)
 
         # get the max volatility of assets in universe
-        vol = self.asset_expected_vol.max()
+        max_vol = self.asset_expected_vol.max()
 
         # return pair of mean returns and vol for new efficient portfolio
         mu_p = efficient_portfolio_mean[
@@ -358,7 +370,7 @@ class Harry:
             ]
         )
 
-        return sig_p[sig_p <= vol], mu_p[sig_p <= vol]
+        return sig_p[sig_p <= max_vol], mu_p[sig_p <= max_vol]
 
     def graph_frontier(self, nportfolios: int, bounds=None):
         """graphs the efficient frontier set
