@@ -1,3 +1,4 @@
+# pyre-strict
 """
 PostGresSQL python Interface for interacting with Dbeaver DB
 Author: Rajan Subramanian
@@ -5,15 +6,18 @@ Created May 10 2020
 Todo - add a copy from
 """
 
-from configparser import ConfigParser
-from marketlearn.toolz import timethis
-from psycopg2.extras import execute_values, DictCursor
-from typing import Any, Dict, Iterator, List, Tuple, Union
 import os
+from configparser import ConfigParser
+from dataclasses import dataclass, field
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+
 import pandas as pd
 import psycopg2
+from marketlearn.toolz import timethis
+from psycopg2.extras import DictCursor, execute_values
 
 
+@dataclass
 class DbReader:
     """Establishes a sql connection with the PostGres Database
 
@@ -27,12 +31,13 @@ class DbReader:
         connection objevct for psycopg2
     """
 
-    def __init__(self, section="dev"):
-        """default constructor used to establish constructor"""
-        self.conn = None
-        self.section = section
+    section: str = "dev"
+    conn: Optional[psycopg2.connection] = field(init=False)
 
-    def _read_db_config(self) -> Dict:
+    def __post_init__(self) -> None:
+        self.conn = None
+
+    def _read_db_config(self) -> Dict[str, str]:
         """reads database configuration from config.ini file
 
         Parameters
@@ -72,7 +77,7 @@ class DbReader:
             )
         return config
 
-    def connect(self):
+    def connect(self) -> psycopg2.connection:
         """Connects to PostGresSql Database
 
         Parameters
@@ -87,20 +92,19 @@ class DbReader:
         """
         if self.conn is None or self.conn.closed:
             try:
-                # read connection parameters
                 params = self._read_db_config()
-                # connect to the PostgresSql Server
                 self.conn = psycopg2.connect(**params)
+                return self.conn
             except psycopg2.DatabaseError as error:
                 print(error)
-            else:
-                return self.conn
 
-    def _create_records(self, dictrow: List) -> Tuple:
+    def _create_records(
+        self, dictrow: Tuple[Dict[str, Any]]
+    ) -> Tuple[Dict[str, Any]]:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    def fetch(self, query: str):
+    def fetch(self, query: str) -> Tuple[Dict[str, Any]]:
         """Returns the data associated with table
         Args:
         query:  database query parameter
@@ -206,7 +210,7 @@ class DbReader:
         """copies data from csv file and writes to Db"""
         raise NotImplementedError("Will be Implemented Later")
 
-    def drop(self, table_name, conn):
+    def drop(self, table_name: str, conn) -> None:
         """removes table given by table_name from dev db"""
         query = f"drop table {table_name};"
         self.execute(query, conn)
