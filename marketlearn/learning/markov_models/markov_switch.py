@@ -1,3 +1,4 @@
+# pyre-strict
 """
 Module Implements Hamilton's Regime Switching Regression
 Author: Rajan Subramanian
@@ -40,7 +41,7 @@ import numpy as np
 import pandas as pd
 from marketlearn.toolz import timethis
 from numpy import array, float64
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import minimize
 from scipy.stats import norm
 
@@ -81,16 +82,16 @@ class MarkovSwitchModel:
     filtered_prob: NDArray[float64] = field(init=False)
     predict_prob: NDArray[float64] = field(init=False)
     smoothed_prob: NDArray[float64] = field(init=False)
+    em_params: pd.Series = field(init=False)
 
     def __post_init__(self) -> None:
         self.tr_matrix = array((self.nregime, self.nregime))
         self.filtered_prob = array([])
         self.predict_prob = array([])
         self.smoothed_prob = array([])
+        self.em_params = pd.Series([])
 
-    def _sigmoid(
-        self, z: Union[float64, NDArray[float64]]
-    ) -> Union[float64, NDArray[float64]]:
+    def _sigmoid(self, z: ArrayLike[float]) -> ArrayLike[float]:
         """computes the sigmoid function
 
         Parameters
@@ -103,7 +104,7 @@ class MarkovSwitchModel:
         np.ndarray, shape=(n_regime, n_regime)
             transition probabilities
         """
-        return 1.0 / (1 + np.exp(-z))
+        return 1.0 / (1.0 + np.exp(-z))
 
     def _normpdf(
         self,
@@ -153,7 +154,7 @@ class MarkovSwitchModel:
             loglikelihood of data observed
         """
         # get parameters from theta
-        prob = theta[:2]
+        prob: NDArray[float64] = theta[:2]
         means = theta[2:4]
         sig = np.array([theta[-1], theta[-1]])
 
@@ -162,11 +163,12 @@ class MarkovSwitchModel:
         hfilter = np.zeros((n, self.nregime))
         eta = np.zeros((n, self.nregime))
         predict_prob = np.zeros((n, self.nregime))
+
         # joint density f(yt|St, Ft-1) * P(st|Ft-1)
         jointd = np.zeros(n)
 
-        # construct transition matrix
-        self._transition_matrix(*self._sigmoid(prob))
+        pii, pjj = self._sigmoid(prob)
+        self._transition_matrix(pii, pjj)
 
         # initial guess for filter
         hfilter[0] = np.array([0.5, 0.5])
@@ -205,7 +207,7 @@ class MarkovSwitchModel:
         obs: NDArray[float64],
         theta: NDArray[float64],
         predict: bool = False,
-    ) -> Union[List[np.ndarray], np.ndarray]:
+    ) -> Union[List[NDArray[float64]], NDArray[float64]]:
         """computes the hamilton filter
 
         Parameters
