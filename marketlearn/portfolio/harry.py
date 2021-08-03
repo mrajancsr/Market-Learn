@@ -215,7 +215,7 @@ class Harry:
         add_constraints: bool = False,
         target: Optional[float] = None,
         bounds: Tuple[float, float] = (0.0, 1.0),
-    ) -> np.ndarray[float64]:
+    ) -> NDArray[float64]:
         """Computes the weights corresponding to minimum variance
 
         Parameters

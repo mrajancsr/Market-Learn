@@ -9,13 +9,14 @@ Notes:
 - Need to finish up the continued fractions when i have time
 """
 
+from functools import wraps
+from typing import Callable, Tuple, Union
+
 import matplotlib.pyplot as plt
 import mpmath as mpm
 import numpy as np
-from functools import wraps
 from lmfit import Model
 from numpy import floor
-from typing import Tuple, Callable, Union
 
 
 class Vectorize:
@@ -187,7 +188,9 @@ class LimitOrderBook:
         new_orders = self.ask_size[self.price == price][0] + qty
         self.ask_size[self.price == price] = new_orders
 
-    def cancel_buy(self, price: int, cancelable_orders: int = None, qty: int = 1):
+    def cancel_buy(
+        self, price: int, cancelable_orders: int = None, qty: int = 1
+    ):
         """Places a cancel order at given price level on bid side
 
         :param price: price at which we cancel order
@@ -210,7 +213,9 @@ class LimitOrderBook:
         remaining_orders = self.bid_size[self.price == price][0] - qty
         self.bid_size[self.price == price] = remaining_orders
 
-    def cancel_sell(self, price: int, cancelable_orders: int = None, qty: int = 1):
+    def cancel_sell(
+        self, price: int, cancelable_orders: int = None, qty: int = 1
+    ):
         """Places a cancel order at given price level on ask side
 
         :param price: price at which we cancel order
@@ -548,7 +553,9 @@ class LimitOrderBook:
         :rtype: np.ndarray
         """
         model = Model(
-            self._objective_func, independent_vars=["L"], param_names=["k", "alpha"]
+            self._objective_func,
+            independent_vars=["L"],
+            param_names=["k", "alpha"],
         )
 
         # make initial guess for k and alpha
@@ -704,13 +711,15 @@ class LimitOrderBook:
         return mpm.invertlaplace(f, shift, method="talbot")
 
     def prob_mid(self, n=10000, xb=1, xs=1):
-        """ calculates probability of mid-price to go up"""
+        """calculates probability of mid-price to go up"""
 
         def send_orders(xb, xs, mu=0.94, lamda=1.85, theta=0.71):
             cum_rate = 2 * mu + 2 * lamda + theta * xb + theta * xs
             bid_qty_down = mu + theta * xb
             ask_qty_down = mu + theta * xs
-            pevent = np.array([lamda, lamda, bid_qty_down, ask_qty_down]) / cum_rate
+            pevent = (
+                np.array([lamda, lamda, bid_qty_down, ask_qty_down]) / cum_rate
+            )
             ans = np.random.choice(np.arange(4), size=1, p=pevent)[0]
 
             if ans == 0:
@@ -742,7 +751,8 @@ class LimitOrderBook:
             cum_rate = 2 * mu + 2 * lamda + theta * (xb - 1) + theta * xs
             ask_qty_down = mu + theta * xs
             pevent = (
-                np.array([lamda, lamda, mu, theta * (xb - 1), ask_qty_down]) / cum_rate
+                np.array([lamda, lamda, mu, theta * (xb - 1), ask_qty_down])
+                / cum_rate
             )
             ans = np.random.choice(np.arange(5), size=1, p=pevent)[
                 0
@@ -768,7 +778,9 @@ class LimitOrderBook:
         for i in range(n):
             qb_old, qs_old, d_old = xb, xs, dpos
             while True:
-                qb_new, qs_new, d_new = send_orders(xb=qb_old, xs=qs_old, d=d_old)
+                qb_new, qs_new, d_new = send_orders(
+                    xb=qb_old, xs=qs_old, d=d_old
+                )
                 if d_new == 0:  # my order has been executed
                     count += 1
                     break
@@ -778,7 +790,9 @@ class LimitOrderBook:
         return count / n
 
     def prob_making_spread(self, n=10000, xb=5, xs=5, bid_pos=5, ask_pos=5):
-        def send_orders(xb, xs, bid_pos, ask_pos, mu=0.94, lamda=1.85, theta=0.71):
+        def send_orders(
+            xb, xs, bid_pos, ask_pos, mu=0.94, lamda=1.85, theta=0.71
+        ):
             xb_rate = xb - 1
             xs_rate = xs - 1
             if bid_pos == 0:
@@ -788,7 +802,9 @@ class LimitOrderBook:
 
             cum_rate = 2 * mu + 2 * lamda + theta * xb_rate + theta * xs_rate
             pevent = (
-                np.array([lamda, lamda, mu, mu, theta * xb_rate, theta * xs_rate])
+                np.array(
+                    [lamda, lamda, mu, mu, theta * xb_rate, theta * xs_rate]
+                )
                 / cum_rate
             )
             ans = np.random.choice(np.arange(6), size=1, p=pevent)[0]
@@ -820,7 +836,9 @@ class LimitOrderBook:
         for i in range(n):
             qb_old, qs_old, b_old, a_old = xb, xs, bid_pos, ask_pos
             while True:
-                qb_new, qs_new, b_new, a_new = send_orders(qb_old, qs_old, b_old, a_old)
+                qb_new, qs_new, b_new, a_new = send_orders(
+                    qb_old, qs_old, b_old, a_old
+                )
                 if b_new == 0 and a_new == 0:
                     count += 1
                     break

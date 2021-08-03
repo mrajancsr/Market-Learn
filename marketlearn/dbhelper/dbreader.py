@@ -23,11 +23,13 @@ class DbReader:
 
     Parameters
     ----------
-    None
+    section: str, default='postgresql-dev'
+        one of postgresql-dev or postgresql-practice
+
 
     Attributes
     ----------
-    conn
+    conn: Optional[psycopg2.connection]
         connection objevct for psycopg2
     """
 
