@@ -1,3 +1,4 @@
+# pyre-strict
 """Module creates the Securitities Master DataBase for Equities
 
 Author: Rajan Subramanian
@@ -5,10 +6,13 @@ Date: 11/16/2020
 """
 
 
-from marketlearn.dbhelper import DbReader
+from dataclasses import dataclass, field
 from typing import List
 
+from marketlearn.dbhelper import DbReader
 
+
+@dataclass
 class EquitySchema:
     """Creates Schema to hold end of day equity prices
 
@@ -31,15 +35,20 @@ class EquitySchema:
         this table stores daily pricing information for each security
     """
 
-    def __init__(self):
-        """default constructor used to create schema"""
+    exchange: str = field(init=False)
+    data_vendor: str = field(init=False)
+    security: str = field(init=False)
+    eq_daily_price: str = field(init=False)
+    _db: DbReader = field(init=False)
+
+    def __post_init__(self) -> None:
         self.exchange = "exchange"
-        self.data_vendor = "data_venddor"
+        self.data_vendor = "data_vendor"
         self.security = "security"
         self.eq_daily_price = "eq_daily_price"
         self._db = DbReader()
 
-    def create_exchange_query(self):
+    def create_exchange_query(self) -> str:
         """creates the exchange table"""
         query = """Create table exchange(
                 id serial,
@@ -55,7 +64,7 @@ class EquitySchema:
             """
         return query
 
-    def create_data_vendor_query(self):
+    def create_data_vendor_query(self) -> str:
         """creates the data_vendor table"""
         query = """create table data_vendor(
                 id serial,
@@ -69,7 +78,7 @@ class EquitySchema:
             """
         return query
 
-    def create_security_query(self):
+    def create_security_query(self) -> str:
         """creates the symbol table"""
         query = """create table security(
                 id serial,
@@ -88,7 +97,7 @@ class EquitySchema:
             """
         return query
 
-    def create_eq_daily_price_query(self):
+    def create_eq_daily_price_query(self) -> str:
         """creates daily equity price information"""
         query = """create table eq_daily_price(
                 id serial,
@@ -112,7 +121,7 @@ class EquitySchema:
             """
         return query
 
-    def clear_tables(self, table_names: List[str]):
+    def clear_tables(self, table_names: List[str]) -> None:
         """clears tables from database given by table_names
 
         Parameters
@@ -123,7 +132,7 @@ class EquitySchema:
         queries = (f"delete from {table_name}" for table_name in table_names)
         self._db.execute(queries)
 
-    def create_tables(self):
+    def create_tables(self) -> None:
         """creates tables"""
         # create a list of table queries
         queries = (
