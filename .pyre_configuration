@@ -1,0 +1,6 @@
+{
+  "source_directories": [
+    "."
+  ],
+  "taint_models_path": "/Users/raj/Documents/QuantResearch/Home/market-learn/py39/lib"
+}
