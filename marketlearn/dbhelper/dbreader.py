@@ -9,16 +9,33 @@ Todo - add a copy from
 import os
 from configparser import ConfigParser
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import pandas as pd
 import psycopg2
 from marketlearn.toolz import timethis
 from psycopg2.extras import DictCursor, execute_values
 
+connection = TypeVar("connection")
+
+
+class PathNotFoundError(Exception):
+    pass
+
 
 @dataclass
-class DbReader:
+class DbReader(Generic[connection]):
     """Establishes a sql connection with the PostGres Database
 
     Parameters
@@ -34,10 +51,12 @@ class DbReader:
     """
 
     section: str = "dev"
-    conn: Optional[psycopg2.connection] = field(init=False)
+    conn: Optional[connection] = field(init=False)
+    column_names: Set[str] = field(init=False)
 
     def __post_init__(self) -> None:
         self.conn = None
+        self.column_names = {""}
 
     def _read_db_config(self) -> Dict[str, str]:
         """reads database configuration from config.ini file
@@ -59,8 +78,14 @@ class DbReader:
         """
         # create the parser
         file_name = "config.ini"
-        file_path = os.path.join(os.getenv("SQLCONFIGPATH"), file_name)
-        file_path = file_path.replace(":", "")
+        config_path = os.getenv("SQLCONFIGPATH")
+        if isinstance(config_path, str):
+            file_path = os.path.join(config_path, file_name)
+            file_path = file_path.replace(":", "")
+        else:
+            raise PathNotFoundError(
+                "SQLCONFIGPATH is incorrect - please check"
+            )
 
         parser = ConfigParser()
         parser.read(file_path)
@@ -79,7 +104,7 @@ class DbReader:
             )
         return config
 
-    def connect(self) -> psycopg2.connection:
+    def connect(self) -> Optional[connection]:
         """Connects to PostGresSql Database
 
         Parameters
@@ -92,7 +117,8 @@ class DbReader:
         connection object
             connection to the PostGresSQL DB
         """
-        if self.conn is None or self.conn.closed:
+        connection_closed = getattr(self.conn, "closed")
+        if self.conn is None or connection_closed:
             try:
                 params = self._read_db_config()
                 self.conn = psycopg2.connect(**params)
@@ -102,11 +128,11 @@ class DbReader:
 
     def _create_records(
         self, dictrow: Tuple[Dict[str, Any]]
-    ) -> Tuple[Dict[str, Any]]:
+    ) -> Tuple[Dict[str, Any], ...]:
         """converts data obtained from db into tuple of dictionaries"""
         return tuple({k: v for k, v in record.items()} for record in dictrow)
 
-    def fetch(self, query: str) -> Tuple[Dict[str, Any]]:
+    def fetch(self, query: str) -> Optional[Tuple[Dict[str, Any]]]:
         """Returns the data associated with table
         Args:
         query:  database query parameter
@@ -118,29 +144,34 @@ class DbReader:
 
         try:
             self.connect()
-            with self.conn.cursor(cursor_factory=DictCursor) as curr:
-                curr.execute(query)
-                # get column names
-                self.col_names = tuple(map(lambda x: x.name, curr.description))
-                # fetch the rows
-                rows = curr.fetchall()
-            self.conn.close()
-        except psycopg2.DatabaseError as e:
-            print(e)
-            self.conn.close()
+            conn = getattr(self, "conn")
+            if conn:
+                column_names = set()
+                with conn.cursor(cursor_factory=DictCursor) as curr:
+                    curr.execute(query)
+                    for col in curr.description:
+                        column_names.add(col.name)
+                    rows = curr.fetchall()
+                getattr(conn, "close")()
+                self.column_names = column_names
+        except psycopg2.DatabaseError as error:
+            print(error)
+            getattr(conn, "close")()
         else:
             return rows
 
     @timethis
-    def fetchdf(self, query: str):
+    def fetchdf(self, query: str) -> pd.DataFrame:
         """Returns a pandas dataframe of the db query"""
-        return pd.DataFrame(self.fetch(query), columns=self.col_names)
+        return pd.DataFrame(self.fetch(query), columns=self.column_names)
 
-    def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator:
+    def iterator_from_df(
+        self, datadf: pd.DataFrame
+    ) -> Iterator[Dict[str, Any]]:
         """Convenience function to transform pandas dataframe to
         Iterator for db push
         """
-        yield from iter(datadf.to_dict(orient="rows"))
+        return iter(datadf.to_dict(orient="rows"))
 
     def push(
         self,
@@ -246,3 +277,6 @@ class DbReader:
             self.conn.close()
         except Exception as e:
             print(e)
+
+
+db = DbReader()
