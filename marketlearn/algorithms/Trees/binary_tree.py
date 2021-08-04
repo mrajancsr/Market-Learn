@@ -4,42 +4,55 @@ Author: Rajan Subramanian
 Date: 11/11/2020
 """
 from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Iterator, Optional, Union, overload
+
 from marketlearn.algorithms.trees import tree_base as tb
-from typing import Any, Iterator, Union
 
 
+@dataclass
+class Node:
+    element: Any
+    parent: Optional[Node] = None
+    left: Optional[Node] = None
+    right: Optional[Node] = None
+
+
+@dataclass
+class Position(tb.Position):
+    """Abstration representing location of single element"""
+
+    container: BinaryTree
+    node: Node
+
+    def element(self) -> Any:
+        """return element stored at position"""
+        return self.node.element
+
+    def __eq__(self, other: Position) -> bool:
+        return type(other) is type(self) and other.node is self.node
+
+
+@dataclass
 class BinaryTree(tb._BinaryTreeBase):
     """Class representing binary tree structure using linked representation"""
 
-    class _Node:
+    _root: Optional[Node] = field(init=False)
+    _size: int = 0
 
-        __slots__ = "_element", "_parent", "_left", "_right"
+    def __post_init__(self) -> None:
+        self._root = None
 
-        def __init__(self, element, parent=None, left=None, right=None):
-            self._element = element
-            self._parent = parent
-            self._left = left
-            self._right = right
+    def __len__(self):
+        """returns total number of nodes in a tree"""
+        return self._size
 
-    class Position(tb.Position):
-        """Abstraction representing location of single element"""
-
-        def __init__(self, container, node):
-            self._container = container
-            self._node = node
-
-        def element(self):
-            """return element stored at position """
-            return self._node._element
-
-        def __eq__(self, other):
-            return type(other) is type(self) and other._node is self._node
-
-    def _make_position(self, node: _Node) -> Union[Position, None]:
+    def _make_position(self, node: Node) -> Optional[Position]:
         """Return Position's instance for a given node"""
-        return self.Position(self, node) if node is not None else None
+        return Position(self, node) if node is not None else None
 
-    def _validate(self, p: Position) -> _Node:
+    def _validate(self, p: Position) -> Optional[Node]:
         """return position's node or raise appropriate error if invalid
 
         Parameters
@@ -61,31 +74,22 @@ class BinaryTree(tb._BinaryTreeBase):
         ValueError
             if p's parent is the current node
         """
-        if not isinstance(p, self.Position):
+        if not isinstance(p, Position):
             raise TypeError("p must be proper Position type")
-        if p._container is not self:
+        if p.container is not self:
             raise TypeError("p does not belong to this container")
 
         # convention for deprecated nodes
-        if p._node._parent is p._node:
+        if p.node.parent is p.node:
             raise ValueError("p is no longer valid")
-        return p._node
+        return p.node
 
-    # binary tree constructor
-    def __init__(self):
-        """Creates a initially empty binary tree"""
-        self._root = None
-        self._size = 0
-
-    def __len__(self):
-        """returns total number of nodes in a tree"""
-        return self._size
-
-    def root(self) -> Position:
+    @override
+    def root(self) -> Optional[Position]:
         """return root position of tree, return None if tree is empty"""
         return self._make_position(self._root)
 
-    def parent(self, p: Position) -> Union[Position, None]:
+    def parent(self, p: Position) -> Optional[Position]:
         """return position representing p's parent (or None if p is root)
 
         Parameters
