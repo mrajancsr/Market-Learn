@@ -27,6 +27,7 @@ import psycopg2
 from marketlearn.toolz import timethis
 from psycopg2.extras import DictCursor, execute_values
 
+# Custom Type to represent psycopg2 connection
 connection = TypeVar("connection")
 
 
@@ -152,11 +153,10 @@ class DbReader(Generic[connection]):
                     for col in curr.description:
                         column_names.add(col.name)
                     rows = curr.fetchall()
-                getattr(conn, "close")()
+                conn.close()
                 self.column_names = column_names
         except psycopg2.DatabaseError as error:
             print(error)
-            getattr(conn, "close")()
         else:
             return rows
 
@@ -179,32 +179,40 @@ class DbReader(Generic[connection]):
         table_name: str,
         columns: List[str],
     ) -> None:
-        """Pushes data given as an Iterator to PostGresDB
+        """Pushes data to postgresql database
 
-        :param data: data to be pushed
-        :type data: Iterator[Dict[str, Any]]
-        :param table_name: the table to insert data into
-        :type table_name: str
-        :param columns: the columns where data is inserted to
-        :type columns: List[str]
-        :param section: currently only supports 'dev',
-         defaults to 'dev'
-        :type section: str, optional
+        Parameters
+        ----------
+        data : Iterator[Dict[str, Any]]
+            to push to postgresql database
+        table_name : str
+            the table to push to
+        columns : List[str]
+            column names of the data
+
+        Raises
+        ------
+        psycopg2.DatabaseError
+            if the table doesn't exist or incorrect data format
         """
         try:
             self.connect()
-            with self.conn.cursor() as curr:
-                # get the column names
-                col_names = ",".join(columns)
+            conn = getattr(self, "conn")
+            if conn:
+                with conn.cursor() as curr:
+                    # get the column names
+                    col_names = ",".join(columns)
 
-                # create an iterator of tuple rows for db insert
-                args = (tuple(item.values()) for item in data)
-                query = f"""INSERT INTO {table_name} ({col_names}) values %s"""
+                    # create an iterator of tuple rows for db insert
+                    args = (tuple(item.values()) for item in data)
+                    query = (
+                        f"""INSERT INTO {table_name} ({col_names}) values %s"""
+                    )
 
-                # insert data into database and close connection
-                execute_values(curr, query, args)
-            self.conn.commit()
-            self.conn.close()
+                    # insert data into database and close connection
+                    execute_values(curr, query, args)
+                conn.commit()
+                conn.close()
         except psycopg2.DatabaseError as e:
             print(e)
 
@@ -214,24 +222,18 @@ class DbReader(Generic[connection]):
         datadf: pd.DataFrame,
         table_name: str,
     ) -> None:
-        """Pushes pandas dataframe to database
+        """Pushes pandas dataframe to postgresql database
 
-        :param datadf: data to be pushed
-        :type datadf: pd.DataFrame
-        :param table_name: the name of table to be pushed to
-        :type table_name: str
-        :param section: currently only supports 'dev',
-        defaults to 'dev'
-        :type section: str, optional
+        Parameters
+        ----------
+        datadf : pd.DataFrame
+            data to push to database
+        table_name : str
+            the table to push to
         """
-        # get the column names
-        cols = list(datadf)
-
-        # create an iterator from pandas df prior to push
+        column_names = list(datadf)
         data = self.iterator_from_df(datadf)
-
-        # push the data to table given by table_name
-        self.push(data, table_name=table_name, columns=cols)
+        self.push(data, table_name=table_name, columns=column_names)
 
     def copy_from(
         self,
@@ -243,40 +245,45 @@ class DbReader(Generic[connection]):
         """copies data from csv file and writes to Db"""
         raise NotImplementedError("Will be Implemented Later")
 
-    def drop(self, table_name: str, conn) -> None:
-        """removes table given by table_name from dev db"""
-        query = f"drop table {table_name};"
-        self.execute(query, conn)
+    def drop(self, table_name: str) -> None:
+        """removes table given by table_name from dev db
 
-    def delete(self, table_name):
-        """deletes all rows given by table_name from dev deb
-        table schema is retained
+        Parameters
+        ----------
+        table_name : str
+            the table in database
         """
-        query = f"delete from {table_name};"
-        self.execute(query)
+        self.execute(f"drop table {table_name};")
 
-    def execute(self, query: Union[str, List[str]]):
+    def delete(self, table_name: str) -> None:
+        """[summary]
+
+        Parameters
+        ----------
+        table_name : [type]
+            [description]
+        """
+        self.execute(f"delete from {table_name};")
+
+    def execute(self, query: Union[str, Tuple[str]]) -> None:
         """executes a sql query statement
 
         Parameters
         ----------
-        query : Union[str, List[str]]
-            can be either a statement or list of queries
-        section : str, optional, default='dev'
-            supposed one of dev or practice
+        query : Union[str, Tuple[str]]
+            can be either a statement or tuple of queries
         """
         try:
             self.connect()
-            with self.conn.cursor() as curr:
-                if isinstance(query, str):
-                    curr.execute(query)
-                elif isinstance(query, list):
-                    for q in query:
-                        curr.execute(q)
-            self.conn.commit()
-            self.conn.close()
+            conn = getattr(self, "conn")
+            if conn:
+                with conn.cursor() as curr:
+                    if isinstance(query, str):
+                        curr.execute(query)
+                    elif isinstance(query, tuple):
+                        for q in query:
+                            curr.execute(q)
+                conn.commit()
+                conn.close()
         except Exception as e:
             print(e)
-
-
-db = DbReader()
