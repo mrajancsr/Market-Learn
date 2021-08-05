@@ -15,7 +15,7 @@ import pandas as pd
 from marketlearn.portfolio import Asset
 from numpy import array, diag, float64, sqrt
 from numpy.random import random
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import minimize
 
 # import plotly.graph_objects as go
@@ -131,7 +131,7 @@ class Harry:
         weights = random(nsecurities)
         return weights / weights.sum()
 
-    def portfolio_variance(self, weights: NDArray[float64]) -> float:
+    def portfolio_variance(self, weights: NDArray[float64]) -> ArrayLike:
         """computes the portfolio variance
         portfolio variance is given by var_p = w'cov(R)w
         Parameters
@@ -148,10 +148,12 @@ class Harry:
         float
             portfolio variance
         """
-        return weights.transpose().dot(self.covariance_matrix).dot(weights)
+        return weights.T @ self.covariance_matrix @ weights
 
-    def portfolio_expected_return(self, weights: NDArray[float64]) -> float:
-        return weights.transpose().dot(self.asset_expected_returns)
+    def portfolio_expected_return(
+        self, weights: NDArray[float64]
+    ) -> ArrayLike:
+        return weights.T @ self.asset_expected_returns
 
     def simulate_investment_opportunity_set(
         self, nportfolios: int
@@ -262,17 +264,29 @@ class Harry:
         )["x"]
         return weights
 
-    def optimize_sharpe(self, bounds=None) -> np.ndarray:
+    def optimize_sharpe(
+        self, bounds: Optional[Tuple[int]] = None
+    ) -> NDArray[float64]:
         """Return the weights corresponding to maximizing sharpe ratio
         The sharpe ratio is given by SRp = mu_p - mu_f / sigma_p
         subject to w'mu = mu_p
                    w'cov(R)w = var_p
                    s.t sum(weights) = 1
-        """
-        # get count of assets in portfolio
-        total_assets = self.security_count
 
-        # make random guess
+        Parameters
+        ----------
+        bounds : Optional[Tuple[int]], default=None
+            bounds for long/short positins
+            (0, 1) long only
+            (-1, 0) short only
+            (-1, 1) can be long or short
+
+        Returns
+        -------
+        NDArray[float64]
+            weights corresponding to optimal sharpe ratio
+        """
+        total_assets = self.security_count
         guess_weights = Harry.random_weights(nsim=1, nsecurities=total_assets)
 
         # set target return & target variance and sum of weights constraint
@@ -290,8 +304,8 @@ class Harry:
         return weights
 
     def construct_efficient_frontier(
-        self, bounds=None
-    ) -> Tuple[ndarray[float64], ndarray[float64]]:
+        self, bounds: Optional[Tuple[int]] = None
+    ) -> Tuple[NDArray[float64], NDArray[float64]]:
         """Constructs the efficient frontier
 
         Parameters
@@ -314,7 +328,7 @@ class Harry:
 
         # get efficient portfolio x whose target return is max security returns
         target = self.asset_expected_returns.max()
-        x = self.optimize_risk(constraints=True, target=target, bounds=bounds)
+        x = self.optimize_risk(target=target, bounds=bounds)
 
         # compute grid of values
         theta = np.linspace(-1, 1, 1000)
