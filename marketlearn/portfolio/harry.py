@@ -18,8 +18,6 @@ from numpy.random import random
 from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import minimize
 
-# import plotly.graph_objects as go
-
 
 class Harry:
     """
@@ -216,7 +214,7 @@ class Harry:
         self,
         add_constraints: bool = False,
         target: Optional[float] = None,
-        bounds: Tuple[float, float] = (0.0, 1.0),
+        bounds: Optional[Tuple[float, float]] = None,
     ) -> NDArray[float64]:
         """Computes the weights corresponding to minimum variance
 
@@ -304,7 +302,7 @@ class Harry:
         return weights
 
     def construct_efficient_frontier(
-        self, bounds: Optional[Tuple[int]] = None
+        self, bounds: Optional[Tuple[float, float]] = None
     ) -> Tuple[NDArray[float64], NDArray[float64]]:
         """Constructs the efficient frontier
 
@@ -328,7 +326,9 @@ class Harry:
 
         # get efficient portfolio x whose target return is max security returns
         target = self.asset_expected_returns.max()
-        x = self.optimize_risk(target=target, bounds=bounds)
+        x = self.optimize_risk(
+            add_constraints=True, target=target, bounds=bounds
+        )
 
         # compute grid of values
         theta = np.linspace(-1, 1, 1000)
@@ -355,7 +355,9 @@ class Harry:
 
         return sig_p[sig_p <= max_vol], mu_p[sig_p <= max_vol]
 
-    def graph_frontier(self, nportfolios: int, bounds=None):
+    def graph_frontier(
+        self, nportfolios: int, bounds: Optional[Tuple[float, float]] = None
+    ) -> None:
         """graphs the efficient frontier set
 
         Parameters
@@ -373,13 +375,15 @@ class Harry:
         plt.plot(xval, yval, color="orange", linewidth=4)
         plt.grid()
 
-    def graph_investment_opportunity_set(self, bounds=None):
+    def graph_investment_opportunity_set(
+        self, bounds: Optional[Tuple[float, float]] = None
+    ) -> None:
         # create grid of target returns > minimum variance portfolio mean
         target_returns = np.linspace(0, 1, 1000)
         # todo: this can be made faster
         weights = map(
             lambda x: self.optimize_risk(
-                constraints=True, target=x, bounds=bounds
+                add_constraints=True, target=x, bounds=bounds
             ),
             target_returns,
         )
@@ -398,23 +402,3 @@ class Harry:
             linestyle="-",
         )
         plt.grid()
-
-    def __global_minimum_variance(self, mean_constraint=False, target=None):
-        """computes weights associated with global minimum variance
-
-        This function uses the formula for global minimum variance
-        # subject to constraint w'1 = 1
-        # if mean constraint is true, then another constraint is added
-        # w'mu = target
-        """
-        n = self.size + 1 if mean_constraint is False else self.size + 2
-        A = np.zeros((n, n))
-        ones = np.ones(self.size)
-        b = np.zeros(n)
-        A[: self.size, : self.size] = self.covmat * 2
-        A[-1, : self.size], A[: self.size, -1] = ones, ones
-        if mean_constraint is True:
-            A[-2, : self.size], A[: self.size, -2] = self.mu_vec.T, self.mu_vec
-            b[-2] = target
-        b[-1] = 1
-        return np.linalg.solve(A, b)[: self.size]
