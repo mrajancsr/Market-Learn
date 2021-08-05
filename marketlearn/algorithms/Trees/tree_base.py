@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
+from typing import Any, Iterator, List, Optional, Union
+
 from marketlearn.algorithms.linked_collections import LinkedQueue
-from typing import Any, Iterator, List, Union
 
 
 class Position(metaclass=ABCMeta):
@@ -12,11 +15,11 @@ class Position(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def __eq__(self, other):
+    def __eq__(self, other: Position) -> bool:
         """returns True if other position represents same location"""
         pass
 
-    def __ne__(self, other):
+    def __ne__(self, other: Position) -> bool:
         """returns True if other does not represent the same location
 
         Parameters
@@ -31,7 +34,7 @@ class Position(metaclass=ABCMeta):
         """
         return not (self == other)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Position({!r})".format(self.element())
 
 
@@ -87,7 +90,7 @@ class Tree(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def children(self, p: Position):
+    def children(self, p: Position) -> Iterator[Position]:
         """generates iteration of p's children
 
         Parameters
@@ -159,7 +162,7 @@ class Tree(metaclass=ABCMeta):
         """
         return len(self) == 0
 
-    def depth(self, p: Position):
+    def depth(self, p: Position) -> int:
         """Returns number of levels seperating position p from root
 
         Takes O(n) worse time
@@ -176,7 +179,7 @@ class Tree(metaclass=ABCMeta):
         """
         return 0 if self.is_root(p) else 1 + self.depth(self.parent(p))
 
-    def _height1(self, p: Position):
+    def _height1(self, p: Position) -> int:
         """Returns height of subtree rooted at position p
 
         Height of non empty tree T is is max of depth
@@ -195,7 +198,7 @@ class Tree(metaclass=ABCMeta):
         """
         return max(self.depth(p) for p in self.positions() if self.is_leaf(p))
 
-    def _height2(self, p: Position):
+    def _height2(self, p: Position) -> int:
         """returns height of subtree rooted at position p
 
         Parameters
@@ -213,7 +216,7 @@ class Tree(metaclass=ABCMeta):
         else:
             return 1 + max(self._height2(c) for c in self.children(p))
 
-    def height(self, p=None):
+    def height(self, p: Optional[Position] = None):
         """returns height of subtree rooted at position p
 
         Parameters
@@ -229,7 +232,7 @@ class Tree(metaclass=ABCMeta):
         p = self.root() if p is None else p
         return self._height2(p)
 
-    def breadthfirst(self):
+    def breadthfirst(self) -> Iterator[Position]:
         """performs a breadth first tree traversal on tree
         Uses a LinkedQueue implementation"""
         if not self.is_empty():
@@ -265,7 +268,10 @@ class Tree(metaclass=ABCMeta):
         Iterator[Position]
             preorder iteration of positions in a subtree rooted at position p
         """
-        yield p  # visit p first before visiting its subtrees
+        # visit p first before visiting its subtrees
+        yield p
+
+        # for each child of p, do a preorder of its subtrees
         for c in self.children(p):
             yield from self._subtree_preorder(c)
 
@@ -296,7 +302,7 @@ class _BinaryTreeBase(Tree):
     """Abstract class representing binary tree methods"""
 
     @abstractmethod
-    def left(self, p: Position) -> Union[Position, None]:
+    def left(self, p: Position) -> Optional[Position]:
         """return position representing p's left child
 
         return None if p does not have left child
@@ -314,7 +320,7 @@ class _BinaryTreeBase(Tree):
         pass
 
     @abstractmethod
-    def right(self, p: Position) -> Union[Position, None]:
+    def right(self, p: Position) -> Optional[Position]:
         """return position representing p's right child
         return None if p does not have right child"
 
@@ -330,7 +336,7 @@ class _BinaryTreeBase(Tree):
         """
         pass
 
-    def sibling(self, p: Position) -> Union[Position, None]:
+    def sibling(self, p: Position) -> Optional[Position]:
         """return position representing p's sibling (None if no siblings
         takes O(1) time
 
@@ -348,9 +354,11 @@ class _BinaryTreeBase(Tree):
         if parent is None:
             return None
         else:
-            if p == self.left(parent):
-                return self.right(parent)
-            return self.left(parent)
+            child = self.left(parent)
+            if child:
+                if p == child:
+                    return self.right(parent)
+                return self.left(parent)
 
     def children(self, p: Position) -> Iterator[Position]:
         """generates an iteration of p's children
@@ -365,10 +373,12 @@ class _BinaryTreeBase(Tree):
         Iterator[Position]
             of p's children
         """
-        if self.left(p) is not None:
-            yield self.left(p)
-        if self.right(p) is not None:
-            yield self.right(p)
+        left_child = self.left(p)
+        if left_child:
+            yield left_child
+        right_child = self.right(p)
+        if right_child:
+            yield right_child
 
     def _subtree_inorder(self, p):
 
