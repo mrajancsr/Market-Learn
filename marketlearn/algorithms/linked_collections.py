@@ -1,12 +1,56 @@
+# pyre-strict
 """linear collections of Stack, Queue and Deque implemented via linked List
 Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
 """
 from __future__ import annotations
-from typing import Any, Union
-from marketlearn.algorithms.linked_lists import linked_base as lb
+
+from dataclasses import dataclass
+from typing import Any, Optional, Union
+
+from marketlearn.algorithms.linked_lists.linked_base import (
+    DoublyLinkedBase,
+    EmptyException,
+    Node,
+)
+from marketlearn.algorithms.linked_lists.linked_base import (
+    Position as PositionBase,
+)
 
 
+@dataclass
+class Position(PositionBase):
+    """Class represents position of single element"""
+
+    _container: Position
+    _node: Node
+
+    # pyre-ignore
+    def element(self) -> Any:
+        """Returns element stored at this position
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
+        return self._node.element
+
+    def __eq__(self, other: Position) -> bool:
+        """Return true if other posotion represents same location
+
+        Parameters
+        ----------
+        other : Position
+            [description]
+        """
+        return type(other) is type(self) and other._node is self._node
+
+    def __ne__(self, other: Position) -> bool:
+        return not (self == other)
+
+
+@dataclass
 class LinkedStack:
     """LIFO Stack Implementation using a singly linked list
         Takes O(1) time
@@ -19,69 +63,59 @@ class LinkedStack:
                         default set to None since its empty at time of creation
     """
 
-    class Node:
-        """
-        Nested Node Class.
-        Create a node to store value and reference for LinkedList
-        Takes O(1) time
+    start_node: Optional[Node] = None
+    size: int = 0
 
-        params:
-        element: represents element of the node
-        nref:    next reference of the node
-        """
-
-        __slots__ = "element", "nref"  # streamline memory usage
-
-        def __init__(self, data, reference=None):
-            self.element = data
-            self.nref = reference
-
-    def __init__(self):
-        self.start_node = None
-        self.size = 0
-
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns number of elements in a stack
         takes O(1) time"""
         return self.size
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """Return True if Stack is empty
         takes O(1) time"""
         return self.size == 0
 
-    def pop(self):
+    # pyre-ignore
+    def pop(self) -> Any:
         """Removes and returns element from top of the stack (LIFO)
         takes O(1) time
         """
         if self.is_empty():
-            raise ("stack has no elements to delete")
-        element = self.start_node.element
-        # delete by assigning next reference of start node to start node
-        self.start_node = self.start_node.nref
-        self.size -= 1
-        return element
+            raise EmptyException("Stack has no elements to delete")
+        if self.start_node:
+            element = getattr(self.start_node, "element")
+            nref = getattr(self.start_node, "nref")
+            # delete by assigning next reference of start node to start node
+            self.start_node = nref
+            self.size -= 1
+            return element
 
-    def push(self, data):
+    # pyre-ignore
+    def push(self, data: Any) -> None:
         """Adds element to top of the Stack
         Takes O(1) time
         """
-        new_node = self.Node(data)  # create a node
+        new_node = Node(data)  # create a node
         new_node.nref = (
             self.start_node
         )  # new nodes next ref is old nodes start
         self.start_node = new_node  # new node is now the start_node
         self.size += 1
 
-    def peek(self):
+    # pyre-ignore
+    def peek(self) -> Any:
         """Returns but does not remove element from top of Stack
         takes O(1) time
         """
         if self.is_empty():
-            raise ("stack is empty")
-        return self.start_node.element
+            raise EmptyException("stack is empty")
+        if self.start_node:
+            element = getattr(self.start_node, "element")
+            return element
+        return None
 
-    def traverse(self):
+    def traverse(self) -> None:
         """Traverses a Singly Linked List
         Takes O(n) time
         """
@@ -108,24 +142,6 @@ class LinkedQueue:
 
     """
 
-    class Node:
-        """
-        Nested Node Class.
-        Create a node to store value and reference for LinkedList
-        Takes O(1) time
-
-        params:
-        element: represents element of the node
-        nref:    next reference of the node
-
-        """
-
-        __slots__ = "element", "nref"  # streamline memory usage
-
-        def __init__(self, data, reference=None):
-            self.element = data
-            self.nref = reference
-
     def __init__(self):
         self.start_node = None
         self.end_node = None
@@ -147,7 +163,7 @@ class LinkedQueue:
         """Adds element to back of the Queue
         Takes O(1) time
         """
-        new_node = self.Node(data)  # create a node
+        new_node = Node(data)  # create a node
         if self.is_empty():
             self.start_node = new_node
             self.end_node = new_node  # creating a circular reference
@@ -189,6 +205,7 @@ class LinkedQueue:
                 n = n.nref
 
 
+@dataclass
 class LinkedDeque:
     """Deque Implementation using a Doubly Linked List
         Takes O(1) time for all operations
@@ -203,28 +220,9 @@ class LinkedDeque:
 
     """
 
-    class Node:
-        """
-        Nested Node Class.
-        Create a node to store value and 2 references for LinkedList
-        Takes O(1) time
-
-        params:
-        element: represents element of the node
-        nref:    next reference of the node
-        pref:    previous reference of the node
-
-        """
-
-        def __init__(self, data, next_ref=None, prev_ref=None):
-            self.element = data
-            self.nref = next_ref
-            self.pref = prev_ref
-
-    def __init__(self):
-        self.start_node = None
-        self.end_node = None
-        self.size = 0
+    start_node: Optional[Node] = None
+    end_node: Optional[Node] = None
+    size: int = 0
 
     def __len__(self):
         return self.size
@@ -319,7 +317,7 @@ class LinkedDeque:
                 n = n.nref
 
 
-class PositionalList(lb._DoublyLinkedBase):
+class PositionalList(DoublyLinkedBase):
     """Container of elements allowing positional access"""
 
     class Position(lb.Position):
