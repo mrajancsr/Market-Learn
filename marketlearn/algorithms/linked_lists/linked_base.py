@@ -7,6 +7,10 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 
+class EmptyException(Exception):
+    pass
+
+
 @dataclass
 class Position(metaclass=ABCMeta):
     """Abstract Base Class representing position of an element"""
@@ -40,6 +44,20 @@ class Position(metaclass=ABCMeta):
 
 @dataclass
 class Node:
+    """
+    Create a node to store v alue and 2 references for LinkedList
+    Takes O(1) time
+
+    Parameters
+    ----------
+    element : Any
+        represents element of the node
+    nref : optional[Node], default=None
+        next referernce of the node
+    pref : optional[Node], default=None
+        previous reference of the node
+    """
+
     # pyre-fixme
     element: Any
     pref: Optional[Node] = None
@@ -47,7 +65,7 @@ class Node:
 
 
 @dataclass
-class _DoublyLinkedBase(metaclass=ABCMeta):
+class DoublyLinkedBase(metaclass=ABCMeta):
     start_node: Node = field(init=False, default=Node(None))
     end_node: Node = field(init=False, default=Node(None))
     size: int = field(init=False, default=0)
@@ -77,14 +95,14 @@ class _DoublyLinkedBase(metaclass=ABCMeta):
         ----------
         data : Any
             data to be inserted
-        node1 : _Node
+        node1 : Node
             previous node
-        node2 : _Node
+        node2 : Node
             next node
 
         Returns
         -------
-        [_Node]
+        [Node]
             node inserted between two nodes
         """
         # Create a node
@@ -102,7 +120,7 @@ class _DoublyLinkedBase(metaclass=ABCMeta):
 
         Parameters
         ----------
-        node : _Node
+        node : Node
             node to be deleted
 
         Returns

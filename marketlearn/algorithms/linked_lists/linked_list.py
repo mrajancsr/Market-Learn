@@ -1,11 +1,17 @@
+# pyre-strict
 """Implementation for Singly and DoublyLinked List
 Author: Rajan Subramanian
 """
 
 from __future__ import annotations
-from typing import Any
+
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+from marketlearn.algorithms.linked_lists import EmptyException, Node
 
 
+@dataclass
 class SinglyLinkedList:
     """Create a Singly Linked List
         Takes O(1) time
@@ -23,29 +29,10 @@ class SinglyLinkedList:
         represents the length of the linked list
     """
 
-    class Node:
-        """Nested Node Class
+    start_node: Optional[Node] = None
+    size: int = field(init=False, default=0)
 
-        Create a node to store value and reference for LinkedList
-        Takes O(1) time
-
-        Parameters
-        ----------
-        data : Any
-            represents element stored in a node
-        reference : Node, optional, default=None
-            next reference of the Node
-        """
-
-        def __init__(self, data: Any, reference=None):
-            self.element = data
-            self.nref = reference
-
-    def __init__(self):
-        self.start_node = None
-        self.size = 0
-
-    def __len__(self):
+    def __len__(self) -> int:
         """returns length of linked list
 
         Returns
@@ -55,19 +42,20 @@ class SinglyLinkedList:
         """
         return self.size
 
-    def traverse(self):
+    def traverse(self) -> None:
         """Traverses a Singly Linked List
         Takes O(n) time
         """
         if self.start_node is None:
-            print("list has no elements")
-        else:
-            n = self.start_node
-            while n is not None:
-                print(n.element, " ")
-                n = n.nref
+            raise EmptyException("List is empty")
 
-    def insert_at_start(self, data: Any):
+        n = self.start_node
+        while n is not None:
+            print(n.element, " ")
+            n = n.nref
+
+    # pyre-ignore
+    def insert_at_start(self, data: Any) -> None:
         """inserts data at start of the list
         takes O(1) time
 
@@ -76,11 +64,16 @@ class SinglyLinkedList:
         data : Any
             data to be inserted into linkedlist
         """
-        new_node = self.Node(data)  # create a node
-        new_node.nref = self.start_node  # new nodes nextref is old nodes start
-        self.start_node = new_node  # new node is now the start_node
+        new_node = Node(data)
+
+        # New nodes nextref is old nodes start
+        new_node.nref = self.start_node
+
+        # New node is now the start_node
+        self.start_node = new_node
         self.size += 1
 
+    # pyre-ignore
     def insert_at_end(self, data: Any) -> None:
         """inserts value at end of the list
         if list is empty, takes O(1) time.  Otherwise:
@@ -91,11 +84,12 @@ class SinglyLinkedList:
         data : Any
             data to be inserted into linkedlist
         """
-        new_node = self.Node(data)
+        new_node = Node(data)
         if self.start_node is None:  # if list is empty
             self.start_node = new_node  # then start node is the new node
             self.size += 1
-            return
+            return None
+
         n = self.start_node
         # iterate until last element
         while n.nref is not None:
@@ -103,7 +97,8 @@ class SinglyLinkedList:
         n.nref = new_node  # set the next reference to point to new node
         self.size += 1
 
-    def insert_after_item(self, item: Any, data: Any):
+    # pyre-ignore
+    def insert_after_item(self, item: Any, data: Any) -> None:
         """nserts data before item is found
         if found, takes O(k+1), otherwise, O(n)
 
@@ -122,12 +117,13 @@ class SinglyLinkedList:
         if n is None:
             print("item not found in list")
         else:
-            new_node = self.Node(data)
+            new_node = Node(data)
             # set the new nodes next ref to current nodes next ref
             new_node.nref = n.nref
             n.nref = new_node  # set the current nodes next ref to new node
             self.size += 1
 
+    # pyre-ignore
     def insert_before_item(self, item: Any, data: Any):
         """inserts data before item is found
         if found, takes O(k+1), otherwise, O(n)
@@ -140,16 +136,16 @@ class SinglyLinkedList:
             data to be inserted before item is found
         """
         if self.start_node is None:
-            print("list has no elements")
-            return
+            raise EmptyException("list has no elements")
 
         # if element is found in first node
-        if self.start_node.element == item:
-            new_node = self.Node(data)
+        element = getattr(self.start_node, "element")
+        if element == item:
+            new_node = Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
             self.size += 1
-            return
+            return None
 
         # iterate until next node contains element
         n = self.start_node
@@ -160,16 +156,17 @@ class SinglyLinkedList:
 
         # if end of list is reached
         if n.nref is None:
-            print("value not found is list")
+            raise ValueError("Value not found in list")
         else:
-            new_node = self.Node(data)
+            new_node = Node(data)
             new_node.nref = n.nref  # new nodes next ref is previous nodes next
             n.nref = new_node
             self.size += 1
 
-    def insert_at_index(self, index, data):
+    # pyre-ignore
+    def insert_at_index(self, index: int, data: Any) -> None:
         if index == 0:
-            new_node = self.Node(data)
+            new_node = Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
             self.size += 1
@@ -181,18 +178,16 @@ class SinglyLinkedList:
             index -= 1
             n = n.nref
 
-        if n.nref is None:
+        nref = getattr(n, "nref")
+        if nref is None:
             raise IndexError("Index out of bounds")
         else:
-            new_node = self.Node(data)
-            new_node.nref = n.nref
-            n.nref = new_node
+            new_node = Node(data)
+            new_node.nref = nref
+            nref = new_node
             self.size += 1
 
-    def count_positions(self):
-        """Returns the count of nodes in Linked List"""
-        return self.size
-
+    # pyre-ignore
     def search(self, item: Any) -> bool:
         """returns True if item is found
 
@@ -208,8 +203,7 @@ class SinglyLinkedList:
         """
         # check if linked list is empty
         if self.start_node is None:
-            print("list has non elements")
-            return
+            raise EmptyException("List has no elements")
 
         # iterate and search for elements
         n = self.start_node
@@ -219,7 +213,7 @@ class SinglyLinkedList:
             n = n.nref
         return False
 
-    def reverse(self):
+    def reverse(self) -> None:
         n = self.start_node  # current node
         prev_node = None
         next_node = None
@@ -230,14 +224,13 @@ class SinglyLinkedList:
             n = next_node  # increment over to next node
         self.start_node = prev_node
 
-    def delete_from_start(self):
+    def delete_from_start(self) -> None:
         if self.start_node is None:
-            print("list has no elements to delete")
-            return
+            raise EmptyException("List is empty")
         # delete by assining next reference of start node to start node
-        self.start_node = self.start_node.nref
+        self.start_node = getattr(self.start_node, "nref")
 
-    def delete_from_end(self):
+    def delete_from_end(self) -> None:
         if self.start_node is None:
             print("list has no elements to delete")
             return
@@ -246,6 +239,7 @@ class SinglyLinkedList:
             n = n.nref
         n.nref = None
 
+    # pyre-ignore
     def delete_item(self, item: Any):
         """Deletes the Node that contains the item
 
@@ -254,23 +248,25 @@ class SinglyLinkedList:
         """
         # check if list is empty
         if self.start_node is None:
-            print("no element to delete")
-            return
+            raise EmptyException("list is empty")
+
         # check if first node contains the item
-        if self.start_node.element == item:
+        element = getattr(self.start_node, "element")
+        if element == item:
             # assign next reference of current node to start node
-            self.start_node = self.start_node.nref
+            self.start_node = getattr(self.start_node, "nref")
             return
 
         # iterate until element is found
         n = self.start_node
         while n:
-            if n.nref.element == item:
+            if getattr(n.nref, "element") == item:
                 break
             n = n.nref
 
         # check if tail is reached
-        if n.nref is None:
+        nref = getattr(n, "nref")
+        if nref is None:
             print("item not found in index")
         else:
-            n.nref = n.nref.nref
+            nref = nref.nref
