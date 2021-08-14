@@ -1,8 +1,14 @@
+# pyre-strict
 """Implementation of a Doubly Linked List"""
 from __future__ import annotations
-from typing import Any
+
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+from marketlearn.algorithms.linked_lists import EmptyException, Node
 
 
+@dataclass
 class DoublyLinkedList:
     """Create a new Doubly Linked List (dLinklist)
         Takes O(1) time
@@ -22,51 +28,33 @@ class DoublyLinkedList:
 
     """
 
-    class Node:
-        """Nested Node Class
-        Create a node to store v alue and 2 references for LinkedList
-        Takes O(1) time
+    start_node: Optional[Node] = field(init=False, default=None)
+    size: int = field(init=False, default=0)
 
-        Parameters
-        ----------
-        data : Any, default=None
-            represents element of the node
-        next_ref : optional[self.Node], default=None
-            next referernce of the node
-        prev_ref : optional[self.Node], default=None
-            previous reference of the node
-        """
-
-        def __init__(self, data: Any, next_ref=None, prev_ref=None):
-            self.element = data
-            self.nref = next_ref
-            self.pref = prev_ref
-
-    def __init__(self):
-        self.start_node = None
-        self.size = 0
-
-    def insert_in_empty_list(self, data):
+    # pyre-ignore
+    def insert_in_empty_list(self, data: Any) -> None:
         """inserts data into a empty dlinked list
         params: data to insert
         """
         if self.start_node is None:
-            new_node = self.Node(data)
+            new_node = Node(data)
             self.start_node = new_node
             self.size += 1
         else:
-            print("dlink is not empty")
+            raise EmptyException("Doubly Linked List Cannot be Empty")
 
-    def insert_at_start(self, data):
+    # pyre-ignore
+    def insert_at_start(self, data: Any) -> None:
         """inserets data at start of dlinked list
         takes O(1) time
         """
-        if self.start_node is None:  # if list is empty
-            new_node = self.Node(data)
+        if self.start_node is None:
+            new_node = Node(data)
             self.start_node = new_node
             self.size += 1
-            return
-        new_node = self.Node(data)
+            return None
+
+        new_node = Node(data)
         # make next reference of new node to current node
         new_node.nref = self.start_node
 
@@ -75,7 +63,8 @@ class DoublyLinkedList:
         self.start_node = new_node
         self.size += 1
 
-    def insert_at_end(self, data):
+    # pyre-ignore
+    def insert_at_end(self, data) -> None:
         """inserts data at end of dlinked list"""
         if self.start_node is None:
             new_node = self.Node(data)
@@ -89,7 +78,7 @@ class DoublyLinkedList:
         new_node.pref = n
         n.nref = new_node
 
-    def traverse(self):
+    def traverse(self) -> None:
         """Traverses a Singly Linked List
         Takes O(n) time
         """
@@ -101,7 +90,8 @@ class DoublyLinkedList:
                 print(n.element, " ")
                 n = n.nref
 
-    def insert_after_value(self, value, data):
+    # pyre-ignore
+    def insert_after_value(self, value: Any, data: Any) -> None:
         """inserts data after item x"""
         if self.start_node is None:
             print("list is empty")
@@ -123,7 +113,8 @@ class DoublyLinkedList:
                 n.nref.pref = new_node
             n.nref = new_node
 
-    def insert_before_value(self, value, data):
+    # pyre-ignore
+    def insert_before_value(self, value: Any, data: Any) -> None:
         if self.start_node is None:
             print("empty dlinked list")
             return
@@ -150,7 +141,7 @@ class DoublyLinkedList:
             # update pref reference of current node to new node
             n.pref = new_node
 
-    def delete_from_start(self):
+    def delete_from_start(self) -> None:
         """deletes a node from the start of dlinklist
         takes O(1) time
         """
@@ -164,7 +155,7 @@ class DoublyLinkedList:
         self.start_node = self.start_node.nref
         self.start_node.pref = None
 
-    def delete_from_end(self):
+    def delete_from_end(self) -> None:
         """Deletes the node at end of dlist
         takes O(n) time
         """
@@ -177,7 +168,7 @@ class DoublyLinkedList:
             n = n.nref
         n.pref.nref = None
 
-    def delete_by_value(self, value):
+    def delete_by_value(self, value) -> None:
         if self.start_node is None:
             print("dLinklist is empty")
             return
@@ -215,19 +206,19 @@ class DoublyLinkedList:
                 # set the prev ref of next node to current nodes previous ref
                 n.nref.pref = n.pref
 
-    def reverse(self):
+    def reverse(self) -> None:
         if self.start_node is None:
             print("list has no elements to reverse")
             return
         n = self.start_node  # current node
         prev_node = None
-        while n:  # assume first node case...
-            prev_node = n.pref  # save the previous reference
-            n.pref = (
-                n.nref
-            )  # next ref of current node is prev ref of curr node after flip
+        # assume first node case...
+        while n:
+            # save the previous reference
+            prev_node = n.pref
+            # next ref of current node is prev ref of curr node after flip
+            n.pref = n.nref
             n.nref = prev_node
-            n = (
-                n.pref
-            )  # since pref is the next reference.  we iterate backward
+            # since pref is the next reference.  we iterate backward
+            n = n.pref
         self.start_node = prev_node.pref
