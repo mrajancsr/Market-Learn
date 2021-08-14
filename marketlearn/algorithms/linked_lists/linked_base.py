@@ -1,24 +1,28 @@
 """Abstract Base class for Doubly Linked List"""
-
+# pyre-strict
 from __future__ import annotations
-from typing import Any
+
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any, Optional
 
 
+@dataclass
 class Position(metaclass=ABCMeta):
     """Abstract Base Class representing position of an element"""
 
     @abstractmethod
-    def element(self):
+    # pyre-fixme
+    def element(self) -> Any:
         """returns element stored in this position"""
         pass
 
     @abstractmethod
-    def __eq__(self, other):
+    def __eq__(self, other: Position) -> bool:
         """returns True if other position represents same location"""
         pass
 
-    def __ne__(self, other):
+    def __ne__(self, other: Position) -> bool:
         """returns True if other does not represent the same location
 
         Parameters
@@ -34,22 +38,26 @@ class Position(metaclass=ABCMeta):
         return not (self == other)
 
 
+@dataclass
+class Node:
+    # pyre-fixme
+    element: Any
+    pref: Optional[Node] = None
+    nref: Optional[Node] = None
+
+
+@dataclass
 class _DoublyLinkedBase(metaclass=ABCMeta):
-    class _Node:
-        def __init__(self, data, previous_ref=None, next_ref=None):
-            self._element = data
-            self._pref = previous_ref
-            self._nref = next_ref
+    start_node: Node = field(init=False, default=Node(None))
+    end_node: Node = field(init=False, default=Node(None))
+    size: int = field(init=False, default=0)
 
-    def __init__(self):
-        self._start_node = self._Node(None)
-        self._end_node = self._Node(None)
-        self._start_node._nref = self._end_node  # creating circular reference
-        self._end_node._pref = self._start_node
-        self._size = 0
+    def __post_init__(self) -> None:
+        self.start_node.nref = self.end_node
+        self.end_node.pref = self.start_node
 
-    def __len__(self):
-        return self._size
+    def __len__(self) -> int:
+        return self.size
 
     def is_empty(self) -> bool:
         """Returns True if empty
@@ -59,9 +67,10 @@ class _DoublyLinkedBase(metaclass=ABCMeta):
         bool
             True if empty
         """
-        return self._size == 0
+        return self.size == 0
 
-    def _insert_between(self, data: Any, node1: _Node, node2: _Node) -> _Node:
+    # pyre-fixme
+    def _insert_between(self, data: Any, node1: Node, node2: Node) -> Node:
         """Adds data between two nodes
 
         Parameters
@@ -79,15 +88,16 @@ class _DoublyLinkedBase(metaclass=ABCMeta):
             node inserted between two nodes
         """
         # Create a node
-        new_node = self._Node(data, node1, node2)
+        new_node = Node(data, node1, node2)
 
         # Set new node between two nodes
-        node1._nref = new_node
-        node2._pref = new_node
-        self._size += 1
+        node1.nref = new_node
+        node2.pref = new_node
+        self.size += 1
         return new_node
 
-    def _delete_node(self, node: _Node) -> Any:
+    # pyre-fixme
+    def _delete_node(self, node: Node) -> Any:
         """Deletes node from list and returns the element
 
         Parameters
@@ -101,25 +111,27 @@ class _DoublyLinkedBase(metaclass=ABCMeta):
             data contained within the node
         """
         # save the nodes previous and next reference prior to deletion
-        before = node._pref
-        after = node._nref
-        before._nref = after
-        after._pref = before
-        self._size -= 1
-        element = node._element
+        before = node.pref
+        after = node.nref
+        if before:
+            before.nref = after
+        if after:
+            after.pref = before
+        self.size -= 1
+        element = node.element
 
         # deprecate the node
-        node._nref = node._pref = node._element = None
+        node.nref = node.pref = node.element = None
         return element
 
-    def _traverse(self):
+    def _traverse(self) -> None:
         """Traverses a Linked List
         Takes O(n) time
         """
-        if self._start_node is None:
+        if self.start_node is None:
             print("list has no elements")
         else:
-            n = self._start_node
+            n = self.start_node
             while n is not None:
                 print(n._element, " ")
                 n = n._nref
