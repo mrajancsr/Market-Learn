@@ -1,15 +1,20 @@
+# pyre-strict
 """Implementation of Linear Regression using various fitting methods
 Author: Rajan Subramanian
 Created: May 23, 2020
 """
 from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Dict, Union
+
 import numpy as np
+from marketlearn.learning.linear_models.base import LinearBase
 from scipy.linalg import solve_triangular
 from scipy.optimize import minimize
-from typing import Dict, Union
-from marketlearn.learning.linear_models.base import LinearBase
 
 
+@dataclass
 class LinearRegression(LinearBase):
     """
     Implements the classic Linear Regression via ols
@@ -41,10 +46,9 @@ class LinearRegression(LinearBase):
         solve Mx = y.  Leting M = U'U, we solve this by forward/backward sub
     """
 
-    def __init__(self, bias: bool = True, degree: int = 1):
-        self.bias = bias
-        self.degree = degree
-        self.run = False
+    bias: bool = True
+    degree: int = 1
+    run: bool = field(init=False, default=False)
 
     def _linear_solve(
         self, A: np.ndarray, b: np.ndarray, method: str = "ols-cholesky"
@@ -154,6 +158,7 @@ class LinearRegression(LinearBase):
         return np.linalg.inv(X.T @ X) * self.s2
 
 
+@dataclass
 class LinearRegressionMLE(LinearBase):
     """
     Implements linear regression via Maximum Likelihood Estimate
@@ -179,16 +184,17 @@ class LinearRegressionMLE(LinearBase):
 
     """
 
-    def __init__(self, bias: bool = True, degree: int = 1):
-        self.bias = bias
-        self.degree = degree
-        self.run = False
+    bias: bool = True
+    degree: int = 1
+    run: bool = field(init=False, default=False)
 
     def _loglikelihood(self, true, guess):
         error = true - guess
         return 0.5 * (error ** 2).sum()
 
-    def _objective_func(self, guess: np.ndarray, A: np.ndarray, b: np.ndarray):
+    def _objective_func(
+        self, guess: np.ndarray, A: np.ndarray, b: np.ndarray
+    ) -> float:
         """the objective function to be minimized, returns estimated x for Ax=b
         Args:
         guess:
@@ -298,6 +304,7 @@ class LinearRegressionMLE(LinearBase):
         return X @ thetas
 
 
+@dataclass
 class LinearRegressionGD(LinearBase):
     """Implements the ols regression via Gradient Descent
 
@@ -312,20 +319,11 @@ class LinearRegressionGD(LinearBase):
     residuals:       Number of incorrect predictions
     """
 
-    def __init__(
-        self,
-        eta: float = 0.001,
-        n_iter: int = 20,
-        random_state: int = 1,
-        bias: bool = True,
-        degree: int = 1,
-    ):
-        self.eta = eta
-        self.n_iter = n_iter
-        self.random_state = random_state
-        self.bias = bias
-        self.degree = degree
-        self.run = False
+    eta: float = 0.001
+    n_iter: int = 20
+    random_state: int = 1
+    bias: bool = True
+    degree: int = 1
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> LinearRegressionGD:
         """Fits model to training data via Gradient Descent
