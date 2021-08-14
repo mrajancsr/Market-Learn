@@ -104,7 +104,7 @@ class DoublyLinkedList:
         if n is None:
             print("value not found")
         else:
-            new_node = self.Node(data)
+            new_node = Node(data)
             new_node.pref = n
             new_node.nref = n.nref
 
@@ -119,7 +119,7 @@ class DoublyLinkedList:
             print("empty dlinked list")
             return
         if self.start_node.element == value:
-            new_node = self.Node(data)
+            new_node = Node(data)
             new_node.nref = self.start_node
             self.start_node = new_node
             return
@@ -131,7 +131,7 @@ class DoublyLinkedList:
         if n is None:
             print("dlinked list is empty")
         else:
-            new_node = self.Node(data)
+            new_node = Node(data)
             # set next ref of new to current node
             new_node.nref = n
 

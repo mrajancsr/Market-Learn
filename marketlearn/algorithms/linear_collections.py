@@ -1,6 +1,6 @@
 """Linear Collections, consisting of stacks, queue and deque"""
-from typing import Any, Union, Optional
 import collections
+from typing import Any, Optional, Union
 
 
 class _Empty(Exception):
@@ -87,9 +87,10 @@ class MaxStack:
 
     def __init__(self, item: Optional[list] = None):
         self._data = []
-        self._create_stack(item)
+        if item:
+            self._create_stack(item)
 
-    def _create_stack(self, items: list) -> list:
+    def _create_stack(self, items: list):
         """Creates a stack from list of items
 
         :param items: list of items
@@ -100,7 +101,8 @@ class MaxStack:
         # push items to a stack if user supplies list of items
         if isinstance(items, list):
             for item in items:
-                self.push(item)
+                if item:
+                    self.push(item)
 
     def empty(self):
         """returns True if Stack is empty

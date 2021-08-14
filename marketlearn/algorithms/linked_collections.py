@@ -5,8 +5,8 @@ Takes O(1) time for all insertion, removal operations
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Optional, Union
+from dataclasses import dataclass, field
+from typing import Any, Iterator, Optional
 
 from marketlearn.algorithms.linked_lists.linked_base import (
     DoublyLinkedBase,
@@ -128,6 +128,7 @@ class LinkedStack:
                 n = n.nref
 
 
+@dataclass
 class LinkedQueue:
     """FIFO Queue Implementation using a singly linked list
         Takes O(1) time for all operations
@@ -142,24 +143,24 @@ class LinkedQueue:
 
     """
 
-    def __init__(self):
-        self.start_node = None
-        self.end_node = None
-        self.size = 0
+    start_node: Optional[Node] = field(init=False, default=None)
+    end_node: Optional[Node] = field(init=False, default=None)
+    size: int = field(init=False, default=0)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the number of items in a Queue
         takes O(1) time
         """
         return self.size
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """Returns True if Queue is empty
         takes O(1) time
         """
         return self.size == 0
 
-    def enqueue(self, data):
+    # pyre-ignore
+    def enqueue(self, data: Any) -> None:
         """Adds element to back of the Queue
         Takes O(1) time
         """
@@ -168,13 +169,14 @@ class LinkedQueue:
             self.start_node = new_node
             self.end_node = new_node  # creating a circular reference
             self.size += 1
-            return
+            return None
         # else set the next reference of end node
         self.end_node.nref = new_node
         self.end_node = new_node  # update ref of end node to new node
         self.size += 1
 
-    def dequeue(self):
+    # pyre-ignore
+    def dequeue(self) -> Any:
         """removes item at top of the Queue
         takes O(1) time
         """
@@ -224,24 +226,25 @@ class LinkedDeque:
     end_node: Optional[Node] = None
     size: int = 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.size
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """returns True if Deque is empty"""
         return self.size == 0
 
-    def add_front(self, data):
+    # pyre-ignore
+    def add_front(self, data: Any) -> None:
         """inserets data at start of Deque
         takes O(1) time
         """
         if self.is_empty():
-            new_node = self.Node(data)
+            new_node = Node(data)
             self.start_node = new_node
             self.end_node = new_node  # creating a circular reference
             self.size += 1
             return
-        new_node = self.Node(data)
+        new_node = Node(data)
         new_node.nref = (
             self.start_node
         )  # make next reference of new node to current node
@@ -251,7 +254,8 @@ class LinkedDeque:
         self.start_node = new_node
         self.size += 1
 
-    def remove_front(self):
+    # pyre-ignore
+    def remove_front(self) -> Any:
         """deletes a node from the start of Deque
         and returns the element
         takes O(1) time
@@ -271,7 +275,7 @@ class LinkedDeque:
             self.end_node = None
         return element
 
-    def add_rear(self, data):
+    def add_rear(self, data: Any) -> None:
         """Adds element to back of the Deck
         Takes O(1) time
         """
@@ -287,7 +291,8 @@ class LinkedDeque:
         self.end_node = new_node  # update ref of end node to new node
         self.size += 1
 
-    def remove_rear(self):
+    # pyre-ignore
+    def remove_rear(self) -> Any:
         """removes element at back of the Deck
         Takes O(1) time
         """
@@ -304,7 +309,7 @@ class LinkedDeque:
         self.size -= 1
         return element
 
-    def traverse(self):
+    def traverse(self) -> None:
         """Traverses a Singly Linked List
         Takes O(n) time
         """
@@ -320,38 +325,8 @@ class LinkedDeque:
 class PositionalList(DoublyLinkedBase):
     """Container of elements allowing positional access"""
 
-    class Position(lb.Position):
-        """Class represents position of single element"""
-
-        def __init__(self, container, node):
-            self._container = container
-            self._node = node
-
-        def element(self) -> Any:
-            """Returns element stored at this position
-
-            Returns
-            -------
-            [type]
-                [description]
-            """
-            return self._node._element
-
-        def __eq__(self, other):
-            """Return true if other posotion represents same location
-
-            Parameters
-            ----------
-            other : Position
-                [description]
-            """
-            return type(other) is type(self) and other._node is self._node
-
-        def __ne__(self, other):
-            return not (self == other)
-
     # - Utility methods
-    def _validate(self, p: Position):
+    def _validate(self, p: Position) -> Node:
         """Return position's node, or raise error if invalid
 
         Parameters
@@ -367,14 +342,14 @@ class PositionalList(DoublyLinkedBase):
             raise ValueError("p is no longer valid")
         return p._node
 
-    def _make_position(self, node) -> Union[None, Position]:
+    def _make_position(self, node) -> Optional[Position]:
         """Return position instance for given node or None if sentinel"""
         if node is self._start_node or node is self._end_node:
             return None
         return self.Position(self, node)
 
     # - Accessors
-    def first(self) -> Union[Position, None]:
+    def first(self) -> Optional[Position]:
         """Return first position in list or None if empty
 
         Returns
@@ -384,7 +359,7 @@ class PositionalList(DoublyLinkedBase):
         """
         return self._make_position(self._start_node._nref)
 
-    def last(self) -> Union[Position, None]:
+    def last(self) -> Optional[Position]:
         """Return last position in list or None if empty
 
         Returns
@@ -394,7 +369,7 @@ class PositionalList(DoublyLinkedBase):
         """
         return self._make_position(self._end_node._pref)
 
-    def before(self, p: Position) -> Union[Position, None]:
+    def before(self, p: Position) -> Optional[Position]:
         """Return position before p's position or None if p is first psotion
 
         Parameters
@@ -410,7 +385,7 @@ class PositionalList(DoublyLinkedBase):
         node = self._validate(p)
         return self._make_position(node._nref)
 
-    def after(self, p: Position) -> Union[Position, None]:
+    def after(self, p: Position) -> Optional[Position]:
         """Return position after p's position or None if p is last position
 
         Parameters
@@ -426,7 +401,8 @@ class PositionalList(DoublyLinkedBase):
         node = self._validate(p)
         return self._make_position(node._nref)
 
-    def __iter__(self):
+    # pyre-ignore
+    def __iter__(self) -> Iterator[Any]:
         """Generate forward iteration of elements in list"""
         cursor = self.first()
         while cursor is not None:
@@ -434,7 +410,8 @@ class PositionalList(DoublyLinkedBase):
             cursor = self.after(cursor)
 
     # Mutators
-    def _insert_between(self, data, node1, node2) -> Position:
+    # pyre-ignore
+    def _insert_between(self, data: Any, node1: Node, node2: Node) -> Position:
         """Inserts data between two nodes and returns position object
 
         Parameters
@@ -454,6 +431,7 @@ class PositionalList(DoublyLinkedBase):
         node = super()._insert_between(data, node1, node2)
         return self._make_position(node)
 
+    # pyre-ignore
     def add_first(self, data: Any) -> Position:
         """Insert data into first position and return new position
 
@@ -473,6 +451,7 @@ class PositionalList(DoublyLinkedBase):
             )
         )
 
+    # pyre-ignore
     def add_last(self, data: Any) -> Position:
         """Insert data into last position and return new position
 
@@ -490,6 +469,7 @@ class PositionalList(DoublyLinkedBase):
             self._insert_between(data, self._end_node._pref, self._end_node)
         )
 
+    # pyre-ignore
     def add_before(self, data: Any, p: Position) -> Position:
         """Insert data right before position p and return new position
 
@@ -510,13 +490,15 @@ class PositionalList(DoublyLinkedBase):
             self._insert_between(data, node._pref, node)
         )
 
+    # pyre-ignore
     def add_after(self, data: Any, p: Position) -> Position:
         node = self._validate(p)
         return self._make_position(
             self._insert_between(data, node, node._nref)
         )
 
-    def delete(self, p):
+    # pyre-ignore
+    def delete(self, p: Position) -> Any:
         """Remove and return the element at postion p
 
         Parameters
@@ -527,6 +509,7 @@ class PositionalList(DoublyLinkedBase):
         node = self._validate(p)
         return self._delete_node(node)
 
+    # pyre-ignore
     def replace(self, p: Position, data: Any) -> Any:
         """Replace
 
