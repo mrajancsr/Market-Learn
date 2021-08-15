@@ -6,7 +6,7 @@ Takes O(1) time for all insertion, removal operations
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator, Optional, overload
 
 from marketlearn.algorithms.linked_lists.linked_base import (
     DoublyLinkedBase,
@@ -22,7 +22,7 @@ from marketlearn.algorithms.linked_lists.linked_base import (
 class Position(PositionBase):
     """Class represents position of single element"""
 
-    _container: Position
+    _container: object
     _node: Node
 
     # pyre-ignore
@@ -171,7 +171,8 @@ class LinkedQueue:
             self.size += 1
             return None
         # else set the next reference of end node
-        self.end_node.nref = new_node
+        nref = getattr(self.end_node, "nref")
+        nref = new_node
         self.end_node = new_node  # update ref of end node to new node
         self.size += 1
 
@@ -181,11 +182,11 @@ class LinkedQueue:
         takes O(1) time
         """
         if self.is_empty():
-            raise ("Queue has no elements to delete")
-        element = self.start_node.element
+            raise EmptyException("Queue is Empty")
+        element = getattr(self.start_node, "element")
 
         # delete by assigning next reference of start node to start node
-        self.start_node = self.start_node.nref
+        self.start_node = getattr(self.start_node, "nref")
         self.size -= 1
 
         # special case for one element
@@ -194,7 +195,7 @@ class LinkedQueue:
             self.end_node = None
         return element
 
-    def traverse(self):
+    def traverse(self) -> None:
         """Traverses a Singly Linked List
         Takes O(n) time
         """
@@ -261,7 +262,7 @@ class LinkedDeque:
         takes O(1) time
         """
         if self.is_empty():
-            raise ("Deque is empty")
+            raise EmptyException("Queue is Empty")
         element = self.start_node.element
         if self.start_node.nref is None:
             self.start_node = None  # if only one element, delete this
@@ -279,7 +280,7 @@ class LinkedDeque:
         """Adds element to back of the Deck
         Takes O(1) time
         """
-        new_node = self.Node(data)  # create a node
+        new_node = Node(data)  # create a node
         if self.is_empty():
             self.start_node = new_node
             self.end_node = new_node  # creating a circular reference
@@ -298,7 +299,7 @@ class LinkedDeque:
         """
         # to do.  not correctly removing rear
         if self.is_empty():
-            raise ("Deck is empty")
+            raise EmptyException("Deque is Empty")
 
         element = self.end_node.element
 
@@ -334,19 +335,19 @@ class PositionalList(DoublyLinkedBase):
         p : Position
             [description]
         """
-        if not isinstance(p, self.Position):
+        if not isinstance(p, Position):
             raise TypeError("p must be proper Position type")
         if p._container is not self:
             raise ValueError("p does not belong to this container")
-        if p._node._nref is None:
+        if p._node.nref is None:
             raise ValueError("p is no longer valid")
         return p._node
 
-    def _make_position(self, node) -> Optional[Position]:
+    def _make_position(self, node: Node) -> Optional[Position]:
         """Return position instance for given node or None if sentinel"""
-        if node is self._start_node or node is self._end_node:
+        if node is self.start_node or node is self.end_node:
             return None
-        return self.Position(self, node)
+        return Position(self, node)
 
     # - Accessors
     def first(self) -> Optional[Position]:
@@ -357,7 +358,8 @@ class PositionalList(DoublyLinkedBase):
         Union[Position, None]
             first position in list
         """
-        return self._make_position(self._start_node._nref)
+        nref = getattr(self.start_node, "nref")
+        return self._make_position(nref)
 
     def last(self) -> Optional[Position]:
         """Return last position in list or None if empty
@@ -367,7 +369,8 @@ class PositionalList(DoublyLinkedBase):
         Union[Position, None]
             last position in list
         """
-        return self._make_position(self._end_node._pref)
+        pref = getattr(self.end_node, "pref")
+        return self._make_position(pref)
 
     def before(self, p: Position) -> Optional[Position]:
         """Return position before p's position or None if p is first psotion
@@ -383,7 +386,8 @@ class PositionalList(DoublyLinkedBase):
             [description]
         """
         node = self._validate(p)
-        return self._make_position(node._nref)
+        pref = getattr(node, "pref")
+        return self._make_position(pref)
 
     def after(self, p: Position) -> Optional[Position]:
         """Return position after p's position or None if p is last position
@@ -399,7 +403,8 @@ class PositionalList(DoublyLinkedBase):
             [description]
         """
         node = self._validate(p)
-        return self._make_position(node._nref)
+        nref = getattr(node, "nref")
+        return self._make_position(nref)
 
     # pyre-ignore
     def __iter__(self) -> Iterator[Any]:
@@ -409,9 +414,12 @@ class PositionalList(DoublyLinkedBase):
             yield cursor.element()
             cursor = self.after(cursor)
 
-    # Mutators
-    # pyre-ignore
-    def _insert_between(self, data: Any, node1: Node, node2: Node) -> Position:
+    def insert_between(
+        self,
+        data: Any,  # pyre-ignore
+        node1: Node,
+        node2: Node,
+    ) -> Optional[Position]:
         """Inserts data between two nodes and returns position object
 
         Parameters
@@ -428,11 +436,12 @@ class PositionalList(DoublyLinkedBase):
         Position
             of data between node1 and node2
         """
-        node = super()._insert_between(data, node1, node2)
-        return self._make_position(node)
+        node = self._insert_between(data, node1, node2)
+        if node:
+            return self._make_position(node)
 
     # pyre-ignore
-    def add_first(self, data: Any) -> Position:
+    def add_first(self, data: Any) -> Optional[Position]:
         """Insert data into first position and return new position
 
         Parameters
@@ -445,14 +454,13 @@ class PositionalList(DoublyLinkedBase):
         Position
             of data inserted
         """
+        nref = getattr(self.start_node, "nref")
         return self._make_position(
-            self._insert_between(
-                data, self._start_node, self._start_node._nref
-            )
+            self._insert_between(data, self.start_node, nref)
         )
 
     # pyre-ignore
-    def add_last(self, data: Any) -> Position:
+    def add_last(self, data: Any) -> Optional[Position]:
         """Insert data into last position and return new position
 
         Parameters
@@ -465,12 +473,13 @@ class PositionalList(DoublyLinkedBase):
         Position
             of last time
         """
+        pref = getattr(self.end_node, "pref")
         return self._make_position(
-            self._insert_between(data, self._end_node._pref, self._end_node)
+            self._insert_between(data, pref, self.end_node)
         )
 
     # pyre-ignore
-    def add_before(self, data: Any, p: Position) -> Position:
+    def add_before(self, data: Any, p: Position) -> Optional[Position]:
         """Insert data right before position p and return new position
 
         Parameters
@@ -486,16 +495,14 @@ class PositionalList(DoublyLinkedBase):
             position of inserted object
         """
         node = self._validate(p)
-        return self._make_position(
-            self._insert_between(data, node._pref, node)
-        )
+        pref = getattr(node, "pref")
+        return self._make_position(self._insert_between(data, pref, node))
 
     # pyre-ignore
-    def add_after(self, data: Any, p: Position) -> Position:
+    def add_after(self, data: Any, p: Position) -> Optional[Position]:
         node = self._validate(p)
-        return self._make_position(
-            self._insert_between(data, node, node._nref)
-        )
+        nref = getattr(node, "nref")
+        return self._make_position(self._insert_between(data, node, nref))
 
     # pyre-ignore
     def delete(self, p: Position) -> Any:
@@ -526,6 +533,6 @@ class PositionalList(DoublyLinkedBase):
             [description]
         """
         original_node = self._validate(p)
-        old_value = original_node._element
-        original_node._element = data
+        old_value = original_node.element
+        original_node.element = data
         return old_value

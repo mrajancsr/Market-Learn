@@ -1,18 +1,7 @@
+# pyre-strict
 """Linear Collections, consisting of stacks, queue and deque"""
 import collections
 from typing import Any, Optional, Union
-
-
-class _Empty(Exception):
-    """prints Exception error if array is empty
-
-    :param Exception: message for exception error
-    :type Exception: string
-    :return: Exception Message
-    :rtype: Exception Error
-    """
-
-    pass
 
 
 class Stack:
