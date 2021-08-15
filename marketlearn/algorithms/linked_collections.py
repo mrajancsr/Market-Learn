@@ -6,7 +6,7 @@ Takes O(1) time for all insertion, removal operations
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional, overload
+from typing import Any, Iterator, Optional
 
 from marketlearn.algorithms.linked_lists.linked_base import (
     DoublyLinkedBase,
@@ -172,7 +172,7 @@ class LinkedQueue:
             return None
         # else set the next reference of end node
         nref = getattr(self.end_node, "nref")
-        nref = new_node
+        nref = new_node  # noqa
         self.end_node = new_node  # update ref of end node to new node
         self.size += 1
 
@@ -221,6 +221,8 @@ class LinkedDeque:
     end_node:    (Node) represents tail of the linked list
                         default set to None since its empty at time of creation
 
+    Todo: Need to test the class for correctness
+
     """
 
     start_node: Optional[Node] = None
@@ -246,12 +248,12 @@ class LinkedDeque:
             self.size += 1
             return
         new_node = Node(data)
-        new_node.nref = (
-            self.start_node
-        )  # make next reference of new node to current node
-        self.start_node.pref = (
-            new_node  # set previous reference of currenet node to new node
-        )
+        # make next reference of new node to current node
+        new_node.nref = self.start_node
+
+        # set previous reference of currenet node to new node
+        pref = getattr(self.start_node, "pref")
+        pref = new_node  # noqa
         self.start_node = new_node
         self.size += 1
 
@@ -263,19 +265,22 @@ class LinkedDeque:
         """
         if self.is_empty():
             raise EmptyException("Queue is Empty")
-        element = self.start_node.element
-        if self.start_node.nref is None:
+        element = getattr(self.start_node, "element")
+        nref = getattr(self.start_node, "nref")
+        if nref is None:
             self.start_node = None  # if only one element, delete this
             self.size -= 1
             return element
-        self.start_node = self.start_node.nref
-        self.start_node.pref = None
+        self.start_node = nref
+        pref = getattr(self.start_node, "pref")
+        pref = None  # noqa
         self.size -= 1
         # one element case after deleting previous node
         if self.is_empty():
             self.end_node = None
         return element
 
+    # pyre-ignore
     def add_rear(self, data: Any) -> None:
         """Adds element to back of the Deck
         Takes O(1) time
@@ -287,7 +292,8 @@ class LinkedDeque:
             self.size += 1
             return
         # else set the next reference of end node
-        self.end_node.nref = new_node
+        nref = getattr(self.end_node, "nref")
+        nref = new_node  # noqa
         new_node.pref = self.end_node
         self.end_node = new_node  # update ref of end node to new node
         self.size += 1
@@ -301,10 +307,11 @@ class LinkedDeque:
         if self.is_empty():
             raise EmptyException("Deque is Empty")
 
-        element = self.end_node.element
+        element = getattr(self.end_node, "element")
 
-        self.end_node = self.end_node.pref
-        self.end_node.nref = None
+        self.end_node = getattr(self.end_node, "pref")
+        nref = getattr(self.end_node, "nref")
+        nref = None  # noqa
         if self.is_empty():
             self.end_node = None
         self.size -= 1
