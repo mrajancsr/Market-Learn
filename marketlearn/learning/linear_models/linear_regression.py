@@ -6,7 +6,7 @@ Created: May 23, 2020
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 from marketlearn.learning.linear_models.base import LinearBase
@@ -270,23 +270,26 @@ class LinearRegressionMLE(LinearBase):
         method: str = "mle_bfgs",
         run_diagnostics: bool = False,
     ) -> LinearRegressionMLE:
-        """fits training data via maximum likelihood Estimate
+        """Fits training data via Maximum Likelihood Estimate
 
-        Args:
-        X:
-            shape = (n_samples, p_features)
+        Parameters
+        ----------
+        X : NDArray, shape=(n_samples, p_features)
+            the design matrix
             n_samples is number of instances i.e rows
             p_features is number of features i.e columns
-        y:
-            shape = (n_samples)
+        y : NDArray, shape=(n_samples,)
             Target values
-
-        method:
-            the fitting procedure default to 'mle-bfgs'
+        method : str, optional, default='mle_bfgs'
+            fitting procedure
             Also supports 'mle_newton_cg'
+        run_diagnostics : bool, optional, default=False
+            whether to get the regression diagnostics
 
-        Returns:
-        object
+        Returns
+        -------
+        LinearRegressionMLE
+            object after fitting
         """
         X = self.make_polynomial(X)
         # generate random guess
@@ -380,9 +383,9 @@ class LinearRegressionGD(LinearBase):
 
         Parameters
         ----------
-        X : np.ndarray
+        X : ArrayLike
             [description]
-        y : np.ndarray
+        y : ArrayLike
             [description]
 
         Returns
@@ -406,22 +409,19 @@ class LinearRegressionGD(LinearBase):
     def predict(
         self, X: ArrayLike, thetas: Optional[ArrayLike] = None
     ) -> NDArray:
-        """makes predictions of response variable given input params
-        Args:
-        X:
-            shape = (n_samples, p_features)
-            n_samples is number of instances
-            p_features is number of features
-            - if bias is true, a ones column is needed
-        thetas:
-            if initialized to None:
-                uses estimated theta from fitting process
-            if array is given:
-                it serves as initial guess for optimization
+        """Makes predictions of target variable given data
 
-        Returns:
-        predicted values:
-            shape = (n_samples, 1)
+        Parameters
+        ----------
+        X : ArrayLike, shape=(n_samples, p_features)
+            [description]
+        thetas : Optional[ArrayLike], optional, default=None
+            weights of parameters in model
+
+        Returns
+        -------
+        NDArray
+            predictions of response given thetas
         """
         if thetas is None:
             return X @ self.theta
