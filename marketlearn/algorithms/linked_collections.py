@@ -31,8 +31,8 @@ class Position(PositionBase):
 
         Returns
         -------
-        [type]
-            [description]
+        [Any]
+            Returns element stored at this position
         """
         return self._node.element
 
@@ -233,7 +233,6 @@ class LinkedDeque:
         return self.size
 
     def is_empty(self) -> bool:
-        """returns True if Deque is empty"""
         return self.size == 0
 
     # pyre-ignore
@@ -473,12 +472,12 @@ class PositionalList(DoublyLinkedBase):
         Parameters
         ----------
         data : Any
-            [description]
+            data to be inserted into the list
 
         Returns
         -------
         Position
-            of last time
+            data inserted as last item
         """
         pref = getattr(self.end_node, "pref")
         return self._make_position(

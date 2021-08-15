@@ -1,7 +1,8 @@
 # pyre-strict
 """Linear Collections, consisting of stacks, queue and deque"""
 import collections
-from typing import Any, Optional, Union
+from dataclasses import dataclass
+from typing import Any, List, Optional, Union
 
 
 class Stack:
@@ -16,16 +17,18 @@ class Stack:
     def __init__(self, data: Optional[list] = None):
         self._data = [] if data is None else data
 
-    def empty(self):
+    def empty(self) -> bool:
         """returns true if stack is empty"""
         return self._data == []
 
-    def pop(self):
+    # pyre-ignore
+    def pop(self) -> Any:
         """removes item from right(top) of stack"""
         if self.empty():
             raise _Empty("Stack is empty")
         return self._data.pop()
 
+    # pyre-ignore
     def push(self, item: Any) -> None:
         """adds item to right(top) of stack
 
@@ -34,6 +37,7 @@ class Stack:
         """
         self._data.append(item)
 
+    # pyre-ignore
     def peek(self) -> Any:
         """returns right(top) item of stack
 
@@ -63,6 +67,13 @@ class Stack:
         return max(self._data)
 
 
+@dataclass
+class Item:
+    item: Any  # pyre-ignore
+    max: Any  # pyre-ignore
+
+
+@dataclass
 class MaxStack:
     """Implementation of stacks using lists
 
@@ -71,68 +82,68 @@ class MaxStack:
     items on the right is the top, left is bottom
     """
 
-    # to keep track of maximum value after each push
-    _Items = collections.namedtuple("_Items", ("item", "max"))
+    _data: List[Item] = []
 
-    def __init__(self, item: Optional[list] = None):
-        self._data = []
-        if item:
-            self._create_stack(item)
-
-    def _create_stack(self, items: list):
+    # pyre-ignore
+    def _create_stack(self, items: List[Any]) -> None:
         """Creates a stack from list of items
 
-        :param items: list of items
-        :type items: list
-        :return: list that follows a stack order
-        :rtype: list
+        Parameters
+        ----------
+        items : list
+            [description]
         """
         # push items to a stack if user supplies list of items
-        if isinstance(items, list):
-            for item in items:
-                if item:
-                    self.push(item)
+        for item in items:
+            self.push(item)
 
-    def empty(self):
-        """returns True if Stack is empty
-
-        :return: True/False
-        :rtype: bool
-        """
+    def is_empty(self) -> bool:
         return self._data == []
 
     def max(self) -> Union[float, int]:
-        """returns maximum value in a stack
+        """Returns maximum value in a stack
 
-        Takes O(1) time
+        Returns
+        -------
+        Union[float, int]
+            [description]
 
-        :raises _Empty: if stack is empty, raise Exception
-        :return: maximum value in a stack
-        :rtype: Union[float, int]
+        Raises
+        ------
+        _Empty
+            [description]
         """
-        if self.empty():
+        if self.is_empty():
             raise _Empty("Stack is empty")
         return self._data[-1].max
 
+    # pyre-ignore
     def pop(self) -> Any:
         """removes item from the right(top) of stack
 
-        :raises _Empty: if stack is empty
-        :return: item removed
-        :rtype: Any
+        Returns
+        -------
+        Any
+            [description]
+
+        Raises
+        ------
+        _Empty
+            [description]
         """
-        if self.empty():
+        if self.is_empty():
             raise _Empty("Stack is empty")
         return self._data[-1].item
 
-    def push(self, item):
+    # pyre-ignore
+    def push(self, item: Any) -> None:
         """adds item to right(top) of stack
 
         :param item: item to be pushed
         :type item: Any
         """
         self._data.append(
-            self._Items(item, item if self.empty() else max(item, self.max()))
+            Item(item, item if self.is_empty() else max(item, self.max()))
         )
 
 
@@ -144,23 +155,25 @@ class Queue:
     Assumes: First In First Out (FIFO)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Default constructor, needs no parameters"""
-        self._data = []
+        self._data: List[Any] = []  # pyre-ignore
 
-    def empty(self):
+    def empty(self) -> bool:
         return self._data == []
 
-    def enqueue(self, item):
+    # pyre-ignore
+    def enqueue(self, item: Any) -> None:
         self._data.append(item)
 
-    def dequeue(self):
+    # pyre-ignore
+    def dequeue(self) -> Any:
         return self._data.pop(0)
 
-    def size(self):
+    def size(self) -> int:
         return len(self._data)
 
-    def max(self):
+    def max(self) -> Union[float, int]:
         return max(self._data)
 
 
