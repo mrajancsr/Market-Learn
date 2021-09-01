@@ -26,6 +26,7 @@ Notes:
   st ~ Bernoulli(0,1) r.v
 
 - todo:
+    A) need to refactor and finish
     1) add variance switching
     2) add beta parameter switching
     3) add auto-regressive markov switching model
@@ -39,7 +40,6 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from marketlearn.toolz import timethis
 from numpy import array, float64
 from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import minimize
@@ -78,17 +78,19 @@ class MarkovSwitchModel:
 
     nregime: int = 2
     variance_switch: bool = False
-    tr_matrix: NDArray[float64] = field(init=False)
-    filtered_prob: NDArray[float64] = field(init=False)
-    predict_prob: NDArray[float64] = field(init=False)
-    smoothed_prob: NDArray[float64] = field(init=False)
+    theta: NDArray = field(init=False)
+    tr_matrix: NDArray = field(init=False)
+    filtered_prob: NDArray = field(init=False)
+    predict_prob: NDArray = field(init=False)
+    smoothed_prob: NDArray = field(init=False)
     em_params: pd.Series = field(init=False)
 
     def __post_init__(self) -> None:
-        self.tr_matrix = array((self.nregime, self.nregime))
+        self.tr_matrix = np.zeros((self.nregime, self.nregime))
         self.filtered_prob = array([])
         self.predict_prob = array([])
         self.smoothed_prob = array([])
+        self.theta = array([])
         self.em_params = pd.Series([])
 
     def _sigmoid(self, z: ArrayLike[float]) -> ArrayLike[float]:
@@ -136,7 +138,7 @@ class MarkovSwitchModel:
         obs: NDArray[float64],
         theta: NDArray[float64],
         store: bool = False,
-    ) -> float64:
+    ) -> float:
         """Computes the loglikelihood of data observed
 
         Parameters
@@ -300,7 +302,6 @@ class MarkovSwitchModel:
         self.tr_matrix[1, 1] = pjj
         self.tr_matrix[1, 0] = 1 - pjj
 
-    @timethis
     def fit(
         self,
         obs: NDArray[float64],

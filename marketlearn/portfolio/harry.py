@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from marketlearn.portfolio import Asset
+from marketlearn.portfolio.asset import fun
 from numpy import array, diag, float64, sqrt
 from numpy.random import random
 from numpy.typing import ArrayLike, NDArray
@@ -122,7 +123,8 @@ class Harry:
         np.ndarray, shape=(nsim, nsec)
             random weight matrix
         """
-        return (Harry.create_weights(nsecurities) for _ in range(nsim))
+        for _ in range(nsim):
+            yield Harry.create_weights(nsecurities)
 
     @staticmethod
     def create_weights(nsecurities: int) -> NDArray[float64]:
@@ -402,3 +404,7 @@ class Harry:
             linestyle="-",
         )
         plt.grid()
+
+
+test = fun()
+print(test)

@@ -2,40 +2,34 @@
 """Implementation of Asset class"""
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import List, Tuple
+from typing import ClassVar, List, Tuple
 
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
-from numpy import array, cov, isnan, log, transpose
+from numpy import array, cov, isnan, log
+from numpy.typing import NDArray
+
+__TRADING_DAYS_PER_YEAR: int = 252
 
 
+@dataclass
 class Asset:
-    """Serves as a composite class to Portfolio Class"""
+    name: str
+    price_history: pd.Series
+    size: int = field(init=False)
+    returns_history: pd.Series = field(init=False)
+    annualized_returns: float = field(init=False)
+    expected_returns: float = field(init=False)
+    all_assets: ClassVar[List[Asset]] = []
 
-    all_assets: List[Asset] = []
-
-    __TRADING_DAYS_PER_YEAR: int = 252
-
-    def __init__(self, name: str, price_history: pd.Series) -> None:
-        """default constructor used to initialize Asset Class"""
-        self.name = name
-        self.price_history = price_history
-        self.size: int = price_history.shape[0]
-        self.returns_history: pd.Series = log(
-            1 + self.price_history.pct_change()
-        )
-        self.annualized_returns: int = self.returns_history.sum()
-        self.expected_returns: float = self._get_expected_returns()
+    def __post_init__(self) -> None:
+        self.size = self.price_history.shape[0]
+        self.returns_history = log(1 + self.price_history.pct_change())
+        self.annualized_returns = self.returns_history.sum()
+        self.expected_returns = self._get_expected_returns()
         self.__class__.all_assets.append(self)
-
-    def _get_expected_returns(self) -> float:
-        return Asset.get_annualization_factor() * self.returns_history.mean()
-
-    @staticmethod
-    def get_annualization_factor() -> int:
-        return Asset.__TRADING_DAYS_PER_YEAR
 
     def __hash__(self) -> int:
         """allows hashing for lru_cache
@@ -58,11 +52,18 @@ class Asset:
         \nexpected returns: {self.expected_returns:.5f}, \
         \nannualized_returns: {self.annualized_returns:.5f}"
 
+    def _get_expected_returns(self) -> float:
+        return Asset.get_annualization_factor() * self.returns_history.mean()
+
+    @staticmethod
+    def get_annualization_factor() -> int:
+        return __TRADING_DAYS_PER_YEAR
+
     @staticmethod
     @lru_cache
     def covariance_matrix(
         assets: Tuple[Asset],
-    ) -> npt.NDArray[np.float64]:
+    ) -> NDArray[np.float64]:
         """computes the covariance matrix given tuple of assets
 
         Parameters
@@ -75,6 +76,6 @@ class Asset:
         np.ndarray
             covariance matrix of assets
         """
-        returns = transpose(array([asset.returns_history for asset in assets]))
+        returns = array([asset.returns_history for asset in assets]).T
         returns = returns[~isnan(returns).any(axis=1)]
         return cov(returns, rowvar=False) * Asset.get_annualization_factor()
