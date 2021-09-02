@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from marketlearn.algorithms.linked_lists import EmptyException, Node
+from marketlearn.algorithms.linked_lists.linked_base import (
+    EmptyException,
+    Node,
+)
 
 
 @dataclass

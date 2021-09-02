@@ -364,6 +364,8 @@ class PositionalList(DoublyLinkedBase):
         Union[Position, None]
             first position in list
         """
+        if self.is_empty():
+            return None
         nref = getattr(self.start_node, "nref")
         return self._make_position(nref)
 
@@ -461,9 +463,7 @@ class PositionalList(DoublyLinkedBase):
             of data inserted
         """
         nref = getattr(self.start_node, "nref")
-        return self._make_position(
-            self._insert_between(data, self.start_node, nref)
-        )
+        return self.insert_between(data, self.start_node, nref)
 
     # pyre-ignore
     def add_last(self, data: Any) -> Optional[Position]:
@@ -480,9 +480,7 @@ class PositionalList(DoublyLinkedBase):
             data inserted as last item
         """
         pref = getattr(self.end_node, "pref")
-        return self._make_position(
-            self._insert_between(data, pref, self.end_node)
-        )
+        return self.insert_between(data, pref, self.end_node)
 
     # pyre-ignore
     def add_before(self, data: Any, p: Position) -> Optional[Position]:
@@ -502,13 +500,13 @@ class PositionalList(DoublyLinkedBase):
         """
         node = self._validate(p)
         pref = getattr(node, "pref")
-        return self._make_position(self._insert_between(data, pref, node))
+        return self.insert_between(data, pref, node)
 
     # pyre-ignore
     def add_after(self, data: Any, p: Position) -> Optional[Position]:
         node = self._validate(p)
         nref = getattr(node, "nref")
-        return self._make_position(self._insert_between(data, node, nref))
+        return self.insert_between(data, node, nref)
 
     # pyre-ignore
     def delete(self, p: Position) -> Any:

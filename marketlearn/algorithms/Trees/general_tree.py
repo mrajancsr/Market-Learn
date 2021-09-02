@@ -4,8 +4,10 @@ Author: Rajan Subramanian
 Date: -
 """
 from __future__ import annotations
-from marketlearn.algorithms.trees import tree_base as tb
+
 from typing import Any, Iterator, List, Union
+
+from marketlearn.algorithms.trees import tree_base as tb
 
 
 class GeneralTree(tb._GeneralTreeBase):
@@ -45,7 +47,9 @@ class GeneralTree(tb._GeneralTreeBase):
             """return element stored at position"""
             return self._node._element
 
-        def __eq__(self, other):
+        def __eq__(self, other: object):
+            if not isinstance(other, Position):
+                return NotImplemented
             return type(other) is type(self) and other._node is self._node
 
     def _make_position(self, node: _Node) -> Union[Position, None]:
