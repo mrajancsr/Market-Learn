@@ -78,7 +78,7 @@ class LinearRegression(LinearBase):
     - A naive implementation of (A'A)^-1 A'b = x is given
       but computing an inverse is expensive
     - A implementation based on QR decomposition is given based on
-        min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)
+        min||Ax-b|| = min||Q'(QRx - b)|| = min||(Rx - Q'b)||
         based on decomposing nxp matrix A = QR, Q is orthogonal, R is upper
         triangular
     - A cholesky implementation is also included based on converting an n x p
@@ -91,6 +91,64 @@ class LinearRegression(LinearBase):
     run: bool = field(init=False, default=False)
     theta: Optional[NDArray] = field(init=False, default=np.array([]))
     diagnostics: Optional[RegressionDiagnostics] = field(init=False)
+
+    def _normal(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+        """Estimates parameters of regression model via normal method
+        given by (A'A)^-1 A'b = x
+
+        Parameters
+        ----------
+        A : ArrayLike
+            design matrix
+        b : ArrayLike
+            response variable
+
+        Returns
+        -------
+        ArrayLike
+            weights corresponding to linear transformation
+        """
+        return np.linalg.inv(A.T @ A) @ A.T @ b
+
+    def _ols_qr(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+        """Estimates ||Ax - b|| via QR decomposition
+
+        Parameters
+        ----------
+        A : ArrayLike
+            [description]
+        b : ArrayLike
+            [description]
+
+        Returns
+        -------
+        ArrayLike
+            [description]
+        """
+        # min||(Rx - Q'b)
+        q, r = np.linalg.qr(A)
+
+        # solves by forward substitution
+        return solve_triangular(r, q.T @ b)
+
+    def _ols_cholesky(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+        """Estimates ||Ax - b|| via cholesky decomposition
+
+        Parameters
+        ----------
+        A : ArrayLike
+            [description]
+        b : ArrayLike
+            [description]
+
+        Returns
+        -------
+        ArrayLike
+            [description]
+        """
+        M = np.linalg.cholesky(A.T @ A)
+        y = solve_triangular(M, A.T @ b, lower=True)
+        return solve_triangular(M.T, y)
 
     def _linear_solve(
         self,
@@ -117,19 +175,13 @@ class LinearRegression(LinearBase):
             [description]
         """
         if method == "normal":
-            # based on (A'A)^-1 A'b = x
-            return np.linalg.inv(A.T @ A) @ A.T @ b
+            return self._normal(A, b)
         elif method == "ols-qr":
-            # min||(Rx - Q'b)
-            q, r = np.linalg.qr(A)
-            # solves by forward substitution
-            return solve_triangular(r, q.T @ b)
+            return self._ols_qr(A, b)
         elif method == "ols":
-            M = np.linalg.cholesky(A.T @ A)
-            y = solve_triangular(M, A.T @ b, lower=True)
-            return solve_triangular(M.T, y)
+            return self._ols_cholesky(A, b)
         else:
-            return None
+            raise AttributeError("method not available")
 
     def fit(
         self,
@@ -154,7 +206,8 @@ class LinearRegression(LinearBase):
         LinearRegression
             [description]
         """
-        X = self.make_polynomial(X)
+        degree, bias = self.degree, self.bias
+        X = self.make_polynomial(X, degree, bias)
         self.theta = self._linear_solve(A=X, b=y, method=method)
         self.run = True
 
@@ -195,7 +248,7 @@ class LinearRegression(LinearBase):
         return X @ thetas
 
 
-@dataclass
+@dataclass()
 class LinearRegressionMLE(LinearBase):
     """
     Implements linear regression via Maximum Likelihood Estimate
@@ -291,7 +344,8 @@ class LinearRegressionMLE(LinearBase):
         LinearRegressionMLE
             object after fitting
         """
-        X = self.make_polynomial(X)
+        degree, bias = self.degree, self.bias
+        X = self.make_polynomial(X, degree, bias)
         # generate random guess
         rng = np.random.RandomState(1)
         guess_params = rng.uniform(low=0, high=10, size=X.shape[1])
@@ -353,7 +407,7 @@ class LinearRegressionMLE(LinearBase):
         return X @ thetas
 
 
-@dataclass
+@dataclass()
 class LinearRegressionGD(LinearBase):
     """Implements the ols regression via Gradient Descent
 
@@ -373,8 +427,8 @@ class LinearRegressionGD(LinearBase):
     random_state: int = 1
     bias: bool = True
     degree: int = 1
-    cost: List[float] = field(init=False, default=[])
-    theta: Optional[ArrayLike] = field(init=False, default=np.array([]))
+    cost: List[float] = field(init=False)
+    theta: Optional[ArrayLike] = field(init=False)
     diagnostics: Optional[RegressionDiagnostics] = field(init=False)
     run: bool = field(init=False, default=False)
 

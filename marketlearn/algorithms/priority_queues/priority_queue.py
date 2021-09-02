@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
 
 from marketlearn.algorithms.linked_collections import Position, PositionalList
-from marketlearn.algorithms.linked_lists import EmptyException
+from marketlearn.algorithms.linked_lists.linked_base import EmptyException
 from marketlearn.algorithms.priority_queues import Item, PriorityQueueBase
 
 
@@ -54,6 +54,15 @@ class SortedPriorityQueue(PriorityQueueBase):
 
     # pyre-ignore`
     def add(self, key: Any, value: Any) -> None:
+        """adds an item
+
+        Parameters
+        ----------
+        key : Any
+            [description]
+        value : Any
+            [description]
+        """
         latest = Item(key, value)
         # assume last element is largest
         walk = self._data.last()
@@ -86,9 +95,24 @@ class SortedPriorityQueue(PriorityQueueBase):
 
 @dataclass
 class HeapPriorityQueue(PriorityQueueBase):
-    _data: List[float] = []
+    _data: List[float] = field(init=False, default_factory=list)
+
+    def __len__(self) -> int:
+        return len(self._data)
 
     def _parent(self, j: int) -> int:
+        """Returns index of parent of child index j
+
+        Parameters
+        ----------
+        j : int
+            index of child position
+
+        Returns
+        -------
+        int
+            index of parent of child index j
+        """
         return (j - 1) // 2
 
     def _left(self, j: int) -> int:
@@ -98,4 +122,29 @@ class HeapPriorityQueue(PriorityQueueBase):
         return 2 * j + 2
 
     def _has_left(self, j: int) -> bool:
-        return self._left(j) < len(self._data)
+        return self._left(j) < len(self)
+
+    def _has_right(self, j: int) -> bool:
+        return self._right(j) < len(self)
+
+    def _swap(self, i: int, j: int) -> None:
+        self._data[i], self._data[j] = self._data[j], self._data[i]
+
+    def _upheap(self, j: int) -> None:
+        parent = self._parent(j)
+        if j > 0 and self._data[j] < self._data[parent]:
+            self._swap(j, parent)
+            self._upheap(parent)
+
+    def add(self, key: Any, value: Any) -> None:
+        self._data.append(Item(key, value))
+        self._upheap(len(self) - 1)
+
+    def min(self) -> Optional[Tuple[Any, Any]]:
+        if self.is_empty():
+            raise EmptyException("Queue is Empty")
+        item: Item = self._data[0]
+        return (item.key, item.value)
+
+    def _downheap(self, j: int) -> None:
+        pass
