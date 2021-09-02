@@ -1,11 +1,9 @@
 """Contains Implementations of sorting and searching algorithms"""
 
-from typing import List, TypeVar
-
-T = TypeVar("T", int, float)
+from typing import List
 
 
-def bubble_sort(array: List[T]) -> None:
+def bubble_sort(array: List[float]) -> None:
     """Performs bubble sort on array
     T(n) = O(n^2)
     Space Complexity: O(1)
@@ -26,7 +24,7 @@ def bubble_sort(array: List[T]) -> None:
             break
 
 
-def recursive_bubble_sort(array: List[T]) -> None:
+def recursive_bubble_sort(array: List[float]) -> None:
     """performs bubble sort recursively
     T(n) = O(n^2)
     Space Complexity: O(1)
@@ -46,5 +44,25 @@ def recursive_bubble_sort(array: List[T]) -> None:
             continue
 
 
-def selection_sort(array: List[T]) -> None:
-    pass
+def selection_sort(array: List[float]) -> None:
+    n = len(array)
+    for i in range(n):
+        # assume first index is minimum
+        min_idx = i
+        for j in range(i + 1, n):
+            if array[min_idx] < array[j]:
+                min_idx = j
+        array[i], array[min_idx] = array[min_idx], array[i]
+
+
+def insertion_sort(array: List[float]) -> None:
+    n = len(array)
+    for i in range(1, n):
+        key = array[i]
+        # move elements in array[0,..i-1] that are greater than key
+        # to one position ahead of current position
+        j = i - 1
+        while j >= 0 and key < array[j]:
+            array[j + 1] = array[j]
+            j -= 1
+        array[j + 1] = key

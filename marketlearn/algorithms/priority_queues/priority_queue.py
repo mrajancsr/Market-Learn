@@ -14,7 +14,7 @@ class UnsortedPriorityQueue(PriorityQueueBase):
     def __len__(self) -> int:
         return len(self._data)
 
-    # pyre-fixme
+    # pyre-ignore
     def add(self, key: Any, value: Any) -> None:
         self._data.add_last(Item(key, value))
 
@@ -95,7 +95,7 @@ class SortedPriorityQueue(PriorityQueueBase):
 
 @dataclass
 class HeapPriorityQueue(PriorityQueueBase):
-    _data: List[float] = field(init=False, default_factory=list)
+    _data: List[Any] = field(init=False, default_factory=list)  # pyre-ignore
 
     def __len__(self) -> int:
         return len(self._data)
@@ -136,10 +136,12 @@ class HeapPriorityQueue(PriorityQueueBase):
             self._swap(j, parent)
             self._upheap(parent)
 
+    # pyre-ignore
     def add(self, key: Any, value: Any) -> None:
         self._data.append(Item(key, value))
         self._upheap(len(self) - 1)
 
+    # pyre-ignore
     def min(self) -> Optional[Tuple[Any, Any]]:
         if self.is_empty():
             raise EmptyException("Queue is Empty")
