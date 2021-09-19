@@ -72,3 +72,14 @@ class GDrive:
             print("Files:")
             for file in files_in_drive:
                 print(u"{0} ({1})".format(file["name"], file["id"]))
+
+    def download_all_files_from_drive(self) -> None:
+        pass
+
+    def download_file_from_drive(
+        self, file_name: str, target_path: Optional[str] = None
+    ) -> None:
+        pass
+
+    def export_file_to_drive(self, file_name: str, source_path: str) -> None:
+        pass
