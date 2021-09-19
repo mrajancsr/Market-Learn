@@ -1,17 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Dict,
-    Generic,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Dict, Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
