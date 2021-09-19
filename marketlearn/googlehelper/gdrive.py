@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
+from googleapiclient.discovery import Resource, build
 
 # set scope of drive here
 SCOPES: Dict[str, str] = {
@@ -19,14 +20,18 @@ path_to_client_secret = os.path.join(path, "client_secret.json")
 class GDrive:
     mode: str = "readonly"
     flow: Flow = field(init=False)
-    credentials: Optional[Credentials] = field(init=False)
+    _credentials: Optional[Credentials] = field(init=False)
+    _drive_service: Resource = field(init=False)
 
     def __post_init__(self) -> None:
         self.flow = Flow.from_client_secrets_file(
             path_to_client_secret, SCOPES.get(self.mode)
         )
         self.flow.redirect_uri = "http://localhost:8080/"
-        self.credentials = self._get_credentials()
+        self._credentials = self._get_credentials()
+        self._drive_service = build(
+            "drive", "v3", credentials=self._credentials
+        )
 
     def _get_credentials(self) -> Credentials:
         creds: Optional[Credentials] = None
@@ -50,3 +55,20 @@ class GDrive:
             token.write(creds.to_json())
 
         return creds
+
+    def list_files(self) -> None:
+        """Lists the files in google drive"""
+        drive_service = getattr(self, "_drive_service")
+        results = (
+            drive_service.files()
+            .list(pageSize=10, fields="nextPageToken, files(id, name)")
+            .execute()
+        )
+        files_in_drive = results.get("files", [])
+
+        if not files_in_drive:
+            print("Noting found")
+        else:
+            print("Files:")
+            for file in files_in_drive:
+                print(u"{0} ({1})".format(file["name"], file["id"]))
