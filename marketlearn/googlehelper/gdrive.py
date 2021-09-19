@@ -1,6 +1,8 @@
+import asyncio
+import io
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -8,12 +10,12 @@ from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 
 # set scope of drive here
-SCOPES: Dict[str, str] = {
-    "readonly": "https://www.googleapis.com/auth/drive.metadata.readonly"
+SCOPES: Dict[str, List[str]] = {
+    "readonly": ["https://www.googleapis.com/auth/drive.metadata.readonly"]
 }
-
-path = os.path.dirname(os.getcwd())
-path_to_client_secret = os.path.join(path, "client_secret.json")
+config_path = os.environ["GDRIVECONFIGPATH"]
+path_to_client_secret = os.path.join(config_path, "client_secret.json")
+path_to_token_json_file = os.path.join(config_path, "token.json")
 
 
 @dataclass
@@ -27,7 +29,7 @@ class GDrive:
         self.flow = Flow.from_client_secrets_file(
             path_to_client_secret, SCOPES.get(self.mode)
         )
-        self.flow.redirect_uri = "http://localhost:8080/"
+        # self.flow.redirect_uri = "http://localhost:8080/"
         self._credentials = self._get_credentials()
         self._drive_service = build(
             "drive", "v3", credentials=self._credentials
@@ -35,9 +37,9 @@ class GDrive:
 
     def _get_credentials(self) -> Credentials:
         creds: Optional[Credentials] = None
-        if os.path.exists("token.json"):
+        if os.path.exists(path_to_token_json_file):
             creds = Credentials.from_authorized_user_file(
-                "token.json", SCOPES.get(self.mode)
+                path_to_token_json_file, SCOPES.get(self.mode)
             )
 
         # If there are no (valid) credentials available, let the user log in.
@@ -48,10 +50,11 @@ class GDrive:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     path_to_client_secret, SCOPES.get(self.mode)
                 )
-                creds = flow.run_local_server(port=8080)
+                creds = flow.run_local_server(port=0)
 
         # Save the credentials for the next run
-        with open("token.json", "w") as token:
+
+        with open(path_to_token_json_file, "w") as token:
             token.write(creds.to_json())
 
         return creds
@@ -79,7 +82,20 @@ class GDrive:
     def download_file_from_drive(
         self, file_name: str, target_path: Optional[str] = None
     ) -> None:
-        pass
+        fh = io.BytesIO()
+        drive_service = getattr(self, "_drive_service")
+        request = drive_service.files().get_media(fileId=file_name)
+        downloader = MeadiaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print "Download %d%%." % int(status.progress() * 100)
+
 
     def export_file_to_drive(self, file_name: str, source_path: str) -> None:
         pass
+
+
+if __name__ == "__main__":
+    gd = GDrive("readonly")
+    gd.list_files()
