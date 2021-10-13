@@ -1,27 +1,29 @@
 # Homework 1: Coding
 # Author: Rajan S
+from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass, field
 from itertools import permutations
+from typing import Any, List, Tuple
 
 import numpy as np
 
+
 # Utility Classes for graph
-
-
+@dataclass
 class Vertex:
-    def __init__(self, value, index=0):
-        self.value = value
-        self.index = index
+    value: str
+    index: int = 0
 
     def __hash__(self):
         return hash(id(self))
 
 
+@dataclass
 class Edge:
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
+    start: str
+    end: str
 
     def __hash__(self) -> int:
         return hash((self.start, self.end))
@@ -29,17 +31,19 @@ class Edge:
     def __eq__(self, other) -> bool:
         return self.endpoint() == other.endpoint()
 
-    def endpoint(self) -> tuple:
+    def endpoint(self) -> Tuple[str, str]:
         return (self.start, self.end)
 
 
 # utility class for chess attack
-
-
+@dataclass
 class Coordinate:
-    def __init__(self, xidx: int, yidx: int):
-        self.xidx = xidx
-        self.yidx = yidx
+    xidx: int
+    yidx: int
+    xold: int = -1
+    yold: int = -1
+
+    def __post_init__(self):
         self.xold = self.xidx
         self.yold = self.yidx
 
@@ -56,32 +60,30 @@ class Coordinate:
         self.xidx = self.xold
         self.yidx = self.yold
 
-    def move_right(self):
+    def move_right(self) -> Coordinate:
         self.yidx += 1
         return self
 
-    def move_up(self):
+    def move_up(self) -> Coordinate:
         self.xidx -= 1
         return self
 
-    def move_down(self):
+    def move_down(self) -> Coordinate:
         self.xidx += 1
         return self
 
-    def move_left(self):
+    def move_left(self) -> Coordinate:
         self.yidx -= 1
         return self
 
 
 # ------------Priority Queue Problem --------------#########
-
-
+@dataclass
 class Item:
-    def __init__(self, key, value):
-        self.key = key
-        self.value = value
+    key: Any
+    value: Any
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: Item) -> bool:
         return self.value < other.value
 
 
@@ -89,11 +91,11 @@ class EmptyException(Exception):
     pass
 
 
+@dataclass
 class PriorityQueue:
     """List based implementation of priority queue"""
 
-    def __init__(self):
-        self._data = []
+    _data: List[Any] = field(init=False, default_factory=list)
 
     def __len__(self) -> int:
         return len(self._data)
@@ -209,7 +211,7 @@ class PriorityQueue:
             self.swap_entries(j, parent_index)
             self.upheap_bubbling(parent_index)
 
-    def push(self, key, value) -> None:
+    def push(self, key: Any, value: Any) -> None:
         """Adds item to the priority queue and performs upheap bubbling after insertion
 
         Parameters
@@ -308,14 +310,14 @@ def p3_c(x: set, y: set, z: set) -> set:
     return (x | y | z) - (x & y) - (x & z) - (y & z) - (x & y & z)
 
 
-def p4_a() -> np.array:
+def p4_a():
     result = np.ones((5, 5))
     result[1:4, 1:4] = 0
     result[2, 2] = 2
     return result
 
 
-def p4_b(x: np.array) -> list:
+def p4_b(x: np.array):
     pawn_pos = np.where(x == 2)
     knight_pos = np.where(x == 1)
     knight_coordinates = set(
