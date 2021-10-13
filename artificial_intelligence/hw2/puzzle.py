@@ -589,7 +589,7 @@ def A_star_search(initial_state: PuzzleState):
     frontier.push(initial_state, total_cost)
     explored = set()
     while not frontier.is_empty():
-        state, cost = frontier.pop()
+        state, _ = frontier.pop()
         explored.add(tuple(state.config))
         if test_goal(state):
             return Solution(initial_state, state, explored, 0)
