@@ -1,12 +1,10 @@
 from __future__ import annotations, division, print_function
 
-import math
+import os
 import resource
-import sys
-import time
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from marketlearn.algorithms.linear_collections import CircularQueue, Stack
 from marketlearn.algorithms.priority_queues import HeapPriorityQueue
@@ -22,6 +20,11 @@ from marketlearn.algorithms.priority_queues import HeapPriorityQueue
 # and A*-Search
 
 GOAL_CONFIG = list(range(3 * 3))
+OUTPUT_FILE = "output.txt"
+PATH_TO_FILE = (
+    "/Users/raj/Documents/QuantResearch/Home/market-learn/marketlearn"
+)
+PATH_TO_FILE = os.path.join(PATH_TO_FILE, "learning", "search", OUTPUT_FILE)
 
 
 class _Empty(Exception):
@@ -65,12 +68,56 @@ class AdaptablePriorityQueue(HeapPriorityQueue):
 
 @dataclass
 class sQueue(CircularQueue):
-    pass
+    _set: Set[Tuple[int]] = field(init=False, default_factory=set)
+
+    def __post_init__(self):
+        super().__init__()
+
+    def dequeue(self):
+        """Removes items from the front of queue"""
+        if self.empty():
+            raise IndexError("Queue is Empty")
+        removed_item: PuzzleState = self._data[self._front]
+        # reclaim for garbage collection
+        self._data[self._front] = None
+        # get available space and decrement size by 1
+        self._front = (1 + self._front) % len(self._data)
+        self._size -= 1
+        self._set.remove(tuple(removed_item.config))
+        return removed_item
+
+    def enqueue(self, item: PuzzleState):
+        # if capcacity is reached, double capacity
+        if self.size() == len(self._data):
+            self._resize(2 * len(self._data))
+        avail = (self._front + self.size()) % len(self._data)
+        self._data[avail] = item
+        self._set.add(tuple(item.config))
+        self._size += 1
 
 
 @dataclass
 class sStack(Stack):
-    pass
+    _set: Set[Tuple[int]] = field(init=False, default_factory=set)
+
+    def pop(self) -> PuzzleState:
+        """removes item from right(top) of stack"""
+        if self.empty():
+            raise _Empty("Stack is empty")
+        item = self._data.pop()
+        self._set.remove(tuple(item.config))
+        return item
+
+    def push(self, item: PuzzleState) -> None:
+        """Adds an item to right(top) of stack
+
+        Parameters
+        ----------
+        item : PuzzleState
+            [description]
+        """
+        self._data.append(item)
+        self._set.add(tuple(item.config))
 
 
 @dataclass
@@ -86,9 +133,12 @@ class PuzzleState:
     depth: int = 0
     blank_index: int = -1
 
+    def __repr__(self):
+        return self.action
+
     def __post_init__(self) -> None:
-        assert self.n * self.n != len(self.config) or self.n < 2
-        assert set(self.config) != set(range(self.n * self.n))
+        assert self.n * self.n == len(self.config) and self.n >= 3
+        assert set(self.config) == set(range(self.n * self.n))
         self.blank_index = (
             self.config.index(0)
             if self.blank_index == -1
@@ -128,9 +178,12 @@ class PuzzleState:
         )
 
     def move_down(self) -> Optional[PuzzleState]:
-        """
-        Moves the blank tile one row down.
-        :return a PuzzleState with the new configuration
+        """Moves blank tile one row down
+
+        Returns
+        -------
+        Optional[PuzzleState]
+            new state after the move or None if at bottom
         """
         # if bottom row contians blank, do nothing
         n = self.n
@@ -213,18 +266,18 @@ class PuzzleState:
             blank_index=swap_index,
         )
 
-    def expand(self) -> Iterator[PuzzleState]:
+    def expand(self) -> List[PuzzleState]:
         """Generate iteration of children of current node
 
         Yields
         -------
-        Iterator[PuzzleState]
-            iterator of children of current node
+        List[PuzzleState]
+            list of children of current node
         """
 
         # Node has already been expanded
         if len(self.children) != 0:
-            yield from self.children
+            return self.children
 
         # Add child nodes in order of UDLR
         children = [
@@ -236,7 +289,7 @@ class PuzzleState:
 
         # Compose self.children of all non-None children states
         self.children = [state for state in children if state is not None]
-        yield from self.children
+        return self.children
 
 
 def calculate_total_cost(state: PuzzleState) -> float:
@@ -263,7 +316,7 @@ def calculate_total_cost(state: PuzzleState) -> float:
     return state.cost + mhd
 
 
-def manhattan_distance(idx: int, value: int, n: int):
+def manhattan_distance(idx: int, value: int, n: int) -> int:
     """Calculates the manhattan distance of a tile
 
     Parameters
@@ -293,10 +346,10 @@ def test_goal(puzzle_state: PuzzleState) -> bool:
     return puzzle_state.config == GOAL_CONFIG
 
 
-def bfs_search(initial_state):
+def bfs_search(initial_state) -> Optional[Solution]:
     """BFS search"""
     start = perf_counter()
-    frontier = Queue()
+    frontier = sQueue()
     frontier.enqueue(initial_state)
     max_depth = 0
     max_ram = 0
@@ -307,17 +360,14 @@ def bfs_search(initial_state):
         if test_goal(state):
             end = perf_counter()
             elapsed_time = end - start
-            writeOutput(
-                Solution(
-                    initial_state,
-                    state,
-                    explored,
-                    max_depth,
-                    elapsed_time,
-                    max_ram,
-                )
+            return Solution(
+                initial_state,
+                state,
+                explored,
+                max_depth,
+                elapsed_time,
+                max_ram,
             )
-            return
         for neighbor in iter(state.expand()):
             neighbor_config = tuple(neighbor.config)
             if (
@@ -331,10 +381,10 @@ def bfs_search(initial_state):
     return None
 
 
-def dfs_search(initial_state):
+def dfs_search(initial_state) -> Optional[Solution]:
     """DFS search"""
     start = perf_counter()
-    frontier = Stack()
+    frontier = sStack()
     frontier.push(initial_state)
     max_depth = 0
     max_ram = 0
@@ -346,17 +396,14 @@ def dfs_search(initial_state):
         if test_goal(state):
             end = perf_counter()
             elapsed_time = end - start
-            writeOutput(
-                Solution(
-                    initial_state,
-                    state,
-                    explored,
-                    max_depth,
-                    elapsed_time,
-                    max_ram,
-                )
+            return Solution(
+                initial_state,
+                state,
+                explored,
+                max_depth,
+                elapsed_time,
+                max_ram,
             )
-            return
         for neighbor in reversed(state.expand()):
             neighbor_config = tuple(neighbor.config)
             if (
@@ -369,7 +416,7 @@ def dfs_search(initial_state):
     return None
 
 
-def A_star_search(initial_state: PuzzleState):
+def A_star_search(initial_state: PuzzleState) -> Optional[Solution]:
     """A * search"""
     start = perf_counter()
     frontier = PriorityQueue()
@@ -385,17 +432,14 @@ def A_star_search(initial_state: PuzzleState):
         if test_goal(state):
             end = perf_counter()
             elapsed_time = end - start
-            writeOutput(
-                Solution(
-                    initial_state,
-                    state,
-                    explored,
-                    max_depth,
-                    elapsed_time,
-                    max_ram,
-                )
+            return Solution(
+                initial_state,
+                state,
+                explored,
+                max_depth,
+                elapsed_time,
+                max_ram,
             )
-            return
 
         for neighbor in iter(state.expand()):
             neighbor_config = tuple(neighbor.config)
@@ -410,3 +454,30 @@ def A_star_search(initial_state: PuzzleState):
                 item = frontier._set[neighbor_config]
                 frontier.update(item, neighbor, calculate_total_cost(neighbor))
     return None
+
+
+def writeOutput(
+    solution: Solution,
+):
+
+    with open(PATH_TO_FILE, "w") as f:
+        f.write(
+            f"path_to_goal: {repr([state.action for state in solution.path])}\n"
+        )
+        f.write(f"cost_of_path: {solution.path[-1].cost}\n")
+        f.write(f"nodes_expanded: {len(solution.explored) - 1}\n")
+        f.write(f"search_depth: {solution.path[-1].cost}\n")
+        f.write(f"max_search_depth: {solution.max_depth}\n")
+        f.write(f"running_time: {solution.elapsed_time}\n")
+        f.write(f"max_ram_usage: {solution.max_ram / 1000000.}\n")
+
+
+# Main Function that reads in Input and Runs corresponding Algorithm
+def main():
+    state = [6, 1, 8, 4, 0, 2, 7, 3, 5]
+    initial_state = PuzzleState(state, 3)
+    writeOutput(bfs_search(initial_state))
+
+
+if __name__ == "__main__":
+    main()
