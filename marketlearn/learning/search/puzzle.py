@@ -1,13 +1,15 @@
+# pyre-strict
 from __future__ import annotations, division, print_function
 
 import os
 import resource
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from marketlearn.algorithms.linear_collections import CircularQueue, Stack
 from marketlearn.algorithms.priority_queues import HeapPriorityQueue
+from marketlearn.algorithms.priority_queues.priority_queue import Item
 
 # - NPuzzle Game from Artificial Intelligence, a modern perspective -
 # This module is used to reproduce informed and uninformed search strategies
@@ -19,7 +21,10 @@ from marketlearn.algorithms.priority_queues import HeapPriorityQueue
 # Module contains implementation of Breadth-First-Search, Depth-First-Search
 # and A*-Search
 
-GOAL_CONFIG = list(range(3 * 3))
+# - Output Of search is stored at search/output.txt
+# - Output includes total ram usage, execution time, search depth, optimal path
+
+GOAL_CONFIG: List[int] = list(range(3 * 3))
 OUTPUT_FILE = "output.txt"
 PATH_TO_FILE = (
     "/Users/raj/Documents/QuantResearch/Home/market-learn/marketlearn"
@@ -27,7 +32,7 @@ PATH_TO_FILE = (
 PATH_TO_FILE = os.path.join(PATH_TO_FILE, "learning", "search", OUTPUT_FILE)
 
 
-class _Empty(Exception):
+class EmptyException(Exception):
     pass
 
 
@@ -45,7 +50,7 @@ class Solution:
     def __post_init__(self) -> None:
         self.path = self.construct_path()
 
-    def construct_path(self):
+    def construct_path(self) -> List[PuzzleState]:
         path = []
         if tuple(self.goal_state.config) in self.explored:
             # build a path from goal_state to initial_state
@@ -63,17 +68,62 @@ class Solution:
 class AdaptablePriorityQueue(HeapPriorityQueue):
     """Allows for updates in priority if priority changes"""
 
-    pass
+    _set: Dict[Tuple[int, ...], Item] = field(init=False, default_factory=dict)
+
+    def update(self, item: Item, newkey: PuzzleState, newvalue: float) -> None:
+        j = item.index
+        if not (0 <= j < len(self) and self._data[j] is item):
+            raise ValueError("Invalid index")
+        item.key = newkey
+        item.value = newvalue
+        self.heap_bubble(j)
+
+    def heap_bubble(self, j: int) -> None:
+        if j > 0 and self._data[j] < self._data[self.get_parent_index(j)]:
+            self.upheap_bubbling(j)
+        else:
+            self.downheap_bubbling(j)
+
+    def push(self, key: PuzzleState, value: float) -> Item:
+        """Adds item to the priority queue and performs upheap bubbling after insertion
+
+        Parameters
+        ----------
+        key : Any
+            [description]
+        value : Any
+            [description]
+        """
+        n = len(self)
+        item = Item(key, value, n)
+        self._data.append(item)
+        start_index = len(self) - 1
+        self.upheap_bubbling(start_index)
+
+        self._set[tuple(key.config)] = item
+        return item
+
+    def pop(self) -> Tuple[PuzzleState, int]:
+        if self.is_empty():
+            raise EmptyException("PQ is empty")
+        n = len(self) - 1
+        # put minimum item at end, remove it
+        self.swap_entries(0, n)
+        item: Item = self._data.pop()
+        # perform downheap bubbling starting from root
+        self.downheap_bubbling(0)
+        del self._set[tuple(item.key.config)]
+        return (item.key, item.value)
 
 
 @dataclass
 class sQueue(CircularQueue):
-    _set: Set[Tuple[int]] = field(init=False, default_factory=set)
+    _set: Set[Tuple[int, ...]] = field(init=False, default_factory=set)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__init__()
 
-    def dequeue(self):
+    def dequeue(self) -> PuzzleState:
         """Removes items from the front of queue"""
         if self.empty():
             raise IndexError("Queue is Empty")
@@ -86,7 +136,7 @@ class sQueue(CircularQueue):
         self._set.remove(tuple(removed_item.config))
         return removed_item
 
-    def enqueue(self, item: PuzzleState):
+    def enqueue(self, item: PuzzleState) -> None:
         # if capcacity is reached, double capacity
         if self.size() == len(self._data):
             self._resize(2 * len(self._data))
@@ -98,13 +148,13 @@ class sQueue(CircularQueue):
 
 @dataclass
 class sStack(Stack):
-    _set: Set[Tuple[int]] = field(init=False, default_factory=set)
+    _set: Set[Tuple[int, ...]] = field(init=False, default_factory=set)
 
     def pop(self) -> PuzzleState:
         """removes item from right(top) of stack"""
         if self.empty():
-            raise _Empty("Stack is empty")
-        item = self._data.pop()
+            raise EmptyException("Stack is empty")
+        item: PuzzleState = self._data.pop()
         self._set.remove(tuple(item.config))
         return item
 
@@ -128,12 +178,12 @@ class PuzzleState:
     n: int
     parent: Optional[PuzzleState] = None
     children: List[PuzzleState] = field(init=False, default_factory=list)
-    action: str = "initial"
+    action: str = "Initial"
     cost: int = 0
     depth: int = 0
     blank_index: int = -1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.action
 
     def __post_init__(self) -> None:
@@ -145,15 +195,18 @@ class PuzzleState:
             else self.blank_index
         )
 
-    def display(self):
+    def display(self) -> None:
         """Display this Puzzle state as a n*n board"""
         for i in range(self.n):
             print(self.config[3 * i : 3 * (i + 1)])
 
     def move_up(self) -> Optional[PuzzleState]:
-        """
-        Moves the blank tile one row up.
-        :return a PuzzleState with the new configuration
+        """Moves blank tile one row up
+
+        Returns
+        -------
+        Optional[PuzzleState]
+            new state after the move or None if at top
         """
         n = self.n
         # if top row contians blank, do nothing
@@ -240,9 +293,13 @@ class PuzzleState:
         )
 
     def move_right(self) -> Optional[PuzzleState]:
-        """
-        Moves the blank tile one column to the right.
-        :return a PuzzleState with the new configuration
+        """Moves a tile one column to the right
+
+        Returns
+        -------
+        Optional[PuzzleState]
+            None if move to right is not possible
+            other generates the new PuzzleState
         """
         n = self.n
         last_col_slice = slice(n - 1, n * n, n)
@@ -341,13 +398,24 @@ def manhattan_distance(idx: int, value: int, n: int) -> int:
         )
 
 
-def test_goal(puzzle_state: PuzzleState) -> bool:
+def goal_test(puzzle_state: PuzzleState) -> bool:
     """test the state is the goal state or not"""
     return puzzle_state.config == GOAL_CONFIG
 
 
-def bfs_search(initial_state) -> Optional[Solution]:
-    """BFS search"""
+def bfs_search(initial_state: PuzzleState) -> Optional[Solution]:
+    """Performs breadth first search given initial_state
+
+    Parameters
+    ----------
+    initial_state : PuzzleState
+        start state from where search begins
+
+    Returns
+    -------
+    Optional[Solution]
+        optimal path from initial_state to goal
+    """
     start = perf_counter()
     frontier = sQueue()
     frontier.enqueue(initial_state)
@@ -357,7 +425,7 @@ def bfs_search(initial_state) -> Optional[Solution]:
     while not frontier.empty():
         state = frontier.dequeue()
         explored.add(tuple(state.config))
-        if test_goal(state):
+        if goal_test(state):
             end = perf_counter()
             elapsed_time = end - start
             return Solution(
@@ -381,8 +449,19 @@ def bfs_search(initial_state) -> Optional[Solution]:
     return None
 
 
-def dfs_search(initial_state) -> Optional[Solution]:
-    """DFS search"""
+def dfs_search(initial_state: PuzzleState) -> Optional[Solution]:
+    """Performs depth first search given initial state
+
+    Parameters
+    ----------
+    initial_state : PuzzleState
+        start state from where search begins
+
+    Returns
+    -------
+    Optional[Solution]
+        optimal path from initial_state to goal
+    """
     start = perf_counter()
     frontier = sStack()
     frontier.push(initial_state)
@@ -393,7 +472,7 @@ def dfs_search(initial_state) -> Optional[Solution]:
         state: PuzzleState = frontier.pop()
         max_depth = max(max_depth, state.cost)
         explored.add(tuple(state.config))
-        if test_goal(state):
+        if goal_test(state):
             end = perf_counter()
             elapsed_time = end - start
             return Solution(
@@ -419,7 +498,7 @@ def dfs_search(initial_state) -> Optional[Solution]:
 def A_star_search(initial_state: PuzzleState) -> Optional[Solution]:
     """A * search"""
     start = perf_counter()
-    frontier = PriorityQueue()
+    frontier = AdaptablePriorityQueue()
     total_cost = calculate_total_cost(initial_state)
     max_depth = 0
     max_ram = 0
@@ -429,7 +508,7 @@ def A_star_search(initial_state: PuzzleState) -> Optional[Solution]:
         state, _ = frontier.pop()
         max_depth = max(max_depth, state.cost)
         explored.add(tuple(state.config))
-        if test_goal(state):
+        if goal_test(state):
             end = perf_counter()
             elapsed_time = end - start
             return Solution(
@@ -457,26 +536,27 @@ def A_star_search(initial_state: PuzzleState) -> Optional[Solution]:
 
 
 def writeOutput(
-    solution: Solution,
-):
+    solution: Optional[Solution],
+) -> None:
 
     with open(PATH_TO_FILE, "w") as f:
-        f.write(
-            f"path_to_goal: {repr([state.action for state in solution.path])}\n"
-        )
-        f.write(f"cost_of_path: {solution.path[-1].cost}\n")
-        f.write(f"nodes_expanded: {len(solution.explored) - 1}\n")
-        f.write(f"search_depth: {solution.path[-1].cost}\n")
-        f.write(f"max_search_depth: {solution.max_depth}\n")
-        f.write(f"running_time: {solution.elapsed_time}\n")
-        f.write(f"max_ram_usage: {solution.max_ram / 1000000.}\n")
+        if solution is not None:
+            f.write(
+                f"path_to_goal: {repr([state.action for state in solution.path])}\n"
+            )
+            f.write(f"cost_of_path: {solution.path[-1].cost}\n")
+            f.write(f"nodes_expanded: {len(solution.explored) - 1}\n")
+            f.write(f"search_depth: {solution.path[-1].cost}\n")
+            f.write(f"max_search_depth: {solution.max_depth}\n")
+            f.write(f"running_time: {solution.elapsed_time}\n")
+            f.write(f"max_ram_usage: {solution.max_ram / 1000000.}\n")
 
 
 # Main Function that reads in Input and Runs corresponding Algorithm
-def main():
-    state = [6, 1, 8, 4, 0, 2, 7, 3, 5]
+def main() -> None:
+    state: List[int] = [6, 1, 8, 4, 0, 2, 7, 3, 5]
     initial_state = PuzzleState(state, 3)
-    writeOutput(bfs_search(initial_state))
+    writeOutput(A_star_search(initial_state))
 
 
 if __name__ == "__main__":
