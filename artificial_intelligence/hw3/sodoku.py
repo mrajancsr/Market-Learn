@@ -9,7 +9,7 @@ ROW = "ABCDEFGHI"
 COL = "123456789"
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, Iterator, List, Optional, Set
 
 
 @dataclass
@@ -22,10 +22,12 @@ class Constraint:
     def satisfied(self, assignment: Dict[str, int]) -> bool:
         pass
 
+
 def split(string: str):
     head = string.split("123456789")
-    tail = string[len(head):]
+    tail = string[len(head) :]
     return head, int(tail)
+
 
 @dataclass
 class CSP:
@@ -81,62 +83,81 @@ class CSP:
             if not constraint.satisfied(assignment):
                 return False
         return True
-    
-    def _get_box_assignment(self, letter: str, num: int, assignment: Dict[str, int]) -> Iterator[int]:
-        for v in assignment:
+
+    def _get_box_assignment(
+        self,
+        letter: str,
+        num: int,
+        assigned: List[str],
+        assignment: Dict[str, int],
+    ) -> Iterator[int]:
+        for v in assigned:
             curr_letter = v[0]
             curr_num = v[1]
-            if letter in ['A', 'B', 'C'] and curr_letter <= 'C':
-                if all(item in [1, 2, 3] for item in [num, curr_num]) and assignment[v] != 0:
+            if letter in ["A", "B", "C"] and curr_letter <= "C":
+                if all(item in [1, 2, 3] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [4, 5, 6] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [7, 8, 9] for item in [num, curr_num]):
+                    yield assignment[v]
+            elif letter in ["D", "E", "F"] and curr_letter <= "F":
+                if all(item in [1, 2, 3] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [4, 5, 6] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [7, 8, 9] for item in [num, curr_num]):
                     yield v[1]
-                elif all(item in [4, 5, 6] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-                elif all(item in [7, 8, 9] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-            elif letter in ['D', 'E', 'F'] and curr_letter <= 'F':
-                if all(item in [1, 2, 3] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-                elif all(item in [4, 5, 6] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-                elif all(item in [7, 8, 9] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-            elif letter in ['G', 'H', 'I'] and curr_letter <= 'I':
-                if all(item in [1, 2, 3] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-                elif all(item in [4, 5, 6] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
-                elif all(item in [7, 8, 9] for item in [num, curr_num]) and assignment[v] != 0:
-                    yield v[1]
+            elif letter in ["G", "H", "I"] and curr_letter <= "I":
+                if all(item in [1, 2, 3] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [4, 5, 6] for item in [num, curr_num]):
+                    yield assignment[v]
+                elif all(item in [7, 8, 9] for item in [num, curr_num]):
+                    yield assignment[v]
             else:
-                raise LookupError("Variable Not found in csp list of variables")
+                raise LookupError(
+                    "Variable Not found in csp list of variables"
+                )
 
-
-
-    
-    def _remaining_value(self, variable: str, assignment: Dict[str, int]):
+    def _remaining_value(
+        self, variable: str, assigned: List[str], assignment: Dict[str, int]
+    ):
         letter, num = split(variable)
+        impossible_values = set()
         # get row/column values for assigned variables
-        row_col_assigned = (v[1] for v in assignment if v[0] == letter or v[1] == num)
+        impossible_values.update(
+            (assignment[v] for v in assigned if v[0] == letter or v[1] == num)
+        )
         # get values assigned to box (9 boxes)
+        impossible_values.update(
+            (self._get_box_assignment(letter, num, assigned, assignment))
+        )
+        return list(set(self.domains[variable]) - impossible_values)
 
-        if letter in ['A','B','C'] and num < 4:
-            box = [v[1] for v in assignment if v[0] <= 'C' and v[1] < 4 and assignment[v] != 0]
+    def remaining_value(
+        self,
+        assigned: List[str],
+        unassigned: List[str],
+        assignment: Dict[str, int],
+    ) -> Dict[str, List[int]]:
+        result = {}
+        for variable in unassigned:
+            result[variable] = self._remaining_value(
+                variable, assigned, assignment
+            )
+        return result
 
-        for v in assignment:
-            curr_letter = v[0]
-            box_assigned_value = int(v[1])
-            if letter <= curr_letter:
-                if 1 <= box_assigned_value <= 3:
-                    box.append(box_assigned_value)
-                elif 3 < box_assigned_value <= 6:
-                    box.append(box_assigned_value)
-            
-
-
-
-
-
-
+    def minimum_remaining_value(
+        self,
+        assignment: Dict[str, int],
+    ) -> Dict[str, List[int]]:
+        """Returns the variables that have the smallest values remaining"""
+        unassigned = [v for v in self.variables if assignment[v] == 0]
+        assigned = list(assignment.keys() - set(unassigned))
+        result = self.remaining_value(assigned, unassigned, assignment)
+        min_val = min(map(lambda x: len(x), result.values()))
+        return {k: v for k, v in result.items() if v == min_val}
 
     def backtracking_search(
         self, assignment: Dict[str, int] = {}
@@ -144,18 +165,17 @@ class CSP:
         # if all the variables are assigned, return assignment
         if len(assignment) == len(self.variables):
             return assignment
-        unassigned = [v for v in self.variables if v not in assignment]
+
         # first step: select variable based on mrv as the heuristic
-        first = None
-
-        for variable in unassigned:
-            # get row and column assigned value for this variable
-            letter, num = split(variable)
-            if letter == 'A' and num < 4:
-
-            
-
-        
+        first: str = ""
+        mrv = self.minimum_remaining_value(assignment)
+        first: str = list(mrv)[0]
+        for value in mrv[first]:
+            local_assignment = assignment.copy()
+            local_assignment[first] = value
+            if self.consistent(first, local_assignment):
+                return self.backtracking_search(local_assignment)
+        return None
 
 
 def print_board(board):
