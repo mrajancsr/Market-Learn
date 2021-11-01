@@ -8,19 +8,41 @@ e.g. my_board['A1'] = 8
 ROW = "ABCDEFGHI"
 COL = "123456789"
 
+import pickle
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from itertools import combinations
 from typing import Dict, Iterator, List, Optional, Set
 
 
-@dataclass
-class Constraint:
+class Constraint(ABC):
     """Constraint Class
     Each constraint is on the variable it constraints"""
 
-    variables: List[str]
+    def __init__(self, variables: List[str]) -> None:
+        self.variables = variables
 
+    @abstractmethod
     def satisfied(self, assignment: Dict[str, int]) -> bool:
         pass
+
+
+@dataclass
+class SodokuConstraint(Constraint):
+    """Binary Constraint Class for Sodoku Solver"""
+
+    first: str
+    second: str
+
+    def __post_init__(self):
+        super().__init__([self.first, self.second])
+
+    def satisfied(self, assignment: Dict[str, int]) -> bool:
+        if self.first not in assignment or self.second not in assignment:
+            return True
+        # check that number assigned to first variable
+        # is not the same as number assigned to constrained variable
+        return assignment[self.first] != assignment[self.second]
 
 
 def split(string: str):
@@ -35,10 +57,12 @@ class CSP:
 
     variables: List[str]
     domains: Dict[str, List[int]]
-    constraints: Dict[str, List[Constraint]] = field(init=False, default={})
+    constraints: Dict[str, List[Constraint]] = field(
+        init=False, default_factory=dict
+    )
 
     def __post_init__(self) -> None:
-        self.constraints = dict.fromkeys(self.variables, [])
+        self.constraints = {k: [] for k in self.variables}
         assert self.variables == [
             *self.domains
         ], "Look Up Error, every variable must have a domain"
@@ -215,6 +239,26 @@ if __name__ == "__main__":
             for r in range(9)
             for c in range(9)
         }
+        variables: List[str] = list(board.keys())
+        domains: Dict[str, List[int]] = {
+            k: list(range(1, 10)) for k in variables
+        }
 
-        print_board(board)
-        print(board.keys())
+        csp = CSP(variables, domains)
+
+        # add top row constraint
+        for letter in ("A", "B", "C", "D", "E", "F", "G", "H", "I"):
+            for c in combinations((v for v in variables if v[0] == letter), 2):
+                csp.add_constraint(SodokuConstraint(*c))
+
+        # add column constraints
+        for num in ("1", "2", "3", "4", "5", "6", "7", "8", "9"):
+            for c in combinations((v for v in variables if v[1] == num), 2):
+                csp.add_constraint(SodokuConstraint(*c))
+
+        # add box constraints
+
+        print(csp.constraints["A1"], "\n")
+        print(csp.constraints["A2"], "\n")
+        print(csp.constraints["B1"], "\n")
+        print(csp.constraints["B9"], "\n")
