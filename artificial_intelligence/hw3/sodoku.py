@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import random
-import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
-from itertools import chain, combinations, permutations
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from itertools import chain, permutations
+from typing import Dict, List, Optional, Set, Tuple
 
 ROW = "ABCDEFGHI"
 COL = "123456789"
@@ -45,6 +43,64 @@ BOXES: Dict["str", Tuple[str, ...]] = {
     "8": ("G4", "G5", "G6", "H4", "H5", "H6", "I4", "I5", "I6"),
     "9": ("G7", "G8", "G9", "H7", "H8", "H9", "I7", "I8", "I9"),
 }
+
+
+class Queue:
+    """Implementation of a Queue using a list
+
+    O(1) time for all operations
+    Assumes: First In First Out (FIFO)
+    """
+
+    # class constant
+    _DEFAULT_CAPACITY = 10
+
+    def __init__(self):
+        """Default Constructor, needs no parameters"""
+        self._data = [None] * Queue._DEFAULT_CAPACITY
+        self._size = 0
+        self._front = 0
+
+    def __repr__(self):
+        return repr(self._data)
+
+    def __len__(self):
+        return self._size
+
+    def size(self):
+        return len(self)
+
+    def empty(self):
+        return self.size() == 0
+
+    def dequeue(self):
+        """Removes items from the front of queue"""
+        if self.empty():
+            raise IndexError("Queue is Empty")
+        removed_item = self._data[self._front]
+        # reclaim for garbage collection
+        self._data[self._front] = None
+        # get available space and decrement size by 1
+        self._front = (1 + self._front) % len(self._data)
+        self._size -= 1
+        return removed_item
+
+    def enqueue(self, item):
+        # if capcacity is reached, double capacity
+        if self.size() == len(self._data):
+            self._resize(2 * len(self._data))
+        avail = (self._front + self.size()) % len(self._data)
+        self._data[avail] = item
+        self._size += 1
+
+    def _resize(self, cap):
+        old = self._data
+        self._data = [None] * cap
+        curr = self._front
+        for k in range(self.size()):
+            self._data[k] = old[curr]
+            curr = (1 + curr) % len(old)
+        self._front = 0
 
 
 @dataclass
@@ -101,10 +157,14 @@ class CSP:
     _set: Dict[str, Set[Tuple[str, str]]] = field(
         init=False, default_factory=dict
     )
+    _removed_domains: Dict[str, Dict[str, int]] = field(
+        init=False, default_factory=dict
+    )
 
     def __post_init__(self) -> None:
-        self.constraints = {k: defaultdict(set) for k in variables}
+        self.constraints = {k: defaultdict(set) for k in self.variables}
         self._set = {k: set() for k in self.variables}
+        self._removed_domains = defaultdict(dict)
         assert self.variables == [
             *self.domains
         ], "Look Up Error, every variable must have a domain"
@@ -122,23 +182,17 @@ class CSP:
         LookupError
             [description]
         """
-        for variable in constraint.variables:
-            if variable not in self.constraints:
-                raise LookupError(
-                    "The variable in constraint is not a variable in CSP"
-                )
-            else:
-                if (constraint.second, constraint.first) in self._set[
-                    variable
-                ]:
-                    continue
-                v = (
-                    constraint.first
-                    if constraint.first != variable
-                    else constraint.second
-                )
-                self.constraints[variable][v].add(constraint)
-                self._set[variable].add((constraint.first, constraint.second))
+        first_variable, second_variable = constraint.variables
+        if (
+            first_variable not in self.constraints
+            or second_variable not in self.constraints
+        ):
+            raise LookupError(
+                " The variable in constraint is not a variable in CSP"
+            )
+
+        self.constraints[first_variable][second_variable].add(constraint)
+        self._set[first_variable].add((constraint.first, constraint.second))
 
     def consistent(self, variable: str, assignment: Dict[str, int]) -> bool:
         """Check if every constraint with respect to variable satisfies assignment
@@ -161,38 +215,6 @@ class CSP:
             if not constraint.satisfied(assignment):
                 return False
         return True
-
-    def revise(self, first_variable: str, second_variable: str) -> bool:
-        """Returns True if we revise domain of first_variable
-
-        Parameters
-        ----------
-        csp : CSP
-            constraint satisfaction problem
-        first_variable : str
-            the first variable in csp
-        second_variable : str
-            the second variable in csp
-
-        Returns
-        -------
-        bool
-            True if domain of first_variable is reduced
-        """
-        assignment: Dict[str, int] = {}
-        constraint: Constraint = next(
-            iter(self.constraints[first_variable][second_variable])
-        )
-        revised = False
-        for x in self.domains[first_variable]:
-            assignment[first_variable] = x
-            for y in self.domains[second_variable]:
-                assignment[second_variable] = y
-                if not constraint.satisfied(assignment):
-                    self.domains[first_variable].remove(x)
-                    revised = True
-
-        return revised
 
     def _remaining_domain(
         self, unassigned_variable: str, assignment: Dict[str, int]
@@ -232,47 +254,134 @@ class CSP:
         min_val = min(map(lambda x: len(x), remaining_domain.values()))
         return {k: v for k, v in remaining_domain.items() if len(v) == min_val}
 
-    def value_selection(
-        self,
-        selected_variable: str,
-        unassigned: List[str],
-        assignment: Dict[str, int],
-    ) -> str:
-        """Selects a value based on least constraining value
 
-        Parameters
-        ----------
-        selected_variable : str
-            [description]
-        unassigned : List[str]
-            [description]
-        assignment : Dict[str, int]
-            [description]
+def backtracking_search(
+    csp: CSP, assignment: Dict[str, int] = {}
+) -> Optional[Dict[str, int]]:
+    # if all the variables are assigned, return assignment
+    if len(assignment) == len(csp.variables):
+        return assignment
+    unassigned = [v for v in csp.variables if v not in assignment]
+    # first step: select variable based on minimum remaining value
+    mrv = csp.select_unassigned_variable(unassigned, assignment)
+    unassigned_variable: str = list(mrv)[0]
+    for value in mrv[unassigned_variable]:
+        # now variable is assigned
+        assignment[unassigned_variable] = value
+        if csp.consistent(unassigned_variable, assignment):
+            for neighbor in csp.constraints[unassigned_variable].keys():
+                _ = revise_domain(
+                    csp, neighbor, unassigned_variable, assignment
+                )
+            result = backtracking_search(csp, assignment)
+            if result is not None:
+                return result
+            del assignment[unassigned_variable]
+            # restore previous domain removed
+            restore_previous_domain(csp, unassigned_variable)
 
-        Returns
-        -------
-        str
-            [description]
-        """
+    return None
+
+
+def restore_previous_domain(csp: CSP, unassigned_variable: str) -> None:
+    """Restores the domain of unassigned variable's neighbor
+
+    Parameters
+    ----------
+    csp : CSP
+        [description]
+    unassigned_variable : str
+        [description]
+    value : int
+        [description]
+    """
+    for neighbor in csp.constraints[unassigned_variable].keys():
+        if neighbor in csp._removed_domains[unassigned_variable]:
+            removed_item = csp._removed_domains[unassigned_variable][neighbor]
+            csp.domains[neighbor].add(removed_item)
+
+
+def make_network_arc_consistent(csp: CSP, assignment) -> bool:
+    """Implementation of the AC-3 algorithm
+
+    Parameters
+    ----------
+    csp : CSP
+        binary CSP constraint
+    assignment : [type]
+        current assignment of variables in CSP
+
+    Returns
+    -------
+    bool
+        [description]
+    """
+    queue = set()
+    for arcs in csp._set.values():
+        queue.update(arcs)
+    while len(queue) != 0:
+        vi, vj = queue.pop()
+        if revise_domain(csp, vi, vj, assignment):
+            if len(csp.domains[vi]) == 0:
+                return False
+            for vk in csp.constraints[vi].keys() - {vj}:
+                queue.add((vk, vi))
+    return True
+
+
+def revise_domain(
+    csp: CSP,
+    first_variable: str,
+    second_variable: str,
+    assignment: Dict[str, int],
+) -> bool:
+    """Returns True if we revise domain of first_variable
+
+    Parameters
+    ----------
+    csp : CSP
+        constraint satisfaction problem
+    first_variable : str
+        the first variable in csp
+    second_variable : str
+        the second variable in csp
+
+    Returns
+    -------
+    bool
+        True if domain of first_variable is reduced
+    """
+    revised = False
+    if first_variable in assignment and second_variable in assignment:
         pass
+    elif first_variable in assignment:
+        pass
+    elif second_variable in assignment:
+        value = assignment[second_variable]
+        if value in csp.domains[first_variable]:
+            csp.domains[first_variable].remove(value)
+            csp._removed_domains[second_variable][first_variable] = value
+            revised = True
+    else:
+        local_assignment = assignment.copy()
+        # both the variables are unassigned
+        constraint: Constraint = next(
+            iter(csp.constraints[first_variable][second_variable])
+        )
+        first_variable_domain = csp.domains[first_variable].copy()
+        for x in first_variable_domain:
+            not_satisfied_count = 0
+            local_assignment[first_variable] = x
+            for y in csp.domains[second_variable]:
+                local_assignment[second_variable] = y
+                if not constraint.satisfied(local_assignment):
+                    not_satisfied_count += 1
+            if not_satisfied_count == len(csp.domains[second_variable]):
+                csp.domains[first_variable].remove(x)
+                csp._removed_domains[second_variable][first_variable] = x
+                revised = True
 
-    def backtracking_search(
-        self, assignment: Dict[str, int] = {}
-    ) -> Optional[Dict[str, int]]:
-        # if all the variables are assigned, return assignment
-        if len(assignment) == len(self.variables):
-            return assignment
-
-        unassigned = [v for v in self.variables if v not in assignment]
-        # first step: select variable based on minimum remaining value
-        mrv = self.select_unassigned_variable(unassigned, assignment)
-        first: str = random.sample(list(mrv), 1)[0]
-        for value in mrv[first]:
-            local_assignment = assignment.copy()
-            local_assignment[first] = value
-            if self.consistent(first, local_assignment):
-                return self.backtracking_search(local_assignment)
-        return None
+    return revised
 
 
 def print_board(board):
@@ -310,7 +419,7 @@ def convert_to_board(string: str):
     return board
 
 
-if __name__ == "__main__":
+def main(board_num: int):
     # Running sudoku solver with one board $python3 sudoku.py <input_string>.
     # Parse boards to dict representation, scanning board L to R, Up to Down
     import os
@@ -324,36 +433,46 @@ if __name__ == "__main__":
     all_boards = []
     for b in boards:
         all_boards.append(convert_to_board(b))
-    result = []
-    failure = []
-    for board in all_boards[:3]:
-        variables: List[str] = list(board.keys())
-        domains: Dict[str, Set[int]] = {
-            k: set(range(1, 10)) for k in variables
-        }
 
-        csp: CSP = CSP(variables, domains)
+    for board in all_boards[:board_num]:
+        pass
 
-        # add top row constraint
-        for row in ROWS:
-            for c in combinations(ROWS[row], 2):
-                csp.add_constraint(Constraint(*c))
+    variables: List[str] = list(board.keys())
+    # get the assignments
+    assignment: Dict[str, int] = {k: v for k, v in board.items() if v != 0}
+    domains: Dict[str, Set[int]] = {}
+    for k in variables:
+        if k not in assignment:
+            domains[k] = set(range(1, 10))
+        else:
+            domains[k] = set([assignment[k]])
 
-        # add column constraints
-        for col in COLUMNS:
-            for c in combinations(COLUMNS[col], 2):
-                csp.add_constraint(Constraint(*c))
+    csp: CSP = CSP(variables, domains)
 
-        # add box constraints
-        for box in BOXES:
-            for c in combinations(BOXES[box], 2):
-                csp.add_constraint(Constraint(*c))
-        # get the assignments
-        assignment: Dict[str, int] = {k: v for k, v in board.items() if v != 0}
-        try:
-            result.append(csp.backtracking_search(assignment))
-        except Exception:
-            failure.append(board)
+    # add top row constraint
+    for row in ROWS:
+        for c in permutations(ROWS[row], 2):
+            csp.add_constraint(Constraint(*c))
 
-    for b in result:
-        print_board(b)
+    # add column constraints
+    for col in COLUMNS:
+        for c in permutations(COLUMNS[col], 2):
+            csp.add_constraint(Constraint(*c))
+
+    # add box constraints
+    for box in BOXES:
+        for c in permutations(BOXES[box], 2):
+            csp.add_constraint(Constraint(*c))
+
+    # pre-process step
+    make_network_arc_consistent(csp, assignment)
+    print("\n")
+    print("board provided", "\n")
+    print_board(board)
+    print("\n")
+    print("Solution", "\n")
+    print_board(backtracking_search(csp, assignment))
+
+
+if __name__ == "__main__":
+    main(402)
