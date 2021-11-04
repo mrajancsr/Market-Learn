@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain, permutations
+from time import perf_counter
 from typing import Dict, List, Optional, Set, Tuple
 
 ROW = "ABCDEFGHI"
@@ -45,64 +47,6 @@ BOXES: Dict["str", Tuple[str, ...]] = {
 }
 
 
-class Queue:
-    """Implementation of a Queue using a list
-
-    O(1) time for all operations
-    Assumes: First In First Out (FIFO)
-    """
-
-    # class constant
-    _DEFAULT_CAPACITY = 10
-
-    def __init__(self):
-        """Default Constructor, needs no parameters"""
-        self._data = [None] * Queue._DEFAULT_CAPACITY
-        self._size = 0
-        self._front = 0
-
-    def __repr__(self):
-        return repr(self._data)
-
-    def __len__(self):
-        return self._size
-
-    def size(self):
-        return len(self)
-
-    def empty(self):
-        return self.size() == 0
-
-    def dequeue(self):
-        """Removes items from the front of queue"""
-        if self.empty():
-            raise IndexError("Queue is Empty")
-        removed_item = self._data[self._front]
-        # reclaim for garbage collection
-        self._data[self._front] = None
-        # get available space and decrement size by 1
-        self._front = (1 + self._front) % len(self._data)
-        self._size -= 1
-        return removed_item
-
-    def enqueue(self, item):
-        # if capcacity is reached, double capacity
-        if self.size() == len(self._data):
-            self._resize(2 * len(self._data))
-        avail = (self._front + self.size()) % len(self._data)
-        self._data[avail] = item
-        self._size += 1
-
-    def _resize(self, cap):
-        old = self._data
-        self._data = [None] * cap
-        curr = self._front
-        for k in range(self.size()):
-            self._data[k] = old[curr]
-            curr = (1 + curr) % len(old)
-        self._front = 0
-
-
 @dataclass
 class Constraint:
     """Binary Constraint class for sodoku solver"""
@@ -128,21 +72,12 @@ class Constraint:
     def endpoint(self) -> Tuple[str, str]:
         return (self.first, self.second)
 
-    def flip(self) -> Tuple[str, str]:
-        return (self.second, self.first)
-
     def satisfied(self, assignment: Dict[str, int]) -> bool:
         if self.first not in assignment or self.second not in assignment:
             return True
         # check that number assigned to first variable
         # is not the same as number assigned to constrained variable
         return assignment[self.first] != assignment[self.second]
-
-
-def split(string: str):
-    head = string.split("123456789")
-    tail = string[len(head) :]
-    return head, int(tail)
 
 
 @dataclass
@@ -251,6 +186,7 @@ class CSP:
             remaining_domain[variable] = self._remaining_domain(
                 variable, assignment
             )
+        # get the smallest values remaining in domain
         min_val = min(map(lambda x: len(x), remaining_domain.values()))
         return {k: v for k, v in remaining_domain.items() if len(v) == min_val}
 
@@ -258,6 +194,20 @@ class CSP:
 def backtracking_search(
     csp: CSP, assignment: Dict[str, int] = {}
 ) -> Optional[Dict[str, int]]:
+    """Conducts Backtracking Search via Forward Checking
+
+    Parameters
+    ----------
+    csp : CSP
+        binary CSP constraint
+    assignment : Dict[str, int], optional, default = {}
+        assigned values to variables
+
+    Returns
+    -------
+    Optional[Dict[str, int]]
+        Solution to the Sodoku board
+    """
     # if all the variables are assigned, return assignment
     if len(assignment) == len(csp.variables):
         return assignment
@@ -265,8 +215,10 @@ def backtracking_search(
     # first step: select variable based on minimum remaining value
     mrv = csp.select_unassigned_variable(unassigned, assignment)
     unassigned_variable: str = list(mrv)[0]
+    # Second step: choose value in ascending order
     for value in mrv[unassigned_variable]:
-        # now variable is assigned
+        # third step: assign the value to unassigned variable and check
+        # if constraint is satisfied with its neighbors and perform FC
         assignment[unassigned_variable] = value
         if csp.consistent(unassigned_variable, assignment):
             for neighbor in csp.constraints[unassigned_variable].keys():
@@ -277,7 +229,7 @@ def backtracking_search(
             if result is not None:
                 return result
             del assignment[unassigned_variable]
-            # restore previous domain removed
+            # restore domain in the event failure is detected early
             restore_previous_domain(csp, unassigned_variable)
 
     return None
@@ -289,11 +241,10 @@ def restore_previous_domain(csp: CSP, unassigned_variable: str) -> None:
     Parameters
     ----------
     csp : CSP
-        [description]
+        binary csp constraint
     unassigned_variable : str
-        [description]
-    value : int
-        [description]
+        variable assigned in previous iteration
+        prior to detecting failures in Forward Check
     """
     for neighbor in csp.constraints[unassigned_variable].keys():
         if neighbor in csp._removed_domains[unassigned_variable]:
@@ -301,7 +252,7 @@ def restore_previous_domain(csp: CSP, unassigned_variable: str) -> None:
             csp.domains[neighbor].add(removed_item)
 
 
-def make_network_arc_consistent(csp: CSP, assignment) -> bool:
+def make_network_arc_consistent(csp: CSP, assignment: Dict[str, int]) -> bool:
     """Implementation of the AC-3 algorithm
 
     Parameters
@@ -314,7 +265,8 @@ def make_network_arc_consistent(csp: CSP, assignment) -> bool:
     Returns
     -------
     bool
-        [description]
+        True if variable domains have been reduced
+        and network becomes arc consistent
     """
     queue = set()
     for arcs in csp._set.values():
@@ -378,6 +330,7 @@ def revise_domain(
                     not_satisfied_count += 1
             if not_satisfied_count == len(csp.domains[second_variable]):
                 csp.domains[first_variable].remove(x)
+                # keep track of removed item incase of failure - then bt
                 csp._removed_domains[second_variable][first_variable] = x
                 revised = True
 
@@ -464,7 +417,8 @@ def main(board_num: int):
         for c in permutations(BOXES[box], 2):
             csp.add_constraint(Constraint(*c))
 
-    # pre-process step
+    # pre-process step - takes O(D^3)
+    start = perf_counter()
     make_network_arc_consistent(csp, assignment)
     print("\n")
     print("board provided", "\n")
@@ -472,7 +426,10 @@ def main(board_num: int):
     print("\n")
     print("Solution", "\n")
     print_board(backtracking_search(csp, assignment))
+    end = perf_counter()
+    print(f"program finished in {(end - start):.4f} seconds")
 
 
 if __name__ == "__main__":
-    main(402)
+    board_num: int = random.sample(range(1, 401), 1)[0]
+    main(board_num)
