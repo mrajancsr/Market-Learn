@@ -49,14 +49,14 @@ class LinearRegressionGD(LinearBase):
         Parameters
         ----------
         X : ArrayLike
-            [description]
+            design matrix
         y : ArrayLike
-            [description]
+            response vector
 
         Returns
         -------
         LinearRegressionGD
-            [description]
+            returns regression object
         """
         n_samples, p_features = X.shape[0], X.shape[1]
         self.theta = np.zeros(shape=1 + p_features)
@@ -103,19 +103,32 @@ def main():
     """
     data = np.genfromtxt(INPUT_PATH_TO_FILE, delimiter=",")
     scaler = StandardScaler()
-    data = scaler.fit_transform(data)
+    # normalize the data by subtracting mean and scaling
+    # normalize the data by subtracting mean and scaling
+    inputs = scaler.fit_transform(data[:, :2])
     target = data[:, -1]
-    inputs = data[:, :2]
 
     lg = LinearRegressionGD(n_iter=100)
 
-    learning_rates = (0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10)
+    learning_rates = (0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 0.01)
     weights = {}
     for idx, eta in enumerate(learning_rates):
         lg.eta = eta
         _ = lg.fit(inputs, target)
-        weights[idx] = (idx + 1, 100, eta, *lg.theta)
-    weights = pd.DataFrame.from_dict(weights, orient="index")
+
+        weights[idx] = (eta, lg.n_iter, *lg.theta)
+
+    lg.n_iter = 50
+    lg.eta = 0.6
+    _ = lg.fit(inputs, target)
+
+    weights[idx + 1] = (lg.eta, lg.n_iter, *lg.theta)
+
+    weights = pd.DataFrame.from_dict(
+        weights,
+        orient="index",
+        columns=["alpha", "num_iters", "bias", "b_age", "b_weight"],
+    )
     weights.to_csv(OUTPUT_PATH_TO_FILE)
 
 
