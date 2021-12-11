@@ -3,7 +3,7 @@ from __future__ import annotations, division, print_function
 import math
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 GOAL_CONFIG = list(range(3 * 3))
 
@@ -376,9 +376,7 @@ class PuzzleState(object):
         if n * n != len(config) or n < 2:
             raise Exception("The length of config is not correct!")
         if set(config) != set(range(n * n)):
-            raise Exception(
-                "Config contains invalid/duplicate entries : ", config
-            )
+            raise Exception("Config contains invalid/duplicate entries : ", config)
 
         self.n = n
         self.cost = cost
@@ -389,9 +387,7 @@ class PuzzleState(object):
         self.depth = depth
 
         # Get the index and (row, col) of empty block
-        self.blank_index = (
-            self.config.index(0) if blank_index is None else blank_index
-        )
+        self.blank_index = self.config.index(0) if blank_index is None else blank_index
 
     def display(self):
         """Display this Puzzle state as a n*n board"""
@@ -551,10 +547,7 @@ def bfs_search(initial_state):
             return Solution(initial_state, state, explored, max_depth)
         for neighbor in iter(state.expand()):
             neighbor_config = tuple(neighbor.config)
-            if (
-                neighbor_config not in frontier._set
-                and neighbor_config not in explored
-            ):
+            if neighbor_config not in frontier._set and neighbor_config not in explored:
                 frontier.enqueue(neighbor)
     return None
 
@@ -573,10 +566,7 @@ def dfs_search(initial_state):
             return Solution(initial_state, state, explored, max_depth)
         for neighbor in reversed(state.expand()):
             neighbor_config = tuple(neighbor.config)
-            if (
-                neighbor_config not in frontier._set
-                and neighbor_config not in explored
-            ):
+            if neighbor_config not in frontier._set and neighbor_config not in explored:
                 frontier.push(neighbor)
     return None
 
@@ -596,10 +586,7 @@ def A_star_search(initial_state: PuzzleState):
 
         for neighbor in iter(state.expand()):
             neighbor_config = tuple(neighbor.config)
-            if (
-                neighbor_config not in frontier._set
-                and neighbor_config not in explored
-            ):
+            if neighbor_config not in frontier._set and neighbor_config not in explored:
                 frontier.push(neighbor, calculate_total_cost(neighbor))
             elif neighbor_config in frontier._set:
                 item = frontier._set[neighbor_config]

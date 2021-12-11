@@ -6,7 +6,7 @@ Date: 11/11/2020
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional, Union, overload
+from typing import Any, Iterator, Optional, Union
 
 from marketlearn.algorithms.trees import tree_base as tb
 
@@ -243,9 +243,7 @@ class BinaryTree(tb._BinaryTreeBase):
         node._parent = node
         return node._element
 
-    def _attach(
-        self, p: Position, tree1: BinaryTree, tree2: BinaryTree
-    ) -> None:
+    def _attach(self, p: Position, tree1: BinaryTree, tree2: BinaryTree) -> None:
         """Attach trees tree1 and tree2 as left and right subtrees fo external p
         takes O(1) time
 
