@@ -1,17 +1,23 @@
+# pyre-strict
 """Linear Classification Models
 Author: Rajan Subramanian
 """
 
 from __future__ import annotations
-from scipy.optimize import minimize
-from marketlearn.learning.linear_models.base import LogisticBase
-from typing import Union, Dict
-from numpy.linalg import solve
-from numpy import fill_diagonal
+
+from dataclasses import dataclass, field
+from typing import Dict, Union
+
 import numpy as np
+from marketlearn.learning.linear_models.base import LogisticBase
 from marketlearn.toolz import timethis
+from numpy import fill_diagonal, float64
+from numpy.linalg import solve
+from numpy.typing import ArrayLike, NDArray
+from scipy.optimize import minimize
 
 
+@dataclass
 class LogisticRegression(LogisticBase):
     """
     Implements Logistic Regression via MLE
@@ -40,12 +46,16 @@ class LogisticRegression(LogisticBase):
     - todo: A implemention using Stochastic Gradient Descent
     """
 
-    def __init__(self, fit_intercept: bool = True, degree: int = 1):
-        self.fit_intercept = fit_intercept
-        self.degree = degree
+    fit_intercept: bool = True
+    degree: int = 1
+    run: bool = field(init=False)
+
+    def __post_init__(self) -> None:
         self.run = False
 
-    def _jacobian(self, guess: np.ndarray, X: np.ndarray, y: np.ndarray):
+    def _jacobian(
+        self, guess: NDArray[float64], X: NDArray[float64], y: NDArray[float64]
+    ) -> ArrayLike:
         """Computes the Jacobian of likelihood function
 
         Parameters
@@ -121,7 +131,7 @@ class LogisticRegression(LogisticBase):
         # will be used to store the predictions and its inverse
         W = np.zeros((n, n))
         Winv = np.zeros((n, n))
-
+        # --- currently using O(n^2) storage
         for _ in range(niter):
             prob = self.predict(X, guess)
             fill_diagonal(W, prob * (1 - prob))
