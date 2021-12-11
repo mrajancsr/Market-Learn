@@ -90,7 +90,6 @@ class GraphAdjacencyMap(GraphBase):
             iterator of all unique edges in a graph
         """
         seen = set()
-
         for adjacent_vertex in self._out.values():
             seen.update(adjacent_vertex.values())
         yield from seen

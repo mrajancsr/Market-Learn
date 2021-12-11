@@ -1,4 +1,3 @@
-# pyre-strict
 """linear collections of Stack, Queue and Deque implemented via linked List
 Takes O(1) time for all insertion, removal operations
 -O(n) time complexity for traversing the ADTs to print the elements
@@ -91,7 +90,6 @@ class LinkedStack:
             self.size -= 1
             return element
 
-    # pyre-ignore
     def push(self, data: Any) -> None:
         """Adds element to top of the Stack
         Takes O(1) time
@@ -103,15 +101,14 @@ class LinkedStack:
         self.start_node = new_node  # new node is now the start_node
         self.size += 1
 
-    # pyre-ignore
     def peek(self) -> Any:
         """Returns but does not remove element from top of Stack
         takes O(1) time
         """
         if self.is_empty():
             raise EmptyException("stack is empty")
-        if self.start_node:
-            element = getattr(self.start_node, "element")
+        if self.start_node is not None:
+            element = self.start_node.element
             return element
         return None
 

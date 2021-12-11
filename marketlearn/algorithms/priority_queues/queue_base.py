@@ -8,13 +8,15 @@ from typing import Any
 
 @dataclass
 class Item:
-    # pyre-fixme
-    key: Any
-    # pyre-fixme
-    value: Any
+    key: Any  # pyre-ignore
+    value: Any  # pyre-ignore
+    index: int
 
-    def __lt__(self, other: Item) -> bool:
-        return self.key <= other.key
+    def __le__(self, other: Item) -> bool:
+        return self.value <= other.value
+
+    def __gt__(self, other: Item) -> bool:
+        return self.value > other.value
 
 
 @dataclass

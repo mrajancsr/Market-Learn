@@ -1,10 +1,11 @@
 # pyre-strict
 """Linear Collections, consisting of stacks, queue and deque"""
-import collections
-from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+
+from dataclasses import dataclass, field
+from typing import Any, List, Union
 
 
+@dataclass
 class Stack:
     """Implementation of stacks using lists
 
@@ -14,8 +15,7 @@ class Stack:
     items on the right is the top, left is bottom
     """
 
-    def __init__(self, data: Optional[list] = None):
-        self._data = [] if data is None else data
+    _data: List[Any] = field(init=False, default_factory=list)
 
     def empty(self) -> bool:
         """returns true if stack is empty"""
@@ -82,7 +82,7 @@ class MaxStack:
     items on the right is the top, left is bottom
     """
 
-    _data: List[Item] = []
+    _data: List[Item] = field(init=False, default_factory=list)
 
     # pyre-ignore
     def _create_stack(self, items: List[Any]) -> None:
@@ -187,28 +187,30 @@ class CircularQueue:
     # class constant
     _DEFAULT_CAPACITY = 10
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Default Constructor, needs no parameters"""
         self._data = [None] * CircularQueue._DEFAULT_CAPACITY
         self._size = 0
         self._front = 0
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._size
 
-    def size(self):
+    def size(self) -> int:
         return len(self)
 
-    def empty(self):
+    def empty(self) -> bool:
         return self.size() == 0
 
-    def front(self):
+    # pyre-ignore
+    def front(self) -> Any:
         """Returns, but doesn't remove first element"""
         if self.empty():
             raise IndexError("Queue is Empty")
         return self._data[self._front]
 
-    def dequeue(self):
+    # pyre-ignore
+    def dequeue(self) -> Any:
         if self.empty():
             raise IndexError("Queue is Empty")
         removed_item = self.front()
@@ -219,7 +221,8 @@ class CircularQueue:
         self._size -= 1
         return removed_item
 
-    def enqueue(self, item):
+    # pyre-ignore
+    def enqueue(self, item: Any) -> None:
         # if capcacity is reached, double capacity
         if self.size() == len(self._data):
             self._resize(2 * len(self._data))
@@ -227,6 +230,7 @@ class CircularQueue:
         self._data[avail] = item
         self._size += 1
 
+    # pyre-ignore
     def _resize(self, cap):
         old = self._data
         self._data = [None] * cap
@@ -235,35 +239,3 @@ class CircularQueue:
             self._data[k] = old[walk]
             walk = (1 + walk) % len(old)
         self._front = 0
-
-
-class StackQueue:
-    """Implementation of Queue using Stacks"""
-
-    def __init__(self):
-        self._enq, self._deq = Stack(), Stack()
-
-    def enqueue(self, item):
-        self._enq.push(item)
-
-    def dequeue(self):
-        if not self._deq:
-            while self._enq:
-                self._deq.push(self._enq.pop())
-        if not self._deq:
-            raise IndexError("Empty Queue")
-        return self._deq.pop()
-
-    def front(self):
-        return self._enq.peek()
-
-
-class MaxQueue:
-    """Implementation of Queue withh max API using Deque"""
-
-    def __init__(self):
-        self._data = collections.deque()
-        self._candidates_for_max = collections.deque()
-
-    def enqueue(self, item):
-        pass

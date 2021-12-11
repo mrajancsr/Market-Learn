@@ -48,7 +48,7 @@ class BinaryTree(tb._BinaryTreeBase):
         """returns total number of nodes in a tree"""
         return self._size
 
-    def _make_position(self, node: Node) -> Optional[Position]:
+    def _make_position(self, node: Optional[Node]) -> Optional[Position]:
         """Return Position's instance for a given node"""
         return Position(self, node) if node is not None else None
 
@@ -84,7 +84,6 @@ class BinaryTree(tb._BinaryTreeBase):
             raise ValueError("p is no longer valid")
         return p.node
 
-    @override
     def root(self) -> Optional[Position]:
         """return root position of tree, return None if tree is empty"""
         return self._make_position(self._root)
@@ -103,7 +102,8 @@ class BinaryTree(tb._BinaryTreeBase):
             position representing p's parent or None if p is root
         """
         node = self._validate(p)
-        return self._make_position(node._parent)
+        if node is not None:
+            return self._make_position(node.parent)
 
     def left(self, p) -> Union[Position, None]:
         """return position representing p's left child
@@ -111,7 +111,8 @@ class BinaryTree(tb._BinaryTreeBase):
         takes O(1) time
         """
         node = self._validate(p)
-        return self._make_position(node._left)
+        if node is not None:
+            return self._make_position(node._left)
 
     def right(self, p: Position) -> Union[Position, None]:
         """return position representing p's right child

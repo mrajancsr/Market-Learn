@@ -3,11 +3,13 @@ Author: Rajan Subramanian
 """
 
 from __future__ import annotations
-from marketlearn.learning.linear_models.base import NeuralBase
-from marketlearn.toolz import timethis
+
 from typing import Union
+
 import matplotlib.pyplot as plt
 import numpy as np
+from marketlearn.learning.linear_models.base import NeuralBase
+from marketlearn.toolz import timethis
 
 
 class Perceptron(NeuralBase):
@@ -39,7 +41,8 @@ class Perceptron(NeuralBase):
             object with fitted parameters
         """
         # Add bias unit to design matrix
-        X = self.make_polynomial(X)
+        degree, bias = self.degree, self.bias
+        X = self.make_polynomial(X, degree, bias)
 
         # Generate small random weights
         self.thetas = np.random.rand(X.shape[1])
