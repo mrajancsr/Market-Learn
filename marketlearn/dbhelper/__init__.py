@@ -1,1 +1,1 @@
-from marketlearn.dbhelper.dbreader import DbReader
+from marketlearn.dbhelper.dbreader import DbReader  # noqa

@@ -6,7 +6,7 @@ Created: May 23, 2020
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 from marketlearn.learning.linear_models.base import LinearBase
@@ -212,16 +212,9 @@ class LinearRegression(LinearBase):
         self.run = True
 
         if run_diagnostics:
-            self.diagnostics = self.compute_regression_diagnostics(X, y)
+            self.diagnostics = compute_regression_diagnostics(self, X, y)
 
         return self
-
-    def compute_regression_diagnostics(
-        self, X: NDArray, y: NDArray
-    ) -> Optional[RegressionDiagnostics]:
-        if self.run:
-            return RegressionDiagnostics(self, X, y, self.theta)
-        return None
 
     def predict(
         self, X: ArrayLike, thetas: Optional[NDArray] = None
@@ -372,15 +365,8 @@ class LinearRegressionMLE(LinearBase):
             )
         self.run = True
         if run_diagnostics:
-            self.diagnostics = self.compute_regression_diagnostics(X, y)
+            self.diagnostics = compute_regression_diagnostics(self, X, y)
         return self
-
-    def compute_regression_diagnostics(
-        self, X: NDArray, y: NDArray
-    ) -> Optional[RegressionDiagnostics]:
-        if self.run:
-            return RegressionDiagnostics(self, X, y, self.theta)
-        return None
 
     def predict(
         self, X: ArrayLike, thetas: Optional[ArrayLike] = None
@@ -480,3 +466,9 @@ class LinearRegressionGD(LinearBase):
         if thetas is None:
             return X @ self.theta
         return X @ thetas
+
+
+def compute_regression_diagnostics(
+    model: Union[LinearRegression, LinearRegressionMLE], X: NDArray, y: NDArray
+) -> RegressionDiagnostics:
+    return RegressionDiagnostics(model, X, y, model.theta)

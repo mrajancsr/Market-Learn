@@ -2,20 +2,19 @@
 to help with machine learning plots
 """
 
-from matplotlib.colors import ListedColormap
-from pydotplus import graph_from_dot_data
-from scipy import interp
-from sklearn.tree import export_graphviz
-from sklearn.model_selection import validation_curve
-from sklearn.model_selection import learning_curve
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import roc_curve, auc
-from sklearn.preprocessing import LabelBinarizer
+import warnings
 from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import warnings
+from matplotlib.colors import ListedColormap
+from pydotplus import graph_from_dot_data
+from scipy import interp
+from sklearn.metrics import auc, precision_recall_fscore_support, roc_curve
+from sklearn.model_selection import learning_curve, validation_curve
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.tree import export_graphviz
 
 
 def graph_tree(
@@ -331,10 +330,10 @@ def modelfit(
 ):
 
     import matplotlib.pyplot as plt
-    import pandas as pd
     import numpy as np
-    from sklearn.model_selection import cross_val_score
+    import pandas as pd
     from sklearn import metrics
+    from sklearn.model_selection import cross_val_score
 
     alg.fit(X, y)
     # Predict training set:

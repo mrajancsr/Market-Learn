@@ -1,14 +1,22 @@
 {
-    "python.pythonPath": "/Users/raj/anaconda/bin/python",
-    "code-runner.executorMap": 
-    { 
-        "python": "$pythonPath -u $fullFileName" 
-    },
-    "python.terminal.executeInFileDir": true,
-    "code-runner.fileDirectoryAsCwd": true,
-    "code-runner.saveFileBeforeRun": true,
-    "code-runner.clearPreviousOutput" : true,
     "autoDocstring.docstringFormat": "numpy",
+    "python.linting.flake8Enabled": true,
+    "python.languageServer": "Default",
     "python.linting.enabled": true,
-    "python.linting.pycodestyleEnabled": true,
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "python.pythonPath": "/Users/raj/Documents/QuantResearch/Home/market-learn",
+    "editor.codeLens": true,
+    "python.analysis.autoImportCompletions": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true,
+    },
+    "git.ignoreLimitWarning": true,
+    "jupyter.jupyterServerType": "local",
+    "python.autoComplete.extraPaths": [
+        "/usr/bin/python3"
+    ],
+    "python.analysis.extraPaths": [
+        "/usr/bin/python3"
+    ],
 }
