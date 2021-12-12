@@ -1,0 +1,4 @@
+[console_scripts]
+pyre = pyre_check.client.pyre:main
+pyre-upgrade = pyre_check.tools.upgrade.upgrade:main
+

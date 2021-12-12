@@ -1,0 +1,12 @@
+async-generator
+click
+dataclasses-json
+libcst>=0.3.6
+psutil
+pyre-extensions
+pywatchman
+tabulate
+typing-extensions
+
+[:python_version == "3.6"]
+dataclasses
