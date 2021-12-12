@@ -1,22 +1,20 @@
 {
     "autoDocstring.docstringFormat": "numpy",
     "python.linting.flake8Enabled": true,
-    "python.languageServer": "Default",
+    "python.languageServer": "Pylance",
     "python.linting.enabled": true,
     "python.formatting.provider": "black",
     "editor.formatOnSave": true,
-    "python.pythonPath": "/Users/raj/Documents/QuantResearch/Home/market-learn",
     "editor.codeLens": true,
     "python.analysis.autoImportCompletions": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": true,
     },
+    "python.pythonPath": "/Users/rajmani/Documents/research/Home/market-learn",
     "git.ignoreLimitWarning": true,
     "jupyter.jupyterServerType": "local",
-    "python.autoComplete.extraPaths": [
-        "/usr/bin/python3"
-    ],
-    "python.analysis.extraPaths": [
-        "/usr/bin/python3"
-    ],
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "jupyter.notebookFileRoot": "${workspaceFolder}"
 }

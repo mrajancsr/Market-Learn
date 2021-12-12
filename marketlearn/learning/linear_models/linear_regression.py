@@ -216,9 +216,7 @@ class LinearRegression(LinearBase):
 
         return self
 
-    def predict(
-        self, X: ArrayLike, thetas: Optional[NDArray] = None
-    ) -> NDArray:
+    def predict(self, X: ArrayLike, thetas: Optional[NDArray] = None) -> NDArray:
         """makes predictions of response variable given input params
         Args:
         X:
@@ -241,7 +239,7 @@ class LinearRegression(LinearBase):
         return X @ thetas
 
 
-@dataclass()
+@dataclass
 class LinearRegressionMLE(LinearBase):
     """
     Implements linear regression via Maximum Likelihood Estimate
@@ -368,9 +366,7 @@ class LinearRegressionMLE(LinearBase):
             self.diagnostics = compute_regression_diagnostics(self, X, y)
         return self
 
-    def predict(
-        self, X: ArrayLike, thetas: Optional[ArrayLike] = None
-    ) -> NDArray:
+    def predict(self, X: ArrayLike, thetas: Optional[ArrayLike] = None) -> NDArray:
         """makes predictions of response variable given input params
         Args:
         X:
@@ -393,7 +389,7 @@ class LinearRegressionMLE(LinearBase):
         return X @ thetas
 
 
-@dataclass()
+@dataclass
 class LinearRegressionGD(LinearBase):
     """Implements the ols regression via Gradient Descent
 
@@ -446,9 +442,7 @@ class LinearRegressionGD(LinearBase):
         self.run = True
         return self
 
-    def predict(
-        self, X: ArrayLike, thetas: Optional[ArrayLike] = None
-    ) -> NDArray:
+    def predict(self, X: ArrayLike, thetas: Optional[ArrayLike] = None) -> NDArray:
         """Makes predictions of target variable given data
 
         Parameters
@@ -472,3 +466,8 @@ def compute_regression_diagnostics(
     model: Union[LinearRegression, LinearRegressionMLE], X: NDArray, y: NDArray
 ) -> RegressionDiagnostics:
     return RegressionDiagnostics(model, X, y, model.theta)
+
+
+if __name__ == "__main__":
+    lr = LinearRegression()
+    print(lr.bias)

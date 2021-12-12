@@ -1,12 +1,13 @@
 """Abstract base class for regression models"""
 
 from abc import ABCMeta, abstractmethod
+from operator import itemgetter
 from typing import Dict
+
+import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.datasets import make_regression
 from sklearn.preprocessing import PolynomialFeatures
-from operator import itemgetter
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 class LinearBase(metaclass=ABCMeta):
@@ -33,8 +34,7 @@ class LinearBase(metaclass=ABCMeta):
         )
         return dict(zip(["X", "y", "coef"], [features, output, coef]))
 
-    def make_polynomial(self, X: np.ndarray) -> np.ndarray:
-        degree, bias = self.degree, self.bias
+    def make_polynomial(self, X: np.ndarray, degree: int, bias: bool) -> np.ndarray:
         pf = PolynomialFeatures(degree=degree, include_bias=bias)
         return pf.fit_transform(X)
 
@@ -43,7 +43,7 @@ class LinearBase(metaclass=ABCMeta):
         plt.scatter(X, y)
         # sort by design matrix -- needed for matplotlib
         sorted_values = iter(
-            sorted(zip(X.flatten(), self.predictions), key=itemgetter(0))
+            sorted(zip(X.flatten(), self.diagnostics.predictions), key=itemgetter(0))
         )
         X, pred = zip(*sorted_values)
         plt.plot(X, pred, "m-")
