@@ -4,12 +4,13 @@ Author: Rajan Subramanian
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from marketlearn.learning.linear_models.base import NeuralBase
-from marketlearn.toolz import timethis
+from numpy.typing import NDArray
 
 
 class Perceptron(NeuralBase):
@@ -18,13 +19,12 @@ class Perceptron(NeuralBase):
     def __init__(self, eta: float = 0.01, niter: int = 50, bias: bool = True):
         self.eta = eta
         self.niter = niter
-        self.errors = None
         self.bias = bias
         self.thetas = None
+        self.weights = None
         self.degree = 1
 
-    @timethis
-    def fit(self, X: np.ndarray, y: np.ndarray) -> Perceptron:
+    def _fit_batch(self, X: NDArray, y: NDArray) -> Perceptron:
         """fits training data
 
         Parameters
@@ -44,32 +44,57 @@ class Perceptron(NeuralBase):
         degree, bias = self.degree, self.bias
         X = self.make_polynomial(X, degree, bias)
 
-        # Generate small random weights
-        self.thetas = np.random.rand(X.shape[1])
-        self.errors = np.zeros(self.niter)
+        # Initialize weights to 0
+        self.thetas = np.zeros(X.shape[1])
+        weights = {}
+        index = -1
+        converged = False
 
-        for index in range(self.niter):
-            # Count total misclassifications in each iteration
-            count = 0
-
-            # Iterate through each example and identify misclassifications
-            # Number of errors must decline after each iteration
+        while not converged:
+            index += 1
+            prev_weights = self.thetas.copy()
+            # for each example in training set
             for xi, target in zip(X, y):
                 # make prediction
                 yhat = self.predict(xi)
 
                 # update weights if there are misclassifications
-                if target * yhat <= 0:
-                    self.thetas += self.eta * (target - yhat) * xi
-                    count += 1
+                if target != yhat:
+                    self.thetas += target * xi
 
-            # store count of errors in each iteration
-            self.errors[index] = count
+            # update weight per iteration
+            weights[index] = self.thetas.copy()
+            if (prev_weights == self.thetas).all():
+                converged = True
+        self.weights = pd.DataFrame.from_dict(
+            weights, orient="index", columns=["bias", "weight1", "weight2"]
+        )
         return self
 
-    def predict(
-        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
-    ) -> np.ndarray:
+    def _fit_online(self, X: NDArray, y: NDArray) -> Perceptron:
+        # Add bias unit to design matrix
+        degree, bias = self.degree, self.bias
+        X = self.make_polynomial(X, degree, bias)
+
+        # Initialize weights to 0
+        self.thetas = np.zeros(X.shape[1])
+
+        for xi, target in zip(X, y):
+            if target * self.net_input(xi, self.thetas) <= 0:
+                self.thetas += target * xi
+
+        return self
+
+    def fit(self, X: NDArray, y: NDArray, learner="batch") -> Perceptron:
+        msg = "Incorrect learner type, supports one of batch or online"
+        if learner == "batch":
+            return self._fit_batch(X, y)
+        elif learner == "online":
+            return self._fit_online(X, y)
+        else:
+            raise LookupError(msg)
+
+    def predict(self, X: NDArray, thetas: Optional[NDArray] = None) -> int:
         """Activation function to determine if neuron should fire or not
 
         Parameters
@@ -84,34 +109,19 @@ class Perceptron(NeuralBase):
         np.ndarray
             predictions
         """
-        if thetas is None and self.thetas is None:
-            raise ValueError(
-                "Empty weights provided, either call fit() first or provide \
-                    weights"
-            )
-        elif thetas is None:
+        if thetas is None:
             return 1 if self.net_input(X, self.thetas) >= 0 else -1
         return 1 if self.net_input(X, thetas) >= 0 else -1
 
-    def plot_misclassifications(self) -> None:
-        """Plots the misclassifications given number of iterations
-        Requires call to fit() first, otherwise raise appropriate error
+    def plot_decision_boundary(self, inputs, targets, weights):
+        for input, target in zip(inputs, targets):
+            plt.plot(input[0], input[1], "ro" if (target == 1.0) else "bo")
 
-        Raises
-        ------
-        AttributeError
-            if fit() has not been called
-        """
-        if self.errors is None:
-            raise AttributeError(
-                "Must call fit() first before plotting \
-                    misclassifications"
-            )
-        # plot the errors
-        plt.plot(range(1, self.niter + 1), self.errors, marker="o")
-        plt.xlabel("Iterations")
-        plt.ylabel("# of misclassifications")
-        plt.grid()
+        slope = -weights[1] / weights[2]
+        intercept = -weights[0] / weights[2]
+        for i in np.linspace(np.amin(inputs[:, :1]), np.amax(inputs[:, :1])):
+            y = (slope * i) + intercept
+            plt.plot(i, y, "ko")
 
 
 class Adaline(NeuralBase):
@@ -131,8 +141,7 @@ class Adaline(NeuralBase):
         self.thetas = None
         self.degree = 1
 
-    @timethis
-    def fit(self, X: np.ndarray, y: np.ndarray) -> Adaline:
+    def fit(self, X: NDArray, y: NDArray) -> Adaline:
         """fits training data via batch gradient descent
 
         Parameters
@@ -152,15 +161,16 @@ class Adaline(NeuralBase):
         self.thetas = np.zeros(shape=1 + X.shape[1])
 
         # Add bias unit to design matrix
-        X = self.make_polynomial(X)
+        degree = self.degree
+        X = self.make_polynomial(X, degree=degree, bias=True)
 
         for _ in range(self.niter):
             error = y - self.activation(self.net_input(X, self.thetas))
-            self.thetas += self.eta * X.T @ error
-            self.cost.append((error.T @ error) / 2.0)
+            self.thetas += self.eta * np.transpose(X).dot(error)
+            self.cost.append((error.transpose() @ error) / 2.0)
         return self
 
-    def activation(self, X: np.ndarray) -> np.ndarray:
+    def activation(self, X: NDArray) -> NDArray:
         """Computes the linear activation function
         given by f(w'x) = w'x
 
@@ -176,9 +186,7 @@ class Adaline(NeuralBase):
         """
         return X
 
-    def predict(
-        self, X: np.ndarray, thetas: Union[np.ndarray, None] = None
-    ) -> float:
+    def predict(self, X: NDArray, thetas: Optional[NDArray]) -> float:
         """Computes the class label after activation
 
         Parameters
@@ -188,15 +196,10 @@ class Adaline(NeuralBase):
         thetas : Union[np.ndarray, None], optional
             [description], by default None
         """
-        if thetas is None and self.thetas is None:
-            raise ValueError(
-                "Empty weights provided, either call fit() first or provide \
-                    weights"
-            )
-        elif thetas is None:
-            return (
-                1
-                if self.activation(self.net_input(X, self.thetas)) >= 0.0
-                else -1
-            )
-        return 1 if self.activation(self.net_input(X, thetas)) >= 0.0 else -1
+        if thetas is None:
+            if self.activation(self.net_input(X, self.thetas)) >= 0.0:
+                return 1
+            else:
+                return -1
+        else:
+            return 1 if self.activation(self.net_input(X, thetas)) >= 0.0 else -1
