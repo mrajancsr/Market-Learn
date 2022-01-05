@@ -55,14 +55,10 @@ class Perceptron(NeuralBase):
             prev_weights = self.thetas.copy()
             # for each example in training set
             for xi, target in zip(X, y):
-                # make prediction
-                yhat = self.predict(xi)
-
                 # update weights if there are misclassifications
-                if target != yhat:
+                if target != self.predict(xi):
                     self.thetas += target * xi
 
-            # update weight per iteration
             weights[index] = self.thetas.copy()
             if (prev_weights == self.thetas).all():
                 converged = True
@@ -72,17 +68,23 @@ class Perceptron(NeuralBase):
         return self
 
     def _fit_online(self, X: NDArray, y: NDArray) -> Perceptron:
-        # Add bias unit to design matrix
-        degree, bias = self.degree, self.bias
-        X = self.make_polynomial(X, degree, bias)
-
+        R = (np.sum(np.abs(X) ** 2, axis=-1) ** (0.5)).max()
+        bias = 0
         # Initialize weights to 0
-        self.thetas = np.zeros(X.shape[1])
+        self.thetas = np.zeros(X.shape[1] + 1)
+        mistakes = 0
+        mistakes_from_previous_iteration = 0
+        while True:
+            for xi, target in zip(X, y):
+                if target * (self.net_input(xi, self.thetas[1:]) + bias) <= 0:
+                    self.thetas[1:] += self.eta * target * xi
+                    bias += self.eta * target * R * R
+                    mistakes += 1
+            if mistakes_from_previous_iteration == mistakes:
+                break
+            mistakes_from_previous_iteration = mistakes
 
-        for xi, target in zip(X, y):
-            if target * self.net_input(xi, self.thetas) <= 0:
-                self.thetas += target * xi
-
+        self.thetas[0] = bias
         return self
 
     def fit(self, X: NDArray, y: NDArray, learner="batch") -> Perceptron:

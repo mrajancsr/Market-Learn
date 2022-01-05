@@ -17,12 +17,12 @@ from scipy.optimize import minimize
 
 @dataclass
 class RegressionDiagnostics:
-    obj: object
-    X: ArrayLike
-    y: ArrayLike
-    theta: ArrayLike
+    model: Union[LinearRegression, LinearRegressionMLE]
+    X: NDArray
+    y: NDArray
+    theta: NDArray
     predictions: Optional[NDArray] = field(init=False, default=np.array([]))
-    residuals: ArrayLike = field(init=False, default=np.array([]))
+    residuals: NDArray = field(init=False, default=np.array([]))
     rss: float = field(init=False, default=0.0)
     tss: float = field(init=False, default=0.0)
     ess: float = field(init=False, default=0.0)
@@ -31,7 +31,7 @@ class RegressionDiagnostics:
     s2: float = field(init=False, default=0.0)
     r2: float = field(init=False, default=0.0)
     bic: float = field(init=False, default=0.0)
-    param_covar: ArrayLike = field(init=False, default=np.array([]))
+    param_covar: NDArray = field(init=False, default=np.array([]))
 
     def __post_init__(self) -> None:
         n_samples, p_features = self.X.shape[0], self.X.shape[1]
@@ -50,7 +50,7 @@ class RegressionDiagnostics:
         ) + self.total_features * np.log(n_samples)
         self.param_covar = self._param_covar(self.X)
 
-    def _param_covar(self, X: ArrayLike) -> ArrayLike:
+    def _param_covar(self, X: NDArray) -> NDArray:
         return np.linalg.inv(X.T @ X) * self.s2
 
 
@@ -89,40 +89,40 @@ class LinearRegression(LinearBase):
     bias: bool = True
     degree: int = 1
     run: bool = field(init=False, default=False)
-    theta: Optional[NDArray] = field(init=False, default=np.array([]))
+    theta: NDArray = field(init=False, default=np.array([]))
     diagnostics: Optional[RegressionDiagnostics] = field(init=False)
 
-    def _normal(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+    def _normal(self, A: NDArray, b: NDArray) -> NDArray:
         """Estimates parameters of regression model via normal method
         given by (A'A)^-1 A'b = x
 
         Parameters
         ----------
-        A : ArrayLike
+        A : NDArray
             design matrix
-        b : ArrayLike
+        b : NDarray, shape = (n_samples,)
             response variable
 
         Returns
         -------
-        ArrayLike
+        NDarray
             weights corresponding to linear transformation
         """
         return np.linalg.inv(A.T @ A) @ A.T @ b
 
-    def _ols_qr(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+    def _ols_qr(self, A: NDArray, b: NDArray) -> NDArray:
         """Estimates ||Ax - b|| via QR decomposition
 
         Parameters
         ----------
-        A : ArrayLike
+        A : NDArray
             [description]
-        b : ArrayLike
+        b : NDArray
             [description]
 
         Returns
         -------
-        ArrayLike
+        NDArray
             [description]
         """
         # min||(Rx - Q'b)
@@ -131,7 +131,7 @@ class LinearRegression(LinearBase):
         # solves by forward substitution
         return solve_triangular(r, q.T @ b)
 
-    def _ols_cholesky(self, A: ArrayLike, b: ArrayLike) -> ArrayLike:
+    def _ols_cholesky(self, A: NDArray, b: NDArray) -> NDArray:
         """Estimates ||Ax - b|| via cholesky decomposition
 
         Parameters
@@ -208,15 +208,17 @@ class LinearRegression(LinearBase):
         """
         degree, bias = self.degree, self.bias
         X = self.make_polynomial(X, degree, bias)
-        self.theta = self._linear_solve(A=X, b=y, method=method)
-        self.run = True
+        weights = self._linear_solve(A=X, b=y, method=method)
+        if weights:
+            self.theta = weights
+            self.run = True
 
         if run_diagnostics:
             self.diagnostics = compute_regression_diagnostics(self, X, y)
 
         return self
 
-    def predict(self, X: ArrayLike, thetas: Optional[NDArray] = None) -> NDArray:
+    def predict(self, X: NDArray, thetas: Optional[NDArray] = None) -> NDArray:
         """makes predictions of response variable given input params
         Args:
         X:
@@ -234,9 +236,10 @@ class LinearRegression(LinearBase):
         predicted values:
             shape = (n_samples,)
         """
-        if thetas is None:
-            return X @ self.theta
-        return X @ thetas
+
+        if thetas is None and self.run:
+            return np.dot(X, self.theta)
+        return np.dot(X, thetas)
 
 
 @dataclass
@@ -298,7 +301,7 @@ class LinearRegressionMLE(LinearBase):
         f = self._loglikelihood(true=b, guess=y_guess)
         return f
 
-    def _jacobian(self, guess: NDArray, A: NDArray, b: NDArray) -> ArrayLike:
+    def _jacobian(self, guess: NDArray, A: NDArray, b: NDArray) -> NDArray:
         return A.T @ (guess @ A.T - b)
 
     def _hessian(self, guess: NDArray, A: NDArray, b: NDArray) -> ArrayLike:

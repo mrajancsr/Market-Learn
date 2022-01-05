@@ -9,30 +9,14 @@ Todo - add a copy from
 import os
 from configparser import ConfigParser
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Dict,
-    Generic,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, Dict, Generic, Iterator, List, Optional, Tuple, TypeVar, Union
 
 import pandas as pd
 import psycopg2
-from marketlearn.toolz import timethis
 from psycopg2.extras import DictCursor, execute_values
 
 # Custom Type to represent psycopg2 connection
 connection = TypeVar("connection")
-
-
-class PathNotFoundError(Exception):
-    pass
 
 
 @dataclass
@@ -52,20 +36,11 @@ class DbReader(Generic[connection]):
     """
 
     section: str = "dev"
-    conn: Optional[connection] = field(init=False)
-    column_names: Set[str] = field(init=False)
-
-    def __post_init__(self) -> None:
-        self.conn = None
-        self.column_names = {""}
+    conn: Optional[connection] = None
+    column_names: List[str] = field(init=False, default_factory=list)
 
     def _read_db_config(self) -> Dict[str, str]:
         """reads database configuration from config.ini file
-
-        Parameters
-        ----------
-        section : str, optional, default='postgresql-dev'
-            one of postgresql-dev or postgresql-practice
 
         Returns
         -------
@@ -80,13 +55,11 @@ class DbReader(Generic[connection]):
         # create the parser
         file_name = "config.ini"
         config_path = os.getenv("SQLCONFIGPATH")
-        if isinstance(config_path, str):
+
+        if os.path.exists(config_path):
             file_path = os.path.join(config_path, file_name)
-            file_path = file_path.replace(":", "")
         else:
-            raise PathNotFoundError(
-                "SQLCONFIGPATH is incorrect - please check"
-            )
+            raise FileNotFoundError(f"config_path: {config_path}")
 
         parser = ConfigParser()
         parser.read(file_path)
@@ -99,10 +72,7 @@ class DbReader(Generic[connection]):
             for param in params:
                 config[param[0]] = param[1]
         else:
-            raise Exception(
-                f"{section} not found in the {file_name} \
-                \nfilepath: {file_path}"
-            )
+            raise Exception(f"Incorrect Section: {section}")
         return config
 
     def connect(self) -> Optional[connection]:
@@ -118,14 +88,13 @@ class DbReader(Generic[connection]):
         connection object
             connection to the PostGresSQL DB
         """
-        connection_closed = getattr(self.conn, "closed")
-        if self.conn is None or connection_closed:
-            try:
-                params = self._read_db_config()
-                self.conn = psycopg2.connect(**params)
-                return self.conn
-            except psycopg2.DatabaseError as error:
-                print(error)
+
+        try:
+            params = self._read_db_config()
+            conn = psycopg2.connect(**params)
+            return conn
+        except psycopg2.DatabaseError as error:
+            print(error)
 
     def _create_records(
         self, dictrow: Tuple[Dict[str, Any]]
@@ -144,8 +113,7 @@ class DbReader(Generic[connection]):
         """
 
         try:
-            self.connect()
-            conn = getattr(self, "conn")
+            conn = self.connect()
             if conn:
                 column_names = set()
                 with conn.cursor(cursor_factory=DictCursor) as curr:
@@ -155,19 +123,15 @@ class DbReader(Generic[connection]):
                     rows = curr.fetchall()
                 conn.close()
                 self.column_names = column_names
+                return rows
         except psycopg2.DatabaseError as error:
             print(error)
-        else:
-            return rows
 
-    @timethis
     def fetchdf(self, query: str) -> pd.DataFrame:
         """Returns a pandas dataframe of the db query"""
         return pd.DataFrame(self.fetch(query), columns=self.column_names)
 
-    def iterator_from_df(
-        self, datadf: pd.DataFrame
-    ) -> Iterator[Dict[str, Any]]:
+    def iterator_from_df(self, datadf: pd.DataFrame) -> Iterator[Dict[str, Any]]:
         """Convenience function to transform pandas dataframe to
         Iterator for db push
         """
@@ -205,9 +169,7 @@ class DbReader(Generic[connection]):
 
                     # create an iterator of tuple rows for db insert
                     args = (tuple(item.values()) for item in data)
-                    query = (
-                        f"""INSERT INTO {table_name} ({col_names}) values %s"""
-                    )
+                    query = f"""INSERT INTO {table_name} ({col_names}) values %s"""
 
                     # insert data into database and close connection
                     execute_values(curr, query, args)
@@ -216,7 +178,6 @@ class DbReader(Generic[connection]):
         except psycopg2.DatabaseError as e:
             print(e)
 
-    @timethis
     def pushdf(
         self,
         datadf: pd.DataFrame,
@@ -287,3 +248,21 @@ class DbReader(Generic[connection]):
                 conn.close()
         except Exception as e:
             print(e)
+
+
+def main():
+    db = DbReader()
+    query = "select * from customer"
+    df = db.fetchdf(query)
+    print(df.head())
+    data = db.fetch(query)
+    print(data)
+
+
+if __name__ == "__main__":
+    db = DbReader()
+    query = "select * from customer"
+    df = db.fetchdf(query)
+    df.head()
+
+main()
