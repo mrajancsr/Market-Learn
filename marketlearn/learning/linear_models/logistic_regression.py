@@ -75,7 +75,7 @@ class LogisticRegression(LogisticBase):
         predictions = self.predict(X, guess)
         return -1 * X.T @ (y - predictions)
 
-    def _hessian(self, X: np.ndarray, W: np.ndarray):
+    def _hessian(self, X: NDArray, W: NDArray) -> NDArray:
         """Computes the Hessian wrt to weights
 
         Parameters
@@ -94,7 +94,7 @@ class LogisticRegression(LogisticBase):
 
         return X.T @ W @ X
 
-    def _loglikelihood(self, y: np.ndarray, z: np.ndarray):
+    def _loglikelihood(self, y: NDArray, z: NDArray) -> float:
         """Returns loglikelihood function of logistic regression
 
         Parameters
@@ -111,7 +111,7 @@ class LogisticRegression(LogisticBase):
         """
         return y @ z - np.log(1 + np.exp(z)).sum()
 
-    def _irls(self, X: np.ndarray, y: np.ndarray, niter=20) -> np.ndarray:
+    def _irls(self, X: NDArray, y: NDArray, niter: int = 20) -> NDArray:
         """performs iteratively reweighted least squares
 
         Parameters
