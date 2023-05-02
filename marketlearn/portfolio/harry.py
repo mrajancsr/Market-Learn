@@ -12,12 +12,12 @@ from typing import Dict, Generator, Iterator, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from marketlearn.portfolio import Asset
-from marketlearn.portfolio.asset import fun
 from numpy import array, diag, float64, sqrt
 from numpy.random import random
 from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import minimize
+
+from marketlearn.portfolio import Asset
 
 
 class Harry:
@@ -48,15 +48,11 @@ class Harry:
             name: Asset(name=name, price_history=historical_prices[name])
             for name in historical_prices.columns
         }
-        self.covariance_matrix: NDArray[float64] = Asset.covariance_matrix(
-            tuple(self)
-        )
+        self.covariance_matrix: NDArray[float64] = Asset.covariance_matrix(tuple(self))
         self.asset_expected_returns: NDArray[
             float64
         ] = self.get_asset_expected_returns()
-        self.asset_expected_vol: NDArray[
-            float64
-        ] = self.get_asset_expected_volatility()
+        self.asset_expected_vol: NDArray[float64] = self.get_asset_expected_volatility()
 
         self.security_count: int = len(self.__assets)
         self.risk_free_rate = risk_free_rate
@@ -108,9 +104,7 @@ class Harry:
         return sqrt(diag(self.covariance_matrix))
 
     @staticmethod
-    def random_weights(
-        nsim: int, nsecurities: int
-    ) -> Iterator[NDArray[float64]]:
+    def random_weights(nsim: int, nsecurities: int) -> Iterator[NDArray[float64]]:
         """creates a portfolio with random weights
         Parameters
         ----------
@@ -148,12 +142,19 @@ class Harry:
         float
             portfolio variance
         """
-        return weights.T @ self.covariance_matrix @ weights
+        ndim = weights.ndim
+        if ndim == 1:
+            return weights.T @ self.covariance_matrix @ weights
+        else:
+            return diag(weights @ self.covariance_matrix @ weights.T)
 
-    def portfolio_expected_return(
-        self, weights: NDArray[float64]
-    ) -> ArrayLike:
-        return weights.T @ self.asset_expected_returns
+    def portfolio_expected_return(self, weights: NDArray[float64]) -> ArrayLike:
+        ndim = weights.ndim
+        if ndim == 1:
+            return weights.T @ self.asset_expected_returns
+        # allows construction of efficient portfolios
+        else:
+            return weights @ self.asset_expected_returns
 
     def simulate_investment_opportunity_set(
         self, nportfolios: int
@@ -238,15 +239,14 @@ class Harry:
             weights corresponding to minimum variance
         """
         total_assets = self.security_count
-        guess_weights = Harry.random_weights(nsim=1, nsecurities=total_assets)
+        guess_weights = Harry.create_weights(nsecurities=total_assets)
 
         # minimize risk subject to target level of return constraint
         if add_constraints:
             constraints = [
                 {
                     "type": "eq",
-                    "fun": lambda w: self.portfolio_expected_return(w)
-                    - target,
+                    "fun": lambda w: self.portfolio_expected_return(w) - target,
                 },
                 {"type": "eq", "fun": lambda w: sum(w) - 1},
             ]
@@ -264,9 +264,7 @@ class Harry:
         )["x"]
         return weights
 
-    def optimize_sharpe(
-        self, bounds: Optional[Tuple[int]] = None
-    ) -> NDArray[float64]:
+    def optimize_sharpe(self, bounds: Optional[Tuple[int]] = None) -> NDArray[float64]:
         """Return the weights corresponding to maximizing sharpe ratio
         The sharpe ratio is given by SRp = mu_p - mu_f / sigma_p
         subject to w'mu = mu_p
@@ -328,9 +326,7 @@ class Harry:
 
         # get efficient portfolio x whose target return is max security returns
         target = self.asset_expected_returns.max()
-        x = self.optimize_risk(
-            add_constraints=True, target=target, bounds=bounds
-        )
+        x = self.optimize_risk(add_constraints=True, target=target, bounds=bounds)
 
         # compute grid of values
         theta = np.linspace(-1, 1, 1000)
@@ -384,9 +380,7 @@ class Harry:
         target_returns = np.linspace(0, 1, 1000)
         # todo: this can be made faster
         weights = map(
-            lambda x: self.optimize_risk(
-                add_constraints=True, target=x, bounds=bounds
-            ),
+            lambda x: self.optimize_risk(add_constraints=True, target=x, bounds=bounds),
             target_returns,
         )
         weights = np.vstack(tuple(weights))
@@ -400,11 +394,7 @@ class Harry:
         plt.plot(
             portfolio_expected_vol,
             portfolio_expected_returns,
-            color="black",
+            color="red",
             linestyle="-",
         )
         plt.grid()
-
-
-test = fun()
-print(test)

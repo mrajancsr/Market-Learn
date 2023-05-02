@@ -11,8 +11,6 @@ import pandas as pd
 from numpy import array, cov, isnan, log
 from numpy.typing import NDArray
 
-__TRADING_DAYS_PER_YEAR: int = 252
-
 
 @dataclass
 class Asset:
@@ -57,7 +55,7 @@ class Asset:
 
     @staticmethod
     def get_annualization_factor() -> int:
-        return __TRADING_DAYS_PER_YEAR
+        return 252
 
     @staticmethod
     @lru_cache
